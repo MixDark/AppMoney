@@ -1,0 +1,30 @@
+{% extends 'layout/base.html' %}
+{% block title %}Editar perfil{% endblock %}
+{% block content %}
+<div class="max-w-sm w-full bg-white/20 backdrop-blur-xl p-10 rounded-3xl shadow-2xl border border-white/30 flex flex-col items-center">
+    <h2 class="text-3xl font-bold mb-8 text-center text-black">Editar perfil</h2>
+    {% if mensaje %}<p class="text-red-700 mb-6 text-center text-lg font-semibold">{{ mensaje|capitalize }}</p>{% endif %}
+    <form method="post" class="space-y-6 w-full flex flex-col items-start">
+        <div class="w-full flex flex-col items-start">
+            <label class="block mb-3 text-black text-lg font-semibold">Usuario:</label>
+            <input type="text" value="{{ usuario.nombre_usuario }}" disabled class="w-full bg-white/20 border border-white/30 rounded-2xl px-6 py-3 text-black text-base focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-transparent backdrop-blur-sm transition-all duration-200 cursor-not-allowed">
+        </div>
+        <div class="w-full flex flex-col items-start">
+            <label class="block mb-3 text-black text-lg font-semibold">Contraseña actual:</label>
+            <input type="password" name="password_actual" required class="w-full bg-white/20 border border-white/30 rounded-2xl px-6 py-3 text-black text-base placeholder-black/60 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-transparent backdrop-blur-sm transition-all duration-200">
+        </div>
+        <div class="w-full flex flex-col items-start">
+            <label class="block mb-3 text-black text-lg font-semibold">Nueva contraseña:</label>
+            <input type="password" name="password_nueva" class="w-full bg-white/20 border border-white/30 rounded-2xl px-6 py-3 text-black text-base placeholder-black/60 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-transparent backdrop-blur-sm transition-all duration-200">
+        </div>
+        <div class="w-full flex flex-col items-start">
+            <label class="block mb-3 text-black text-lg font-semibold">Confirmar nueva contraseña:</label>
+            <input type="password" name="password_confirmar" class="w-full bg-white/20 border border-white/30 rounded-2xl px-6 py-3 text-black text-base placeholder-black/60 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-transparent backdrop-blur-sm transition-all duration-200">
+        </div>
+        <div class="w-full flex gap-4 justify-center mt-8">
+            <button type="submit" class="bg-white/40 backdrop-blur-xl text-black px-10 py-3 rounded-2xl font-semibold border border-white/30 hover:bg-white/50 transition-all duration-200 shadow-lg hover:shadow-xl">Guardar</button>
+            <a href="/" class="bg-white/20 backdrop-blur-xl text-black px-10 py-3 rounded-2xl font-semibold border border-white/30 hover:bg-white/30 transition-all duration-200 shadow-lg hover:shadow-xl flex items-center justify-center">Cancelar</a>
+        </div>
+    </form>
+</div>
+{% endblock %}

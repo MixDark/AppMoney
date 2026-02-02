@@ -1,0 +1,107 @@
+{% extends 'layout/base.html' %}
+{% block title %}Reportes mensuales{% endblock %}
+{% block content %}
+<div class="max-w-5xl w-full bg-white/20 backdrop-blur-xl p-8 rounded-3xl shadow-2xl border border-white/30 flex flex-col items-center">
+    <h2 class="text-4xl font-bold mb-6 text-center text-black">Reportes por mes</h2>
+    
+    <form method="get" class="flex flex-col md:flex-row gap-4 items-center mb-8 justify-center w-full">
+        <div class="flex items-center gap-2">
+            <input type="month" name="mes" value="{{ mes_actual }}" class="bg-white/20 border border-white/30 rounded-2xl px-4 py-3 text-black focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-transparent backdrop-blur-sm transition-all duration-200">
+        </div>
+        <button type="submit" class="bg-white/40 backdrop-blur-xl text-black px-8 py-3 rounded-2xl border border-white/30 font-semibold hover:bg-white/50 transition-all duration-200 shadow-lg hover:shadow-xl">Ver</button>
+    </form>
+    
+    <!-- Tabla de Ingresos -->
+    <div class="mb-8 w-full">
+        <h3 class="text-lg font-semibold mb-4 text-left text-black">Ingresos</h3>
+        <div class="overflow-x-auto bg-white/30 rounded-2xl border border-white/30 backdrop-blur-lg">
+            <table class="w-full text-sm">
+                <thead>
+                    <tr class="border-b border-white/30 bg-white/20">
+                        <th class="px-4 py-3 text-left font-semibold text-black">Fecha</th>
+                        <th class="px-4 py-3 text-left font-semibold text-black">Descripción</th>
+                        <th class="px-4 py-3 text-right font-bold text-black">Monto</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% if ingresos %}
+                        {% for ingreso in ingresos %}
+                        <tr class="border-b border-white/20 hover:bg-white/10 transition">
+                            <td class="px-4 py-3 text-black font-semibold">{{ ingreso.fecha|format_date }}</td>
+                            <td class="px-4 py-3 text-black font-medium">{{ ingreso.descripcion }}</td>
+                            <td class="px-4 py-3 text-right font-bold text-black">$ {{ ingreso.monto|format_money }}</td>
+                        </tr>
+                        {% endfor %}
+                    {% else %}
+                        <tr>
+                            <td colspan="3" class="px-4 py-4 text-center text-gray-400">Sin ingresos registrados en este mes</td>
+                        </tr>
+                    {% endif %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    
+    <!-- Tabla de Gastos -->
+    <div class="mb-8 w-full">
+        <h3 class="text-lg font-semibold mb-4 text-left text-black">Gastos</h3>
+        <div class="overflow-x-auto bg-white/30 rounded-2xl border border-white/30 backdrop-blur-lg">
+            <table class="w-full text-base">
+                <thead>
+                    <tr class="border-b border-white/30 bg-white/20">
+                        <th class="px-4 py-3 text-left font-semibold text-black">Fecha</th>
+                        <th class="px-4 py-3 text-left font-semibold text-black">Descripción</th>
+                        <th class="px-4 py-3 text-right font-bold text-black">Monto</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% if gastos %}
+                        {% for gasto in gastos %}
+                        <tr class="border-b border-white/20 hover:bg-white/10 transition">
+                            <td class="px-4 py-3 text-black font-semibold">{{ gasto.fecha|format_date }}</td>
+                            <td class="px-4 py-3 text-black font-medium">{{ gasto.descripcion }}</td>
+                            <td class="px-4 py-3 text-right font-bold text-black">$ {{ gasto.monto|format_money }}</td>
+                        </tr>
+                        {% endfor %}
+                    {% else %}
+                        <tr>
+                            <td colspan="3" class="px-4 py-4 text-center text-gray-400">Sin gastos registrados en este mes</td>
+                        </tr>
+                    {% endif %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Tabla de Inversiones -->
+    <div class="mb-8 w-full">
+        <h3 class="text-lg font-semibold mb-4 text-left text-black">Inversiones</h3>
+        <div class="overflow-x-auto bg-white/30 rounded-2xl border border-white/30 backdrop-blur-lg">
+            <table class="w-full text-base">
+                <thead>
+                    <tr class="border-b border-white/30 bg-white/20">
+                        <th class="px-4 py-3 text-left font-semibold text-black">Fecha</th>
+                        <th class="px-4 py-3 text-left font-semibold text-black">Descripción</th>
+                        <th class="px-4 py-3 text-right font-bold text-black">Monto</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% if inversiones %}
+                        {% for inversion in inversiones %}
+                        <tr class="border-b border-white/20 hover:bg-white/10 transition">
+                            <td class="px-4 py-3 text-black font-semibold">{{ inversion.fecha|format_date }}</td>
+                            <td class="px-4 py-3 text-black font-medium">{{ inversion.descripcion }}</td>
+                            <td class="px-4 py-3 text-right font-bold text-black">$ {{ inversion.monto|format_money }}</td>
+                        </tr>
+                        {% endfor %}
+                    {% else %}
+                        <tr>
+                            <td colspan="3" class="px-4 py-4 text-center text-gray-400">Sin inversiones registradas en este mes</td>
+                        </tr>
+                    {% endif %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}
