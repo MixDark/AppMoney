@@ -1,82 +1,36 @@
 {% extends 'layout/base.html' %}
-{% block title %}Editar registro{% endblock %}
+{% block title %}Editar Registro - App Money{% endblock %}
 {% block content %}
-<style>
-    /* Select styling */
-    select {
-        background-color: rgba(255, 255, 255, 0.4) !important;
-        background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e") !important;
-        background-repeat: no-repeat !important;
-        background-position: right 0.75rem center !important;
-        background-size: 1.5em 1.5em !important;
-        padding-right: 2.5rem !important;
-        color: black !important;
-        font-weight: 500 !important;
-    }
-    
-    select option {
-        background-color: rgba(255, 255, 255, 0.9);
-        color: black;
-        padding: 0.5rem;
-    }
-    
-    select option:checked {
-        background: linear-gradient(#0066ff, #0066ff);
-        background-color: #0066ff !important;
-        color: white !important;
-    }
-    
-    /* Date input styling */
-    input[type="date"] {
-        background-color: rgba(255, 255, 255, 0.4) !important;
-        color: black !important;
-        font-weight: 500 !important;
-        font-size: 1rem !important;
-    }
-    
-    /* Calendar icon styling */
-    input[type="date"]::-webkit-calendar-picker-indicator {
-        cursor: pointer;
-        border-radius: 4px;
-        margin-right: 0.5rem;
-        opacity: 0.9;
-        filter: invert(0.3) brightness(0.9);
-    }
+<div class="fluent-card p-12 max-w-lg w-full flex flex-col items-center">
+    <h2 class="text-2xl font-black mb-10 text-center uppercase tracking-tight">Editar registro</h2>
 
-    input[type="date"]::-webkit-outer-spin-button,
-    input[type="date"]::-webkit-inner-spin-button {
-        display: none;
-    }
-</style>
-<div class="max-w-lg w-full bg-white/20 backdrop-blur-xl p-16 rounded-3xl shadow-2xl border border-white/30 flex flex-col items-center">
-    <h2 class="text-2xl font-bold mb-12 text-center text-black">Editar registro</h2>
-    <form method="post" class="space-y-8 w-full flex flex-col items-start">
+    <form method="post" class="space-y-8 w-full">
         <input type="hidden" name="registro_id" value="{{ registro.id }}">
         <input type="hidden" name="tipo" value="{{ tipo }}">
-        
-        <div class="w-full flex flex-col items-start">
-            <label class="block mb-3 text-black text-lg font-semibold">Tipo:</label>
-            <input type="text" value="{% if tipo == 'ingreso' %}Ingreso{% elif tipo == 'gasto' %}Gasto{% else %}Inversión{% endif %}" disabled class="w-full bg-white/20 border border-white/30 rounded-2xl px-6 py-4 text-black text-base focus:outline-none backdrop-blur-sm">
+
+        <div class="w-full">
+            <label class="block text-[10px] font-black uppercase mb-2 tracking-widest opacity-60">Tipo</label>
+            <input type="text" value="{{ tipo|capitalize }}" disabled class="input-glass opacity-50 cursor-not-allowed">
         </div>
-        
-        <div class="w-full flex flex-col items-start">
-            <label class="block mb-3 text-black text-lg font-semibold">Monto:</label>
-            <input type="number" step="0.01" name="monto" required value="{{ registro.monto }}" class="w-full bg-white/20 border border-white/30 rounded-2xl px-6 py-4 text-black text-base placeholder-black/60 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-transparent backdrop-blur-sm transition-all duration-200">
+
+        <div class="w-full">
+            <label class="block text-[10px] font-black uppercase mb-2 tracking-widest opacity-60">Monto</label>
+            <input type="number" step="0.01" name="monto" required value="{{ registro.monto }}" class="input-glass">
         </div>
-        
-        <div class="w-full flex flex-col items-start">
-            <label class="block mb-3 text-black text-lg font-semibold">Descripción:</label>
-            <input type="text" name="descripcion" value="{{ registro.descripcion }}" class="w-full bg-white/20 border border-white/30 rounded-2xl px-6 py-4 text-black text-base placeholder-black/60 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-transparent backdrop-blur-sm transition-all duration-200">
+
+        <div class="w-full">
+            <label class="block text-[10px] font-black uppercase mb-2 tracking-widest opacity-60">Descripción</label>
+            <input type="text" name="descripcion" value="{{ registro.descripcion }}" class="input-glass">
         </div>
-        
-        <div class="w-full flex flex-col items-start">
-            <label class="block mb-3 text-black text-lg font-semibold">Fecha:</label>
-            <input type="date" name="fecha" required value="{{ registro.fecha }}" class="w-full border border-white/30 rounded-2xl px-6 py-4 text-black text-base focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-transparent backdrop-blur-sm transition-all duration-200">
+
+        <div class="w-full">
+            <label class="block text-[10px] font-black uppercase mb-2 tracking-widest opacity-60">Fecha</label>
+            <input type="date" name="fecha" required value="{{ registro.fecha }}" class="input-glass text-xs">
         </div>
-        
-        <div class="w-full flex gap-4 justify-center">
-            <button type="submit" class="bg-white/40 backdrop-blur-xl text-black px-10 py-4 rounded-2xl text-xl font-semibold border border-white/30 hover:bg-white/50 transition-all duration-200 shadow-lg hover:shadow-xl transform hover:scale-105">Guardar</button>
-            <a href="/registrar" class="bg-white/40 backdrop-blur-xl text-black px-10 py-4 rounded-2xl text-xl font-semibold border border-white/30 hover:bg-white/50 transition-all duration-200 shadow-lg hover:shadow-xl transform hover:scale-105">Cancelar</a>
+
+        <div class="w-full flex gap-4 justify-center pt-8">
+            <button type="submit" class="btn-fluent px-6 flex items-center justify-center gap-2 py-2"><i class="fas fa-save"></i> Guardar</button>
+            <a href="/registrar" class="btn-fluent px-6 flex items-center justify-center gap-2 py-2 btn-red"><i class="fas fa-times"></i> Cancelar</a>
         </div>
     </form>
 </div>

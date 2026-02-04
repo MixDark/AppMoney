@@ -1,29 +1,91 @@
 {% extends 'layout/base.html' %}
-{% block title %}Editar perfil{% endblock %}
+{% block title %}Mi Perfil - App Money{% endblock %}
 {% block content %}
-<div class="max-w-sm w-full bg-white/20 backdrop-blur-xl p-10 rounded-3xl shadow-2xl border border-white/30 flex flex-col items-center">
-    <h2 class="text-3xl font-bold mb-8 text-center text-black">Editar perfil</h2>
-    {% if mensaje %}<p class="text-red-700 mb-6 text-center text-lg font-semibold">{{ mensaje|capitalize }}</p>{% endif %}
-    <form method="post" class="space-y-6 w-full flex flex-col items-start">
-        <div class="w-full flex flex-col items-start">
-            <label class="block mb-3 text-black text-lg font-semibold">Usuario:</label>
-            <input type="text" value="{{ usuario.nombre_usuario }}" disabled class="w-full bg-white/20 border border-white/30 rounded-2xl px-6 py-3 text-black text-base focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-transparent backdrop-blur-sm transition-all duration-200 cursor-not-allowed">
+<div class="fluent-card p-10 max-w-3xl w-full mx-auto">
+    <h2 class="text-3xl font-black mb-10 text-center uppercase tracking-tight">Perfil y preferencias</h2>
+
+    {% if mensaje %}
+    <p
+        class="text-blue-700 mb-8 text-center text-sm font-bold bg-blue-100/50 py-3 px-6 rounded-xl border border-blue-200">
+        {{ mensaje|capitalize }}
+    </p>
+    {% endif %}
+
+    <form method="post" enctype="multipart/form-data" class="space-y-10">
+        <!-- Sección de Imagen -->
+        <div class="flex flex-col items-center mb-10">
+            <div class="relative">
+                <div
+                    class="w-28 h-28 bg-black/5 rounded-full flex items-center justify-center text-black text-4xl font-black border-4 border-white/40 shadow-xl overflow-hidden backdrop-blur-xl">
+                    {% if current_user.foto_perfil %}
+                    <img src="{{ current_user.foto_perfil }}" class="w-full h-full object-cover">
+                    {% else %}
+                    {{ current_user.nombre_usuario[0].upper() }}
+                    {% endif %}
+                </div>
+                <!-- Input oculto para la foto -->
+                <input type="file" name="foto_perfil" id="foto_perfil" class="hidden" accept="image/*"
+                    onchange="if(this.files[0]) { document.querySelector('form button[type=submit]').click(); }">
+                <button type="button" onclick="document.getElementById('foto_perfil').click()"
+                    class="absolute bottom-1 right-1 bg-white/60 backdrop-blur-md p-2 rounded-full shadow-lg border border-black/5 text-black hover:scale-110 transition-all">
+                    <i class="fas fa-camera text-xs"></i>
+                </button>
+            </div>
+            <p class="text-2xl font-black mt-4 tracking-tight">{{ current_user.nombre_usuario }}</p>
         </div>
-        <div class="w-full flex flex-col items-start">
-            <label class="block mb-3 text-black text-lg font-semibold">Contraseña actual:</label>
-            <input type="password" name="password_actual" required class="w-full bg-white/20 border border-white/30 rounded-2xl px-6 py-3 text-black text-base placeholder-black/60 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-transparent backdrop-blur-sm transition-all duration-200">
+
+        <div class="grid grid-cols-1 gap-8">
         </div>
-        <div class="w-full flex flex-col items-start">
-            <label class="block mb-3 text-black text-lg font-semibold">Nueva contraseña:</label>
-            <input type="password" name="password_nueva" class="w-full bg-white/20 border border-white/30 rounded-2xl px-6 py-3 text-black text-base placeholder-black/60 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-transparent backdrop-blur-sm transition-all duration-200">
+
+        <div class="pt-10 border-t border-black/5">
+            <h3 class="font-black text-xl mb-8 uppercase tracking-widest text-black/60">Preferencias</h3>
+            <div class="space-y-8">
+                <div>
+                    <label class="block text-[10px] font-black uppercase mb-2 tracking-widest opacity-60">Moneda</label>
+                    <select name="moneda" class="input-glass appearance-none cursor-pointer">
+                        <option value="USD" {% if usuario.moneda == 'USD' %}selected{% endif %}>USD - Dólar Estadounidense</option>
+                        <option value="EUR" {% if usuario.moneda == 'EUR' %}selected{% endif %}>EUR - Euro</option>
+                        <option value="MXN" {% if usuario.moneda == 'MXN' %}selected{% endif %}>MXN - Peso Mexicano</option>
+                        <option value="ARS" {% if usuario.moneda == 'ARS' %}selected{% endif %}>ARS - Peso Argentino</option>
+                        <option value="COP" {% if usuario.moneda == 'COP' %}selected{% endif %}>COP - Peso Colombiano</option>
+                        <option value="CLP" {% if usuario.moneda == 'CLP' %}selected{% endif %}>CLP - Peso Chileno</option>
+                        <option value="BRL" {% if usuario.moneda == 'BRL' %}selected{% endif %}>BRL - Real Brasileño</option>
+                        <option value="PEN" {% if usuario.moneda == 'PEN' %}selected{% endif %}>PEN - Sol Peruano</option>
+                        <option value="UYU" {% if usuario.moneda == 'UYU' %}selected{% endif %}>UYU - Peso Uruguayo</option>
+                        <option value="VES" {% if usuario.moneda == 'VES' %}selected{% endif %}>VES - Bolívar Venezolano</option>
+                    </select>
+                </div>
+            </div>
         </div>
-        <div class="w-full flex flex-col items-start">
-            <label class="block mb-3 text-black text-lg font-semibold">Confirmar nueva contraseña:</label>
-            <input type="password" name="password_confirmar" class="w-full bg-white/20 border border-white/30 rounded-2xl px-6 py-3 text-black text-base placeholder-black/60 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-transparent backdrop-blur-sm transition-all duration-200">
+
+        <div class="pt-10 border-t border-black/5">
+            <h3 class="font-black text-xl mb-8 uppercase tracking-widest text-black/60">Seguridad</h3>
+            <div class="space-y-8">
+                <div>
+                    <label class="block text-[10px] font-black uppercase mb-2 tracking-widest opacity-60">Contraseña
+                        Actual</label>
+                    <input type="password" name="password_actual" required class="input-glass">
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                    <div>
+                        <label class="block text-[10px] font-black uppercase mb-2 tracking-widest opacity-60">Nueva
+                            contraseña</label>
+                        <input type="password" name="password_nueva" class="input-glass">
+                    </div>
+                    <div>
+                        <label class="block text-[10px] font-black uppercase mb-2 tracking-widest opacity-60">Confirmar
+                            Nueva</label>
+                        <input type="password" name="password_confirmar" class="input-glass">
+                    </div>
+                </div>
+            </div>
         </div>
-        <div class="w-full flex gap-4 justify-center mt-8">
-            <button type="submit" class="bg-white/40 backdrop-blur-xl text-black px-10 py-3 rounded-2xl font-semibold border border-white/30 hover:bg-white/50 transition-all duration-200 shadow-lg hover:shadow-xl">Guardar</button>
-            <a href="/" class="bg-white/20 backdrop-blur-xl text-black px-10 py-3 rounded-2xl font-semibold border border-white/30 hover:bg-white/30 transition-all duration-200 shadow-lg hover:shadow-xl flex items-center justify-center">Cancelar</a>
+
+        <div class="flex gap-4 justify-end mt-12">
+            <a href="/" class="btn-fluent btn-red px-6 flex items-center gap-2"><i class="fas fa-times"></i> Cancelar</a>
+            <button type="submit" class="btn-fluent px-6 flex items-center gap-2">
+                <i class="fas fa-save"></i> Guardar
+            </button>
         </div>
     </form>
 </div>

@@ -1,58 +1,15 @@
 {% extends 'layout/base.html' %}
-{% block title %}Inversiones{% endblock %}
+{% block title %}Inversiones - App Money{% endblock %}
 {% block content %}
-<style>
-    select {
-        background-color: rgba(255, 255, 255, 0.4) !important;
-        background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e") !important;
-        background-repeat: no-repeat !important;
-        background-position: right 0.75rem center !important;
-        background-size: 1.5em 1.5em !important;
-        padding-right: 2.5rem !important;
-        color: black !important;
-        font-weight: 500 !important;
-    }
-    
-    select option {
-        background-color: rgba(255, 255, 255, 0.9);
-        color: black;
-        padding: 0.5rem;
-    }
-    
-    select option:checked {
-        background: linear-gradient(#0066ff, #0066ff);
-        background-color: #0066ff !important;
-        color: white !important;
-    }
-    
-    input[type="date"] {
-        background-color: rgba(255, 255, 255, 0.4) !important;
-        color: black !important;
-        font-weight: 500 !important;
-        font-size: 1rem !important;
-    }
-    
-    input[type="date"]::-webkit-calendar-picker-indicator {
-        cursor: pointer;
-        border-radius: 4px;
-        margin-right: 0.5rem;
-        opacity: 0.9;
-        filter: invert(0.3) brightness(0.9);
-    }
-    
-    input[type="date"]::-webkit-outer-spin-button,
-    input[type="date"]::-webkit-inner-spin-button {
-        display: none;
-    }
-</style>
-<div class="w-full max-w-5xl">
+<div class="w-full max-w-6xl space-y-12">
     <!-- Formulario de registro -->
-    <div class="max-w-lg w-full mx-auto bg-white/20 backdrop-blur-xl p-16 rounded-3xl shadow-2xl border border-white/30 flex flex-col items-center mb-8">
-        <h2 class="text-2xl font-bold mb-8 text-center text-black">Registrar inversión</h2>
-        <form method="post" class="space-y-6 w-full flex flex-col items-start">
-            <div class="w-full flex flex-col items-start">
-                <label class="block mb-3 text-black text-lg font-semibold">Tipo de inversión:</label>
-                <select name="tipo" class="w-full appearance-none border border-white/30 rounded-2xl px-6 py-3 text-black text-base focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-transparent backdrop-blur-sm transition-all duration-200 cursor-pointer">
+    <div class="fluent-card p-12 max-w-lg w-full mx-auto flex flex-col items-center">
+        <h2 class="text-2xl font-black mb-10 text-center uppercase tracking-tight">Registrar inversión</h2>
+        <form method="post" class="space-y-8 w-full">
+            <div>
+                <label class="block text-[10px] font-black uppercase mb-2 tracking-widest opacity-60">Tipo de
+                    inversión</label>
+                <select name="tipo" class="input-glass appearance-none cursor-pointer">
                     <option value="acciones">Acciones</option>
                     <option value="bonos">Bonos</option>
                     <option value="criptomonedas">Criptomonedas</option>
@@ -61,49 +18,65 @@
                     <option value="otro">Otro</option>
                 </select>
             </div>
-            <div class="w-full flex flex-col items-start">
-                <label class="block mb-3 text-black text-lg font-semibold">Monto:</label>
-                <input type="number" step="0.01" name="monto" required class="w-full bg-white/20 border border-white/30 rounded-2xl px-6 py-3 text-black text-base placeholder-black/60 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-transparent backdrop-blur-sm transition-all duration-200">
+            <div>
+                <label class="block text-[10px] font-black uppercase mb-2 tracking-widest opacity-60">Monto</label>
+                <input type="number" step="0.01" name="monto" required class="input-glass">
             </div>
-            <div class="w-full flex flex-col items-start">
-                <label class="block mb-3 text-black text-lg font-semibold">Descripción:</label>
-                <input type="text" name="descripcion" class="w-full bg-white/20 border border-white/30 rounded-2xl px-6 py-3 text-black text-base placeholder-black/60 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-transparent backdrop-blur-sm transition-all duration-200">
+            <div>
+                <label
+                    class="block text-[10px] font-black uppercase mb-2 tracking-widest opacity-60">Descripción</label>
+                <input type="text" name="descripcion" class="input-glass">
             </div>
-            <div class="w-full flex flex-col items-start">
-                <label class="block mb-3 text-black text-lg font-semibold">Fecha:</label>
-                <input type="date" name="fecha" required class="w-full border border-white/30 rounded-2xl px-6 py-3 text-black text-base focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-transparent backdrop-blur-sm transition-all duration-200">
+            <div>
+                <label class="block text-[10px] font-black uppercase mb-2 tracking-widest opacity-60">Fecha</label>
+                <input type="date" name="fecha" required class="input-glass text-xs">
             </div>
-            <button type="submit" class="mx-auto bg-white/40 backdrop-blur-xl text-black px-10 py-3 rounded-2xl font-semibold border border-white/30 hover:bg-white/50 transition-all duration-200 shadow-lg hover:shadow-xl">Registrar</button>
+            <div class="flex justify-center pt-4">
+                <button type="submit" class="btn-fluent px-8 flex items-center justify-center gap-2 py-2"><i class="fas fa-check-circle"></i> Registrar</button>
+            </div>
         </form>
     </div>
 
     <!-- Tabla de inversiones -->
-    <div class="bg-white/20 backdrop-blur-xl p-8 rounded-3xl shadow-2xl border border-white/30">
-        <h3 class="text-2xl font-bold mb-6 text-black">Total de inversiones: $ {{ total_inversiones|format_money }}</h3>
-        <div class="overflow-x-auto bg-white/30 rounded-2xl border border-white/30 backdrop-blur-lg">
-            <table class="w-full text-base">
+    <div class="fluent-card p-10">
+        <div class="flex justify-between items-center mb-10">
+            <h3 class="text-xl font-bold opacity-60 uppercase tracking-widest">Historial de inversiones</h3>
+            <div class="text-right">
+                <p class="text-[10px] font-black opacity-40 uppercase">Total acumulado</p>
+                <p class="text-3xl font-black text-blue-700">$ {{ total_inversiones|format_money }}</p>
+            </div>
+        </div>
+
+        <div class="overflow-x-auto bg-white/40 rounded-3xl border border-white/20">
+            <table class="w-full text-[13px] text-left">
                 <thead>
-                    <tr class="border-b border-white/30 bg-white/20">
-                        <th class="px-4 py-3 text-left font-semibold text-black">Fecha</th>
-                        <th class="px-4 py-3 text-left font-semibold text-black">Tipo</th>
-                        <th class="px-4 py-3 text-left font-semibold text-black">Descripción</th>
-                        <th class="px-4 py-3 text-right font-bold text-black">Monto</th>
+                    <tr class="bg-black/5">
+                        <th class="px-6 py-5 font-black uppercase tracking-widest text-[10px]">Fecha</th>
+                        <th class="px-6 py-5 font-black uppercase tracking-widest text-[10px]">Tipo</th>
+                        <th class="px-6 py-5 font-black uppercase tracking-widest text-[10px]">Descripción</th>
+                        <th class="px-6 py-5 text-right font-black uppercase tracking-widest text-[10px]">Monto</th>
                     </tr>
                 </thead>
-                <tbody>
+                <tbody class="font-semibold">
                     {% if inversiones %}
-                        {% for inversion in inversiones %}
-                        <tr class="border-b border-white/20 hover:bg-white/10 transition">
-                            <td class="px-4 py-3 text-black font-semibold">{{ inversion.fecha|format_date }}</td>
-                            <td class="px-4 py-3 text-black font-medium capitalize">{{ inversion.monto if inversion.monto else 'N/A' }}</td>
-                            <td class="px-4 py-3 text-black font-medium">{{ inversion.descripcion }}</td>
-                            <td class="px-4 py-3 text-right font-bold text-black">$ {{ inversion.monto|format_money }}</td>
-                        </tr>
-                        {% endfor %}
+                    {% for inversion in inversiones %}
+                    <tr class="border-t border-black/5 hover:bg-white/10 transition-all">
+                        <td class="px-6 py-4">{{ inversion.fecha|format_date }}</td>
+                        <td class="px-6 py-4">
+                            <span
+                                class="bg-black/5 px-2 py-1 rounded text-[10px] font-black uppercase tracking-tighter">{{
+                                inversion.tipo|replace('_', ' ') }}</span>
+                        </td>
+                        <td class="px-6 py-4">{{ inversion.descripcion }}</td>
+                        <td class="px-6 py-4 text-right font-black text-blue-700">$ {{ inversion.monto|format_money }}
+                        </td>
+                    </tr>
+                    {% endfor %}
                     {% else %}
-                        <tr>
-                            <td colspan="4" class="px-4 py-4 text-center text-gray-400">Sin inversiones registradas</td>
-                        </tr>
+                    <tr>
+                        <td colspan="4" class="px-6 py-20 text-center opacity-40 italic">Sin inversiones registradas
+                        </td>
+                    </tr>
                     {% endif %}
                 </tbody>
             </table>
@@ -111,4 +84,3 @@
     </div>
 </div>
 {% endblock %}
-

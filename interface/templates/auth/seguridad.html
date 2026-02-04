@@ -1,0 +1,83 @@
+{% extends 'layout/base.html' %}
+{% block title %}Seguridad - App Money{% endblock %}
+{% block content %}
+<div class="fluent-card p-10 max-w-4xl w-full mx-auto">
+    <h2 class="text-3xl font-black mb-12 text-center uppercase tracking-tight">Configuración de seguridad</h2>
+
+    <div class="space-y-8">
+        <!-- 2FA Toggle -->
+        <div
+            class="bg-white/40 p-8 rounded-3xl border border-white/20 flex items-center justify-between transition-all hover:bg-white/50">
+            <div class="flex items-center gap-6">
+                <div
+                    class="w-16 h-16 bg-blue-500/10 rounded-2xl flex items-center justify-center border border-blue-500/20">
+                    <i class="fas fa-shield-alt text-3xl text-blue-600"></i>
+                </div>
+                <div>
+                    <h4 class="font-black text-lg tracking-tight">Autenticación de dos factores (2FA)</h4>
+                    <p class="text-xs font-bold opacity-40 uppercase tracking-widest mt-1">
+                        Nivel de protección:
+                        <span class="{{ 'text-green-600' if usuario.MFA else 'text-red-500' }}">
+                            {{ 'Alto' if usuario.MFA else 'Bajo' }}
+                        </span>
+                    </p>
+                </div>
+            </div>
+            <form method="POST">
+                <label class="relative inline-flex items-center cursor-pointer scale-125">
+                    <input type="checkbox" name="MFA" class="sr-only peer" {% if
+                        usuario.MFA %}checked{% endif %} onchange="this.form.submit()">
+                    <div
+                        class="w-12 h-6 bg-black/10 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-green-600 border border-black/5">
+                    </div>
+                </label>
+            </form>
+        </div>
+
+        <!-- Último Login -->
+        <div class="bg-white/40 p-8 rounded-3xl border border-white/20">
+            <div class="flex items-center gap-4 mb-4">
+                <i class="fas fa-history opacity-40 text-xl"></i>
+                <h4 class="font-black uppercase tracking-widest text-[10px] opacity-60">Actividad de la cuenta</h4>
+            </div>
+            <p class="text-lg font-semibold">
+                Último inicio de sesión detectado:
+                <span class="font-black text-blue-600 ml-2">{{ usuario.ultimo_login if usuario.ultimo_login else 'Primer
+                    ingreso' }}</span>
+            </p>
+        </div>
+
+
+    </div>
+
+    <!-- QR Modal -->
+    {% if qr_code %}
+    <div class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+        <div
+            class="fluent-card bg-white rounded-3xl p-8 max-w-md w-full text-center relative shadow-2xl animate-[fadeIn_0.3s_ease-out]">
+            <h3 class="text-2xl font-black mb-4 uppercase tracking-tight">Escanea el código QR</h3>
+            <p class="text-gray-500 mb-6 text-sm font-semibold">Abre tu aplicación de autenticación (Google Auth, Authy)
+                y escanea este código.</p>
+
+            <div class="bg-white p-4 rounded-xl border border-gray-200 inline-block mb-6 shadow-inner">
+                <img src="data:image/png;base64,{{ qr_code }}" class="w-48 h-48 mx-auto">
+            </div>
+
+            <div class="mb-6">
+                <p class="text-[10px] uppercase font-bold tracking-widest text-gray-400 mb-1">Tu secreto</p>
+                <p
+                    class="text-xs font-mono bg-gray-100 p-2 rounded text-gray-600 break-all select-all border border-gray-200">
+                    {{ secret }}</p>
+            </div>
+
+            <a href="{{ url_for('main.seguridad') }}"
+                class="btn-fluent bg-blue-600 text-white hover:bg-blue-700 px-8 py-3 w-full justify-center flex items-center gap-2">
+                <i class="fas fa-shield-alt"></i> Habilitar 2FA
+                Entendido
+            </a>
+        </div>
+    </div>
+    {% endif %}
+
+</div>
+{% endblock %}

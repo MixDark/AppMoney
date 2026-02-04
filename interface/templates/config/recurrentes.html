@@ -1,0 +1,87 @@
+{% extends 'layout/base.html' %}
+{% block title %}Recurrentes - App Money{% endblock %}
+{% block content %}
+<div class="fluent-card p-10 max-w-6xl w-full">
+    <h2 class="text-3xl font-black mb-10 text-center uppercase tracking-tight">Transacciones recurrentes</h2>
+
+    <!-- Formulario -->
+    <form method="POST"
+        class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12 bg-white/30 p-8 rounded-3xl border border-white/20">
+        <div>
+            <label class="block text-[10px] font-black uppercase mb-2 tracking-widest opacity-60">Descripción</label>
+            <input type="text" name="descripcion" required class="input-glass h-10">
+        </div>
+        <div>
+            <label class="block text-[10px] font-black uppercase mb-2 tracking-widest opacity-60">Tipo</label>
+            <select name="tipo" class="input-glass appearance-none cursor-pointer h-10">
+                <option value="gasto">Gasto</option>
+                <option value="ingreso">Ingreso</option>
+            </select>
+        </div>
+        <div>
+            <label class="block text-[10px] font-black uppercase mb-2 tracking-widest opacity-60">Monto</label>
+            <input type="number" step="0.01" name="monto" required class="input-glass h-10">
+        </div>
+        <div>
+            <label class="block text-[10px] font-black uppercase mb-2 tracking-widest opacity-60">Frecuencia</label>
+            <select name="frecuencia" class="input-glass appearance-none cursor-pointer h-10">
+                <option value="mensual">Mensual</option>
+                <option value="semanal">Semanal</option>
+                <option value="diario">Diario</option>
+                <option value="anual">Anual</option>
+            </select>
+        </div>
+        <div>
+            <label class="block text-[10px] font-black uppercase mb-2 tracking-widest opacity-60">Próxima fecha</label>
+            <input type="date" name="proxima_fecha" required class="input-glass text-xs h-10">
+        </div>
+        <div class="flex flex-col justify-end">
+            <button type="submit" class="btn-fluent px-6 h-10 justify-center flex items-center gap-2"><i class="fas fa-clock"></i> Programar</button>
+        </div>
+    </form>
+
+    <!-- Lista de Recurrentes -->
+    <h3 class="text-lg font-bold mb-6 opacity-60 uppercase tracking-widest">Programaciones activas</h3>
+    <div class="overflow-hidden bg-white/40 rounded-3xl border border-white/20">
+        <table class="w-full text-[13px] text-left">
+            <thead>
+                <tr class="bg-black/5">
+                    <th class="px-6 py-5 font-black uppercase tracking-widest text-[10px]">Frecuencia</th>
+                    <th class="px-6 py-5 font-black uppercase tracking-widest text-[10px]">Descripción</th>
+                    <th class="px-6 py-5 font-black uppercase tracking-widest text-[10px]">Monto</th>
+                    <th class="px-6 py-5 font-black uppercase tracking-widest text-[10px]">Próxima Fecha</th>
+                    <th class="px-6 py-5 text-center font-black uppercase tracking-widest text-[10px]">Acciones</th>
+                </tr>
+            </thead>
+            <tbody class="font-semibold">
+                {% for r in recurrentes %}
+                <tr class="border-t border-black/5 hover:bg-white/10 transition-all">
+                    <td class="px-6 py-4">
+                        <span class="bg-black/5 px-2 py-1 rounded text-[10px] font-black uppercase tracking-tighter">{{
+                            r.frecuencia }}</span>
+                    </td>
+                    <td class="px-6 py-4">{{ r.descripcion|capitalize }}</td>
+                    <td
+                        class="px-6 py-4 font-black {% if r.tipo == 'gasto' %}text-red-700{% else %}text-green-700{% endif %}">
+                        $ {{ r.monto|format_money }}
+                    </td>
+                    <td class="px-6 py-4">{{ r.proxima_fecha|format_date }}</td>
+                    <td class="px-6 py-4 text-center">
+                        <a href="{{ url_for('main.eliminar_recurrente', id=r.id) }}"
+                            class="text-red-600 hover:scale-110 inline-block transition-transform">
+                            <i class="fas fa-trash-alt"></i>
+                        </a>
+                    </td>
+                </tr>
+                {% endfor %}
+                {% if not recurrentes %}
+                <tr>
+                    <td colspan="5" class="px-6 py-20 text-center opacity-40 italic">No hay transacciones recurrentes
+                        programadas.</td>
+                </tr>
+                {% endif %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

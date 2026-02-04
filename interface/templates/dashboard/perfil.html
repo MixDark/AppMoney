@@ -1,0 +1,79 @@
+{% extends 'layout/base.html' %}
+{% block title %}Información del perfil - App Money{% endblock %}
+{% block content %}
+<div class="fluent-card p-12 max-w-3xl w-full mx-auto">
+    <!-- Title -->
+    <h2 class="text-3xl font-black mb-12 text-center uppercase tracking-tight">Información del perfil</h2>
+
+    {% if mensaje %}
+    <p class="{% if 'incorrecta' in mensaje.lower() or 'requerida' in mensaje.lower() or 'no coinciden' in mensaje.lower() %}text-red-700 bg-red-100/50 border-red-200{% else %}text-green-700 bg-green-100/50 border-green-200{% endif %} mb-8 text-center text-sm font-bold py-3 px-6 rounded-xl border">
+        {{ mensaje }}
+    </p>
+    {% endif %}
+
+    <form method="post" enctype="multipart/form-data" class="space-y-8">
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-8 mb-12">
+        <!-- Photo Section -->
+        <div class="md:col-span-1 flex flex-col items-center">
+            <div class="relative mb-6">
+                <div
+                    class="w-32 h-32 bg-black/5 rounded-full flex items-center justify-center text-black text-5xl font-black border-4 border-white/40 shadow-xl overflow-hidden backdrop-blur-xl">
+                    {% if usuario.foto_perfil %}
+                    <img src="{{ usuario.foto_perfil }}" class="w-full h-full object-cover">
+                    {% else %}
+                    {{ usuario.nombre_usuario[0].upper() }}
+                    {% endif %}
+                </div>
+                <!-- Input oculto para la foto -->
+                <input type="file" name="foto_perfil" id="foto_perfil" class="hidden" accept="image/*">
+                <button type="button" onclick="document.getElementById('foto_perfil').click()"
+                    class="absolute bottom-1 right-1 bg-white/60 backdrop-blur-md p-2 rounded-full shadow-lg border border-black/5 text-black hover:scale-110 transition-all cursor-pointer">
+                    <i class="fas fa-camera text-xs"></i>
+                </button>
+            </div>
+            <p class="text-xl font-black text-center">{{ usuario.nombre_usuario }}</p>
+        </div>
+
+        <!-- Info Section -->
+        <div class="md:col-span-2 space-y-6">
+            <!-- Nombre Completo -->
+            <div>
+                <label class="block text-[10px] font-black uppercase mb-2 tracking-widest opacity-60">Nombre completo</label>
+                <input type="text" name="nombre_completo" value="{{ usuario.nombre_completo or '' }}" class="input-glass">
+            </div>
+
+            <!-- Email -->
+            <div>
+                <label class="block text-[10px] font-black uppercase mb-2 tracking-widest opacity-60">Email</label>
+                <input type="email" name="email" value="{{ usuario.email or '' }}" class="input-glass">
+            </div>
+
+            <!-- Teléfono -->
+            <div>
+                <label class="block text-[10px] font-black uppercase mb-2 tracking-widest opacity-60">Teléfono</label>
+                <input type="tel" name="telefono" value="{{ usuario.telefono or '' }}" class="input-glass">
+            </div>
+
+            <!-- País -->
+            <div>
+                <label class="block text-[10px] font-black uppercase mb-2 tracking-widest opacity-60">País</label>
+                <input type="text" name="pais" value="{{ usuario.pais or '' }}" class="input-glass">
+            </div>
+
+            <!-- Ciudad -->
+            <div>
+                <label class="block text-[10px] font-black uppercase mb-2 tracking-widest opacity-60">Ciudad</label>
+                <input type="text" name="ciudad" value="{{ usuario.ciudad or '' }}" class="input-glass">
+            </div>
+        </div>
+        </div>
+        <!-- Botones -->
+        <div class="flex gap-4 justify-end pt-8 border-t border-black/5">
+            <a href="/" class="btn-fluent btn-red px-6 flex items-center gap-2"><i class="fas fa-arrow-left"></i> Volver</a>
+            <button type="submit" class="btn-fluent px-6 flex items-center gap-2">
+                <i class="fas fa-save"></i> Guardar
+            </button>
+        </div>
+    </form>
+</div>
+{% endblock %}

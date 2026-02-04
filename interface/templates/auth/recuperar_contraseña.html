@@ -1,8 +1,8 @@
 {% extends 'layout/base.html' %}
-{% block title %}Registro de usuario{% endblock %}
+{% block title %}Recuperar - App Money{% endblock %}
 {% block content %}
 <div class="fluent-card p-12 max-w-md w-full flex flex-col items-center">
-    <h2 class="text-2xl font-bold mb-10 text-center">Registro de usuario</h2>
+    <h2 class="text-2xl font-black mb-2 text-center uppercase tracking-tight">Recuperar cuenta</h2>
 
     {% if mensaje %}
     <p
@@ -16,21 +16,14 @@
             <label class="block mb-2 text-sm font-bold">Usuario:</label>
             <input type="text" name="nombre_usuario" required class="input-glass">
         </div>
-
-        <div class="w-full">
-            <label class="block mb-2 text-sm font-bold">Contraseña:</label>
-            <input type="password" name="password" required class="input-glass">
-        </div>
-
         <div class="w-full flex justify-center pt-4">
-            <button type="submit" class="btn-fluent px-12 py-3 flex items-center justify-center gap-2">
-                <i class="fas fa-user-plus"></i> Registrar
+            <button type="submit" class="btn-fluent px-10 py-4 justify-center flex items-center gap-2">
+                <i class="fas fa-envelope"></i> Restablecer
             </button>
         </div>
     </form>
-
-    <div class="mt-8 flex flex-col items-center">
-        <a href="/login" class="link-fluent text-sm px-4 py-2">Volver al login</a>
+    <div class="mt-10">
+        <a href="/login" class="link-fluent text-sm font-bold">Volver al login</a>
     </div>
 </div>
 {% endblock %}

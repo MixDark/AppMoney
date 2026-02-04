@@ -1,20 +1,41 @@
 {% extends 'layout/base.html' %}
-{% block title %}Iniciar sesión{% endblock %}
+{% block title %}Inicio de sesión{% endblock %}
 {% block content %}
-<div class="max-w-sm w-full bg-white/20 backdrop-blur-xl p-10 rounded-3xl shadow-2xl border border-white/30 flex flex-col items-center">
-    <h2 class="text-3xl font-bold mb-8 text-center text-black">Inicio de sesión</h2>
-    {% if mensaje %}<p class="text-red-700 mb-6 text-center text-lg font-semibold">{{ mensaje|capitalize }}</p>{% endif %}
-    <form method="post" class="space-y-8 w-full flex flex-col items-start">
-        <div class="w-full flex flex-col items-start">
-            <label class="block mb-3 text-black text-lg font-semibold">Usuario:</label>
-            <input type="text" name="nombre_usuario" required class="w-full bg-white/20 border border-white/30 rounded-2xl px-6 py-4 text-black text-base placeholder-black/60 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-transparent backdrop-blur-sm transition-all duration-200">
+<div class="fluent-card p-12 max-w-md w-full flex flex-col items-center">
+    <h2 class="text-3xl font-bold mb-10 text-center">Inicio de sesión</h2>
+
+    {% if mensaje %}
+    <p
+        class="text-red-600 mb-6 text-center text-sm font-bold bg-red-100/50 py-2 px-4 rounded-lg w-full border border-red-200">
+        {{ mensaje|capitalize }}
+    </p>
+    {% endif %}
+
+    <form method="post" class="space-y-8 w-full flex flex-col">
+        <div class="w-full">
+            <label class="block mb-2 text-sm font-bold">Usuario:</label>
+            <input type="text" name="nombre_usuario" required class="input-glass">
         </div>
-        <div class="w-full flex flex-col items-start">
-            <label class="block mb-3 text-black text-lg font-semibold">Contraseña:</label>
-            <input type="password" name="password" required class="w-full bg-white/20 border border-white/30 rounded-2xl px-6 py-4 text-black text-base placeholder-black/60 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-transparent backdrop-blur-sm transition-all duration-200">
+
+        <div class="w-full">
+            <label class="block mb-2 text-sm font-bold">Contraseña:</label>
+            <input type="password" name="password" required class="input-glass">
         </div>
-        <button type="submit" class="mx-auto bg-white/40 backdrop-blur-xl text-black px-10 py-4 rounded-2xl text-2xl font-semibold border border-white/30 hover:bg-white/50 transition-all duration-200 shadow-lg hover:shadow-xl transform hover:scale-105">Ingresar</button>
+
+        <div class="w-full flex justify-center pt-4">
+            <button type="submit" class="btn-fluent px-8 py-4 justify-center flex items-center gap-2">
+                <i class="fas fa-sign-in-alt"></i> Ingresar
+            </button>
+        </div>
     </form>
-    <p class="mt-8 text-center text-black text-lg">¿No tienes cuenta? <a href="/registrar_usuario" class="text-blue-600 hover:text-blue-700 font-bold transition-colors">Regístrate aquí</a></p>
+
+    <div class="mt-10 flex flex-col items-center gap-3">
+        <p class="text-center text-sm font-semibold">
+            ¿No tienes cuenta? <a href="/registrar_usuario" class="link-fluent">Regístrate aquí</a>
+        </p>
+        <a href="/recuperar_contraseña" class="text-sm font-bold opacity-60 hover:opacity-100 transition-opacity">
+            ¿Olvidó su contraseña?
+        </a>
+    </div>
 </div>
 {% endblock %}

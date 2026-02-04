@@ -1,0 +1,37 @@
+{% extends 'layout/base.html' %}
+{% block title %}Nueva Contraseña - App Money{% endblock %}
+{% block content %}
+<div class="fluent-card p-12 max-w-md w-full flex flex-col items-center">
+    <h2 class="text-2xl font-black mb-10 text-center uppercase tracking-tight">Nueva contraseña</h2>
+
+    {% if mensaje %}
+    <p
+        class="text-red-600 mb-6 text-center text-sm font-bold bg-red-100/50 py-2 px-4 rounded-lg w-full border border-red-200">
+        {{ mensaje|capitalize }}
+    </p>
+    {% endif %}
+
+    <form method="post" class="space-y-8 w-full flex flex-col">
+        <input type="hidden" name="token" value="{{ token }}">
+
+        <div class="w-full">
+            <label class="block mb-2 text-sm font-bold">Nueva contraseña:</label>
+            <input type="password" name="password_nueva" required class="input-glass">
+        </div>
+
+        <div class="w-full">
+            <label class="block mb-2 text-sm font-bold">Confirmar contraseña:</label>
+            <input type="password" name="password_confirmar" required class="input-glass">
+        </div>
+
+        <div class="w-full flex justify-center pt-4">
+            <button type="submit" class="btn-fluent w-full justify-center py-4 flex items-center gap-2">
+                <i class="fas fa-key"></i> Restablecer
+            </button>
+        </div>
+    </form>
+    <div class="mt-8">
+        <a href="/login" class="link-fluent text-sm font-bold">Volver al login</a>
+    </div>
+</div>
+{% endblock %}

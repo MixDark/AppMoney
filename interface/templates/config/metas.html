@@ -1,0 +1,59 @@
+{% extends 'layout/base.html' %}
+{% block title %}Metas - App Money{% endblock %}
+{% block content %}
+<div class="fluent-card p-10 max-w-6xl w-full">
+    <h2 class="text-3xl font-black mb-10 text-center uppercase tracking-tight">Mis metas de ahorro</h2>
+
+    <!-- Agregar Meta -->
+    <form method="POST"
+        class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-12 bg-white/30 p-8 rounded-3xl border border-white/20">
+        <div class="md:col-span-2">
+            <label class="block text-[10px] font-black uppercase mb-2 tracking-widest opacity-60">Nombre De La
+                Meta</label>
+            <input type="text" name="nombre" required class="input-glass h-10">
+        </div>
+        <div>
+            <label class="block text-[10px] font-black uppercase mb-2 tracking-widest opacity-60">Monto Objetivo</label>
+            <input type="number" step="0.01" name="monto_objetivo" required class="input-glass h-10">
+        </div>
+        <div class="flex flex-col justify-end">
+            <button type="submit" class="btn-fluent px-6 h-10 justify-center flex items-center gap-2"><i class="fas fa-bullseye"></i> Crear</button>
+        </div>
+    </form>
+
+    <!-- Grid de Metas -->
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+        {% for m in metas %}
+        <div class="bg-white/40 p-8 rounded-[32px] border border-white/20 flex flex-col items-center">
+            <div class="w-20 h-20 bg-blue-500/10 rounded-full flex items-center justify-center mb-6">
+                <i class="fas fa-bullseye text-3xl text-blue-600"></i>
+            </div>
+            <h4 class="font-black text-xl mb-1">{{ m.nombre }}</h4>
+            <p class="text-2xl font-black text-blue-800 mb-6">$ {{ m.monto_objetivo|format_money }}</p>
+
+            <div class="w-full mb-4">
+                <div class="flex justify-between text-[10px] font-black uppercase tracking-widest mb-2 opacity-60">
+                    <span>Progreso</span>
+                    <span>{{ m.porcentaje }}%</span>
+                </div>
+                <div class="w-full bg-black/5 rounded-full h-3 overflow-hidden border border-black/5">
+                    <div class="h-full bg-blue-600" style="width: {{ m.porcentaje }}%"></div>
+                </div>
+            </div>
+
+            <p class="text-xs font-bold opacity-40 mb-8">Faltan: $ {{ (m.monto_objetivo - m.monto_actual)|format_money
+                }}</p>
+
+            <div class="flex gap-4 w-full">
+                <button class="btn-fluent flex-1 py-2 text-sm justify-center flex items-center gap-1"><i class="fas fa-plus"></i> Aportar</button>
+                <a href="{{ url_for('main.eliminar_meta', id=m.id) }}" class="btn-fluent btn-red p-2 flex items-center gap-1">
+                    <i class="fas fa-trash"></i> Eliminar
+                </a>
+                    <i class="fas fa-trash"></i>
+                </a>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% endblock %}

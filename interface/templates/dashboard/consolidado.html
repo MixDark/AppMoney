@@ -1,117 +1,116 @@
 {% extends 'layout/base.html' %}
-{% block title %}App Money{% endblock %}
+{% block title %}Dashboard - App Money{% endblock %}
 {% block content %}
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2"></script>
 
-<div class="w-full flex flex-col items-center gap-6">
-    <!-- Resumen Financiero Superior -->
-    <div class="bg-white/20 backdrop-blur-xl p-8 rounded-3xl shadow-2xl border border-white/30 max-w-7xl w-full">
-        <h2 class="text-4xl font-bold mb-6 text-center text-black">Consolidado de gastos e ingresos</h2>
-        
-        <div class="bg-white/40 p-6 rounded-2xl w-full border border-white/30 mb-8 backdrop-blur-lg">
-            <h3 class="font-bold text-2xl mb-4 text-center text-black">Resumen financiero</h3>
-            <div class="grid grid-cols-4 gap-4">
-                <div class="text-center">
-                    <p class="text-base text-black font-semibold">Total ingresos</p>
-                    <p class="text-4xl font-bold text-green-700">$ {{ total_ingresos|format_money }}</p>
+<div class="fluent-card p-8 max-w-7xl w-full">
+    <h2 class="text-3xl font-black mb-10 text-center uppercase tracking-tight">Consolidado financiero</h2>
+
+    <!-- Resumen Financiero en 4 Columnas -->
+    <div class="mb-12 text-center bg-white/30 p-8 rounded-3xl border border-white/20">
+        <div class="grid grid-cols-4 gap-4">
+            <div>
+                <p class="text-[10px] font-black opacity-40 uppercase tracking-widest mb-2">Ingresos</p>
+                <p class="text-2xl font-black text-green-600">$ {{ total_ingresos|format_money }}</p>
+            </div>
+            <div>
+                <p class="text-[10px] font-black opacity-40 uppercase tracking-widest mb-2">Gastos</p>
+                <p class="text-2xl font-black text-red-600">$ {{ total_gastos|format_money }}</p>
+            </div>
+            <div>
+                <p class="text-[10px] font-black opacity-40 uppercase tracking-widest mb-2">Inversiones</p>
+                <p class="text-2xl font-black text-blue-600">$ {{ total_inversiones|format_money }}</p>
+            </div>
+            <div>
+                <p class="text-[10px] font-black opacity-40 uppercase tracking-widest mb-2">Saldo Neto</p>
+                {% set saldo_total = total_ingresos - total_gastos - total_inversiones %}
+                <p class="text-2xl font-black {% if saldo_total >= 0 %}text-black{% else %}text-red-700{% endif %}">$ {{
+                    saldo_total|format_money }}</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Grid de Secciones -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-12">
+        <!-- Gráficos Principales -->
+        <div class="space-y-12">
+            <!-- Distribución Circular -->
+            <div class="flex flex-col items-center">
+                <h3 class="text-[11px] font-black uppercase tracking-widest mb-6 opacity-60">Distribución de capital
+                </h3>
+                <div style="width: 280px; height: 280px;">
+                    <canvas id="pieChart"></canvas>
                 </div>
-                <div class="text-center border-l border-r border-white/30">
-                    <p class="text-base text-black font-semibold">Total gastos</p>
-                    <p class="text-4xl font-bold text-red-700">$ {{ total_gastos|format_money }}</p>
+                <div class="flex gap-8 mt-8 text-[10px] font-black uppercase tracking-widest">
+                    <span class="text-green-600">Ingresos: {{ analysis.ingreso_porcentaje }}%</span>
+                    <span class="text-red-600">Gastos: {{ analysis.gasto_porcentaje }}%</span>
+                    <span class="text-blue-600">Inv: {{ analysis.inversion_porcentaje }}%</span>
                 </div>
-                <div class="text-center border-r border-white/30">
-                    <p class="text-base text-black font-semibold">Inversiones</p>
-                    <p class="text-4xl font-bold text-blue-700">$ {{ total_inversiones|format_money }}</p>
-                </div>
-                <div class="text-center">
-                    <p class="text-base text-black font-semibold">Saldo</p>
-                    <p class="text-3xl font-bold {% if saldo >= 0 %}text-green-700{% else %}text-red-700{% endif %}">$ {{ saldo|format_money }}</p>
+            </div>
+
+            <!-- Evolutivo -->
+            <div class="w-full">
+                <h3 class="text-[11px] font-black uppercase tracking-widest mb-6 opacity-60">Evolutivo mensual</h3>
+                <div style="height: 250px;">
+                    <canvas id="evolChart"></canvas>
                 </div>
             </div>
         </div>
-        
-        <!-- Grid Principal: Distribución equilibrada -->
-        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <!-- Sección Gráficos (Izquierda) -->
-            <div class="flex flex-col gap-6">
-                <!-- Gráfico de Pastel -->
-                <div class="bg-white/20 rounded-2xl border border-white/30 backdrop-blur-lg h-auto" style="padding: 32px 8px;">
-                    <h3 class="font-bold text-xl mb-6 text-center text-black">Distribución</h3>
-                    <div style="display: flex; justify-content: center; align-items: center; height: 380px; width: 100%;">
-                        <div style="width: 100%; height: 100%; display: flex; justify-content: center; align-items: center; overflow: visible;">
-                            <canvas id="pieChart"></canvas>
-                        </div>
+
+        <!-- Listas de Transacciones Recientes -->
+        <div class="space-y-10">
+            <!-- Ingresos Recientes -->
+            <div class="bg-white/30 p-6 rounded-3xl border border-white/20">
+                <h3 class="text-[11px] font-black uppercase tracking-widest mb-4 text-green-700">Ingresos recientes</h3>
+                <div class="space-y-2">
+                    {% for ingreso in ingresos[:4] %}
+                    <div
+                        class="flex justify-between items-center text-[12px] font-bold py-2 border-b border-black/5 last:border-0">
+                        <span class="opacity-40">{{ ingreso.fecha|format_date }}</span>
+                        <span class="flex-1 px-4 truncate">{{ ingreso.descripcion }}</span>
+                        <span class="text-green-600">$ {{ ingreso.monto|format_money }}</span>
                     </div>
-                    <div style="height: 10px;"></div>
-                </div>
-                
-                <!-- Gráfico de Barras -->
-                <div class="bg-white/20 p-8 rounded-2xl border border-white/30 backdrop-blur-lg h-auto">
-                    <h3 class="font-bold text-xl mb-6 text-center text-black">Comparativa</h3>
-                    <div style="display: flex; justify-content: center; align-items: center; height: 480px; width: 100%;">
-                        <div style="width: 100%; height: 100%; display: flex; justify-content: center; align-items: center;">
-                            <canvas id="barChart" style="max-width: 100%;"></canvas>
-                        </div>
-                    </div>
-                    <div style="height: 60px;"></div>
+                    {% endfor %}
+                    {% if not ingresos %}
+                    <p class="text-[11px] opacity-30 italic py-2">No hay registros</p>
+                    {% endif %}
                 </div>
             </div>
-            
-            <!-- Sección Historial (Derecha) -->
-            <div class="flex flex-col gap-6">
-                <!-- Ingresos -->
-                <div class="bg-white/30 p-4 rounded-2xl border border-white/30 backdrop-blur-lg flex-1">
-                    <h3 class="text-lg font-semibold mb-3 text-center text-green-700">Ingresos</h3>
-                    <div class="max-h-96 overflow-y-auto">
-                        {% if ingresos %}
-                            {% for ingreso in ingresos %}
-                            <div class="grid grid-cols-3 gap-2 border-b border-white/30 pb-2 mb-2 text-base items-center">
-                                <span class="font-bold text-black">{{ ingreso.fecha|format_date }}</span>
-                                <span class="text-black font-medium">{{ ingreso.descripcion }}</span>
-                                <span class="font-bold text-green-700 text-right">$ {{ ingreso.monto|format_money }}</span>
-                            </div>
-                            {% endfor %}
-                        {% else %}
-                            <div class="text-center text-gray-400 text-base">Sin ingresos</div>
-                        {% endif %}
-                    </div>
-                </div>
-                
-                <!-- Gastos -->
-                <div class="bg-white/30 p-4 rounded-2xl border border-white/30 backdrop-blur-lg flex-1">
-                    <h3 class="text-lg font-semibold mb-3 text-center text-red-700">Gastos</h3>
-                    <div class="max-h-96 overflow-y-auto">
-                        {% if gastos %}
-                            {% for gasto in gastos %}
-                            <div class="grid grid-cols-3 gap-2 border-b border-white/30 pb-2 mb-2 text-base items-center">
-                                <span class="font-bold text-black">{{ gasto.fecha|format_date }}</span>
-                                <span class="text-black font-medium">{{ gasto.descripcion }}</span>
-                                <span class="font-bold text-red-700 text-right">$ {{ gasto.monto|format_money }}</span>
-                            </div>
-                            {% endfor %}
-                        {% else %}
-                            <div class="text-center text-gray-400 text-sm">Sin gastos</div>
-                        {% endif %}
-                    </div>
-                </div>
 
-                <!-- Inversiones -->
-                <div class="bg-white/30 p-4 rounded-2xl border border-white/30 backdrop-blur-lg flex-1">
-                    <h3 class="text-lg font-semibold mb-3 text-center text-blue-700">Inversiones</h3>
-                    <div class="max-h-96 overflow-y-auto">
-                        {% if inversiones %}
-                            {% for inversion in inversiones %}
-                            <div class="grid grid-cols-3 gap-2 border-b border-white/30 pb-2 mb-2 text-base items-center">
-                                <span class="font-bold text-black">{{ inversion.fecha|format_date }}</span>
-                                <span class="text-black font-medium">{{ inversion.descripcion }}</span>
-                                <span class="font-bold text-blue-700 text-right">$ {{ inversion.monto|format_money }}</span>
-                            </div>
-                            {% endfor %}
-                        {% else %}
-                            <div class="text-center text-gray-400 text-sm">Sin inversiones</div>
-                        {% endif %}
+            <!-- Gastos Recientes -->
+            <div class="bg-white/30 p-6 rounded-3xl border border-white/20">
+                <h3 class="text-[11px] font-black uppercase tracking-widest mb-4 text-red-700">Gastos recientes</h3>
+                <div class="space-y-2">
+                    {% for gasto in gastos[:4] %}
+                    <div
+                        class="flex justify-between items-center text-[12px] font-bold py-2 border-b border-black/5 last:border-0">
+                        <span class="opacity-40">{{ gasto.fecha|format_date }}</span>
+                        <span class="flex-1 px-4 truncate">{{ gasto.descripcion }}</span>
+                        <span class="text-red-600">$ {{ gasto.monto|format_money }}</span>
                     </div>
+                    {% endfor %}
+                    {% if not gastos %}
+                    <p class="text-[11px] opacity-30 italic py-2">No hay registros</p>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Inversiones Recientes -->
+            <div class="bg-white/30 p-6 rounded-3xl border border-white/20">
+                <h3 class="text-[11px] font-black uppercase tracking-widest mb-4 text-blue-700">Inversiones recientes
+                </h3>
+                <div class="space-y-2">
+                    {% for inv in inversiones[:4] %}
+                    <div
+                        class="flex justify-between items-center text-[12px] font-bold py-2 border-b border-black/5 last:border-0">
+                        <span class="opacity-40">{{ inv.fecha|format_date }}</span>
+                        <span class="flex-1 px-4 truncate">{{ inv.descripcion }}</span>
+                        <span class="text-blue-600">$ {{ inv.monto|format_money }}</span>
+                    </div>
+                    {% endfor %}
+                    {% if not inversiones %}
+                    <p class="text-[11px] opacity-30 italic py-2">No hay registros</p>
+                    {% endif %}
                 </div>
             </div>
         </div>
@@ -119,170 +118,71 @@
 </div>
 
 <script>
-    // Registrar el plugin de dataLabels
-    Chart.register(ChartDataLabels);
-    
-    // Datos para los gráficos
-    const totalIngresos = {{ total_ingresos }};
-    const totalGastos = {{ total_gastos }};
-    const totalInversiones = {{ total_inversiones }};
-    
-    // Gráfico de Pastel
+    // Gráfico de Distribución (Doughnut)
     const pieCtx = document.getElementById('pieChart').getContext('2d');
     new Chart(pieCtx, {
         type: 'doughnut',
         data: {
             labels: ['Ingresos', 'Gastos', 'Inversiones'],
             datasets: [{
-                data: [totalIngresos, totalGastos, totalInversiones],
-                backgroundColor: ['#15803d', '#b91c1c', '#1e40af'],
-                borderColor: ['#15803d', '#b91c1c', '#1e40af'],
-                borderWidth: 2
+                data: [{{ total_ingresos }}, {{ total_gastos }}, {{ total_inversiones }}],
+        backgroundColor: ['#15803d', '#b91c1c', '#1d4ed8'],
+        borderWidth: 0,
+        hoverOffset: 12
             }]
         },
         options: {
-            responsive: true,
-            maintainAspectRatio: true,
-            plugins: {
-                datalabels: {
-                    display: false
-                },
-                legend: {
-                    position: 'bottom',
-                    labels: {
-                        font: { size: 14, weight: 'bold' },
-                        color: '#000000',
-                        padding: 20,
-                        boxWidth: 0,
-                        boxHeight: 0,
-                        generateLabels: function(chart) {
-                            const data = chart.data;
-                            const datasets = data.datasets;
-                            const labels = data.labels;
-                            let result = [];
-                            
-                            if (datasets.length > 0) {
-                                const dataset = datasets[0];
-                                const total = dataset.data.reduce((a, b) => a + b, 0);
-                                
-                                let legendText = '';
-                                const orderedIndexes = [1, 0, 2]; // Gastos, Ingresos, Inversiones
-                                
-                                orderedIndexes.forEach((idx, position) => {
-                                    const label = labels[idx];
-                                    const value = dataset.data[idx];
-                                    const percentage = ((value / total) * 100).toFixed(1);
-                                    
-                                    if (position > 0) {
-                                        legendText += '     '; // Espaciado entre items
-                                    }
-                                    legendText += label + ': ' + percentage + '%';
-                                });
-                                
-                                result.push({
-                                    text: legendText,
-                                    fillStyle: 'rgba(0,0,0,0)',
-                                    hidden: false,
-                                    index: 0
-                                });
-                            }
-                            return result;
-                        }
-                    }
-                }
-            }
-        }
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+            legend: { display: false }
+        },
+        cutout: '75%'
+    }
     });
-    
-    // Gráfico de Barras
-    const barCtx = document.getElementById('barChart').getContext('2d');
-    new Chart(barCtx, {
-        type: 'bar',
+
+    // Gráfico Evolutivo (Líneas)
+    const evolCtx = document.getElementById('evolChart').getContext('2d');
+    new Chart(evolCtx, {
+        type: 'line',
         data: {
-            labels: ['Ingresos', 'Gastos', 'Inversiones'],
-            datasets: [{
-                label: 'Monto',
-                data: [totalIngresos, totalGastos, totalInversiones],
-                backgroundColor: ['#15803d', '#b91c1c', '#1e40af'],
-                borderColor: ['#15803d', '#b91c1c', '#1e40af'],
-                borderWidth: 2,
-                borderRadius: 8
-            }]
+            labels: {{ analysis.meses_labels | tojson }},
+        datasets: [
+        {
+            label: 'Ingresos',
+            data: {{ analysis.data_ingresos | tojson }},
+        borderColor: '#15803d',
+        backgroundColor: 'rgba(21, 128, 61, 0.1)',
+        fill: true,
+        tension: 0.4
+                },
+        {
+            label: 'Gastos',
+            data: {{ analysis.data_gastos | tojson }},
+        borderColor: '#b91c1c',
+        backgroundColor: 'rgba(185, 28, 28, 0.1)',
+        fill: true,
+        tension: 0.4
+                },
+        {
+            label: 'Inversiones',
+            data: {{ analysis.data_inversiones | tojson }},
+        borderColor: '#1d4ed8',
+        backgroundColor: 'rgba(29, 78, 216, 0.1)',
+        fill: true,
+        tension: 0.4
+                }
+    ]
         },
         options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            indexAxis: 'y',
-            plugins: {
-                datalabels: {
-                    display: false
-                },
-                legend: {
-                    display: true,
-                    labels: {
-                        font: { size: 13, weight: 'bold' },
-                        color: '#000000',
-                        padding: 6,
-                        boxWidth: 0,
-                        boxHeight: 0,
-                        generateLabels: function(chart) {
-                            const data = chart.data;
-                            const datasets = data.datasets;
-                            const labels = data.labels;
-                            let result = [];
-                            
-                            // Función para formatear números al estilo español
-                            const formatMoney = (num) => {
-                                const formatted = Math.floor(num).toString().replace(/\B(?=(\d{3})+(?!\d))/g, '.');
-                                return formatted;
-                            };
-                            
-                            if (datasets.length > 0) {
-                                const dataset = datasets[0];
-                                
-                                let legendText = '';
-                                const orderedIndexes = [1, 0, 2]; // Gastos, Ingresos, Inversiones
-                                
-                                orderedIndexes.forEach((idx, position) => {
-                                    const label = labels[idx];
-                                    const value = dataset.data[idx];
-                                    const formattedValue = formatMoney(value);
-                                    
-                                    if (position > 0) {
-                                        legendText += '          '; // Mayor espaciado
-                                    }
-                                    legendText += label + ': ' + formattedValue;
-                                });
-                                
-                                result.push({
-                                    text: legendText,
-                                    fillStyle: 'rgba(0,0,0,0)',
-                                    hidden: false,
-                                    index: 0
-                                });
-                            }
-                            return result;
-                        }
-                    }
-                }
-            },
-            scales: {
-                x: {
-                    beginAtZero: true,
-                    ticks: {
-                        color: '#000000'
-                    },
-                    grid: {
-                        color: 'rgba(255,255,255,0.1)'
-                    }
-                },
-                y: {
-                    ticks: {
-                        color: '#000000'
-                    }
-                }
-            }
-        }
+        responsive: true,
+        maintainAspectRatio: false,
+        scales: {
+            y: { display: false },
+            x: { grid: { display: false }, ticks: { font: { size: 9, weight: 'bold' } } }
+        },
+        plugins: { legend: { display: false } }
+    }
     });
 </script>
 {% endblock %}

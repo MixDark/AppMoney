@@ -4,7 +4,7 @@ USE app_money;
 -- Tabla de usuarios
 CREATE TABLE IF NOT EXISTS usuarios (
     id INT AUTO_INCREMENT PRIMARY KEY,
-    nombre_usuario VARCHAR(50) NOT NULL UNIQUE,
+    nombre_usuario VARCHAR(100) NOT NULL UNIQUE,
     password_hash VARCHAR(255) NOT NULL,
     creado_en TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
@@ -42,7 +42,17 @@ CREATE TABLE IF NOT EXISTS inversiones (
     FOREIGN KEY (usuario_id) REFERENCES usuarios(id) ON DELETE CASCADE
 );
 
--- Insertar usuario de prueba
+-- Tabla de recuperación de contraseña
+CREATE TABLE IF NOT EXISTS password_reset_tokens (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    usuario_id INT NOT NULL,
+    token VARCHAR(100) NOT NULL UNIQUE,
+    expires_at DATETIME NOT NULL,
+    captcha_attempt INT DEFAULT 0,
+    verified BOOLEAN DEFAULT FALSE,
+    creado_en TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (usuario_id) REFERENCES usuarios(id) ON DELETE CASCADE
+);
 -- Contraseña: Alice12+
 -- Hash generado con werkzeug.security.generate_password_hash()
 INSERT INTO usuarios (nombre_usuario, password_hash) VALUES (
