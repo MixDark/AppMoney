@@ -1,23 +1,32 @@
-# App Money - Gestor de Finanzas Personales
+# App Money - Gestor de finanzas personales
 
 Una aplicación web para gestionar ingresos, gastos e inversiones de forma segura y eficiente.
 
-## 🚀 Funcionalidades Principales
+## 🚀 Funcionalidades principales
 
-### 1. **Autenticación de Usuarios**
+### 1. **Autenticación de usuarios**
 - Registro de nuevos usuarios
 - Login seguro con validación de contraseña
+- Autenticación de Dds Factores (2FA) con OTP
 - Gestión de sesiones
 - Opción de editar perfil y cambiar contraseña
+- Recuperación de contraseña con CAPTCHA
 
-### 2. **Dashboard Consolidado**
+### 2. **Autenticación de dos factores (2FA)** ⭐
+- Configuración de TOTP (Time-based One-Time Password)
+- Generación de código QR para escanear en aplicaciones autenticadoras
+- Modal flotante elegante para verificación de código OTP
+- Validación con ventanas de tiempo seguras
+- Soporte para Google Authenticator, Authy, Microsoft Authenticator
+
+### 3. **Dashboard consolidado**
 - Vista general de finanzas (ingresos, gastos, inversiones y saldo)
 - Gráfico de distribución (pastel) mostrando proporciones
-- Gráfico comparativo (barras) con valores absolutos
+- Gráfico comparativo (líneas) con evolución temporal
 - Historial de transacciones recientes por categoría
 - Totales resumidos de cada categoría
 
-### 3. **Registro de Transacciones**
+### 4. **Registro de transacciones**
 - Registro de ingresos, gastos e inversiones
 - Campos: tipo, monto, descripción, fecha
 - Tabla con todos los registros
@@ -25,34 +34,38 @@ Una aplicación web para gestionar ingresos, gastos e inversiones de forma segur
 - **Eliminar** transacciones
 - Validación de datos en tiempo real
 
-### 4. **Inversiones**
+### 5. **Inversiones**
 - Seguimiento separado de inversiones
 - Diferenciación clara de ingresos y gastos
 - Vista específica de inversiones
 - Integración en gráficos y reportes
 
-### 5. **Reportes Mensuales**
+### 6. **Reportes mensuales**
 - Filtrar transacciones por mes y año
 - Tablas detalladas de ingresos, gastos e inversiones
 - Totales por categoría
 - Saldo calculado automáticamente
 
-### 6. **Edición de Perfil**
+### 7. **Edición de perfil**
 - Cambio de contraseña
 - Validación de contraseña actual
 - Confirmación de nueva contraseña
+- Información personal editable
+- Selección de moneda predeterminada
 
 ## 🔐 Seguridad (OWASP Top 10)
 
 ### Implementadas:
 - ✅ **Inyección SQL**: Consultas parametrizadas
 - ✅ **Autenticación**: Hashing de contraseñas, validación fuerte
+- ✅ **Autenticación multifactor**: TOTP/OTP con código QR
 - ✅ **CSRF**: Tokens en formularios
-- ✅ **Datos Sensibles**: Contraseñas hasheadas, variables de entorno
-- ✅ **Control de Acceso**: Validación de autorización
-- ✅ **Headers de Seguridad**: X-Content-Type-Options, X-Frame-Options, etc.
-- ✅ **Validación de Entrada**: Funciones de validación robustas
-- ✅ **Sesiones Seguras**: Cookies HttpOnly, SameSite, timeout
+- ✅ **Datos sensibles**: Contraseñas hasheadas, variables de entorno
+- ✅ **Control de acceso**: Validación de autorización
+- ✅ **Headers de seguridad**: X-Content-Type-Options, X-Frame-Options, etc.
+- ✅ **Validación de entrada**: Funciones de validación robustas
+- ✅ **Sesiones seguras**: Cookies HttpOnly, SameSite, timeout
+- ✅ **Recuperación de contraseña**: Con CAPTCHA y tokens únicos
 
 ## 📋 Requisitos
 
@@ -68,6 +81,8 @@ Flask-Login==0.6.2
 mysql-connector-python==8.0.33
 python-dotenv==1.0.0
 Werkzeug==2.3.0
+waitress==2.1.2
+pyotp==2.9.0
 ```
 
 ## 🔧 Instalación
@@ -113,7 +128,31 @@ python app.py
 
 La aplicación estará disponible en `http://localhost:5000`
 
-## 📁 Estructura del Proyecto
+## 🔐 Configurar autenticación de dos factores (2FA)
+
+1. **Acceder a seguridad**
+   - Iniciar sesión normalmente
+   - Ir a Configuración → Seguridad
+
+2. **Activar 2FA**
+   - Click en el toggle de "Autenticación de dos factores"
+   - Se generará un código QR
+   - Escanear con tu aplicación autenticadora:
+     - Google Authenticator
+     - Microsoft Authenticator
+     - Authy
+     - Otros apps TOTP
+
+3. **Guardar el secreto**
+   - También se mostrará el código secreto en caso de que necesites importarlo manualmente
+   - Guarda este código en lugar seguro
+
+4. **Usar 2FA**
+   - Próximo login pedirá código OTP
+   - Ingresa el código de 6 dígitos de tu aplicación
+   - El código cambia cada 30 segundos
+
+## 📁 Estructura del proyecto
 
 ```
 app_money/
@@ -146,7 +185,7 @@ app_money/
 └── .gitignore                 # Archivos ignorados por Git
 ```
 
-## 🗄️ Base de Datos
+## 🗄️ Base de datos
 
 **Tablas:**
 
@@ -193,6 +232,7 @@ app_money/
 |--------|----------|-------------|
 | GET | `/` | Dashboard consolidado |
 | GET/POST | `/login` | Página de login |
+| POST | `/verify-otp` | Verificar código OTP (AJAX) |
 | POST | `/logout` | Cerrar sesión |
 | GET/POST | `/registrar` | Registrar transacciones |
 | GET/POST | `/editar_registro` | Editar transacciones |
@@ -200,6 +240,7 @@ app_money/
 | GET | `/reportes` | Ver reportes mensuales |
 | GET | `/inversiones` | Ver inversiones |
 | GET/POST | `/editar_perfil` | Editar perfil de usuario |
+| GET/POST | `/seguridad` | Configurar 2FA/MFA |
 
 ## 📊 Validaciones
 
@@ -225,7 +266,7 @@ Editar `init_db.sql` y ejecutar:
 mysql -u root -p app_money < init_db.sql
 ```
 
-## 📝 Convenciones de Código
+## 📝 Convenciones de código
 
 - Nombres en **español** en templates y mensajes
 - Nombres en **inglés** en código backend
@@ -260,5 +301,5 @@ Desarrollado como gestor de finanzas personales.
 
 ---
 
-**Última actualización**: 2 de febrero de 2026
+**Última actualización**: 5 de febrero de 2026
 
