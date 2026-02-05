@@ -18,5 +18,4 @@ def get_connection():
         if connection.is_connected():
             return connection
     except Error as e:
-        print(f"Error connecting to database: {e}")
         return None

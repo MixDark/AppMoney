@@ -1,3 +1,5 @@
 flask
 flask-login
 mysql-connector-python
+waitress
+pyotp

@@ -1,4 +1,4 @@
-from flask import render_template, request, redirect, url_for, session, flash, send_file
+from flask import render_template, request, redirect, url_for, session, flash, send_file, jsonify
 from flask import Blueprint
 from functools import wraps
 import sys
@@ -17,6 +17,7 @@ from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.lib.units import inch
 from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer, PageBreak
 from reportlab.lib.enums import TA_CENTER, TA_RIGHT, TA_LEFT
+import pyotp
 
 def login_required_custom(f):
     @wraps(f)
@@ -42,10 +43,10 @@ def register_routes(app):
         gastos = obtener_gastos(usuario['id'])
         inversiones = obtener_inversiones(usuario['id'])
         
-        total_ingresos = sum(i['monto'] for i in ingresos)
-        total_gastos = sum(g['monto'] for g in gastos)
-        total_inversiones = sum(inv['monto'] for inv in inversiones)
-        saldo = total_ingresos - total_gastos
+        total_ingresos = float(sum(i['monto'] for i in ingresos) or 0)
+        total_gastos = float(sum(g['monto'] for g in gastos) or 0)
+        total_inversiones = float(sum(inv['monto'] for inv in inversiones) or 0)
+        saldo = total_ingresos - total_gastos - total_inversiones
         
         # Procesar transacciones recurrentes pendientes
         procesar_recurrentes_usuario(usuario['id'])
@@ -62,9 +63,9 @@ def register_routes(app):
             anio, mes = fecha_temp.year, fecha_temp.month
             meses_labels.append(fecha_temp.strftime('%b %Y'))
             
-            ing_mes = sum(x['monto'] for x in obtener_ingresos_por_mes(usuario['id'], anio, mes))
-            gas_mes = sum(x['monto'] for x in obtener_gastos_por_mes(usuario['id'], anio, mes))
-            inv_mes = sum(x['monto'] for x in obtener_inversiones_por_mes(usuario['id'], anio, mes))
+            ing_mes = sum(x['monto'] for x in obtener_ingresos_por_mes(usuario['id'], anio, mes)) or 0
+            gas_mes = sum(x['monto'] for x in obtener_gastos_por_mes(usuario['id'], anio, mes)) or 0
+            inv_mes = sum(x['monto'] for x in obtener_inversiones_por_mes(usuario['id'], anio, mes)) or 0
             
             data_ingresos.append(float(ing_mes))
             data_gastos.append(float(gas_mes))
@@ -100,6 +101,8 @@ def register_routes(app):
     @bp.route('/login', methods=['GET', 'POST'])
     def login():
         mensaje = None
+        mostrar_otp_modal = False
+        
         if request.method == 'POST':
             nombre_usuario = request.form.get('nombre_usuario', '').strip()
             password = request.form.get('password', '')
@@ -107,7 +110,7 @@ def register_routes(app):
             valid, msg = validate_username(nombre_usuario)
             if not valid:
                 mensaje = msg
-                return render_template('auth/login.html', mensaje=mensaje)
+                return render_template('auth/login.html', mensaje=mensaje, mostrar_otp_modal=False)
             
             usuario = obtener_usuario_por_nombre(nombre_usuario)
             
@@ -116,18 +119,66 @@ def register_routes(app):
             elif not check_password_hash(usuario['password_hash'], password):
                 mensaje = 'Contraseña incorrecta'
             else:
-                # Registrar último login
-                actualizar_ultimo_login(usuario['id'])
-                session.permanent = True
-                session['usuario_id'] = usuario['id']
-                return redirect(url_for('main.consolidado'))
+                # Usuario y contraseña son correctos
+                # Verificar si tiene MFA habilitado
+                if usuario_tiene_mfa_activado(usuario['id']):
+                    # Guardar el usuario temporalmente en sesión
+                    session['temp_usuario_id'] = usuario['id']
+                    session['username_temp'] = usuario['nombre_usuario']
+                    mostrar_otp_modal = True
+                    return render_template('auth/login.html', 
+                                         mostrar_otp_modal=mostrar_otp_modal,
+                                         nombre_usuario=nombre_usuario)
+                else:
+                    # Sin MFA, hacer login directo
+                    actualizar_ultimo_login(usuario['id'])
+                    session.permanent = True
+                    session['usuario_id'] = usuario['id']
+                    session.pop('temp_usuario_id', None)
+                    session.pop('username_temp', None)
+                    return redirect(url_for('main.consolidado'))
         
-        return render_template('auth/login.html', mensaje=mensaje)
+        return render_template('auth/login.html', mensaje=mensaje, mostrar_otp_modal=False)
 
     @bp.route('/logout')
     def logout():
         session.clear()
         return redirect(url_for('main.login'))
+
+    @bp.route('/verify-otp', methods=['POST'])
+    def verify_otp():
+        """Verifica el código OTP proporcionado por el usuario"""
+        if 'temp_usuario_id' not in session:
+            return jsonify({'exito': False, 'mensaje': 'Sesión inválida'}), 400
+        
+        codigo_otp = request.form.get('codigo_otp', '').strip()
+        usuario_id = session['temp_usuario_id']
+        
+        if not codigo_otp:
+            return jsonify({'exito': False, 'mensaje': 'Por favor ingresa el código OTP'}), 400
+        
+        # Obtener el secreto TOTP del usuario
+        totp_secret = obtener_totp_secret_usuario(usuario_id)
+        
+        if not totp_secret:
+            return jsonify({'exito': False, 'mensaje': 'Error: MFA no configurado correctamente'}), 400
+        
+        # Validar el código OTP
+        if validar_totp(totp_secret, codigo_otp):
+            # OTP correcto, completar el login
+            usuario = obtener_usuario_por_id(usuario_id)
+            if usuario:
+                actualizar_ultimo_login(usuario_id)
+                session.permanent = True
+                session['usuario_id'] = usuario_id
+                session.pop('temp_usuario_id', None)
+                session.pop('username_temp', None)
+                return jsonify({'exito': True, 'mensaje': 'OTP verificado correctamente', 'redirect': url_for('main.consolidado')})
+            else:
+                return jsonify({'exito': False, 'mensaje': 'Error: Usuario no encontrado'}), 400
+        else:
+            # OTP incorrecto
+            return jsonify({'exito': False, 'mensaje': 'Código OTP inválido'}), 401
 
     @bp.route('/recuperar_contraseña', methods=['GET', 'POST'])
     def recuperar_contraseña():
@@ -341,7 +392,8 @@ def register_routes(app):
             elif tipo == 'inversion':
                 agregar_inversion(usuario_id, '', monto, descripcion, fecha)
             
-            return redirect(url_for('main.registrar'))
+            flash(f'{tipo.capitalize()} registrado correctamente', 'success')
+            return redirect(url_for('main.consolidado'))
         
         usuario_id = session.get('usuario_id')
         
@@ -369,10 +421,10 @@ def register_routes(app):
             gastos = obtener_gastos_por_mes(usuario_id, anio, mes_num)
             inversiones = obtener_inversiones_por_mes(usuario_id, anio, mes_num)
             mes_mostrar = f'{mes_num}/{anio}'
-        total_ingresos = sum(i['monto'] for i in ingresos)
-        total_gastos = sum(g['monto'] for g in gastos)
-        total_inversiones = sum(inv['monto'] for inv in inversiones)
-        saldo = total_ingresos - total_gastos
+        total_ingresos = float(sum(i['monto'] for i in ingresos) or 0)
+        total_gastos = float(sum(g['monto'] for g in gastos) or 0)
+        total_inversiones = float(sum(inv['monto'] for inv in inversiones) or 0)
+        saldo = total_ingresos - total_gastos - total_inversiones
         return render_template('reports/reportes.html', ingresos=ingresos, gastos=gastos, inversiones=inversiones, total_ingresos=total_ingresos, total_gastos=total_gastos, total_inversiones=total_inversiones, saldo=saldo, mes_actual=f'{anio}-{str(mes_num).zfill(2)}', mes_mostrar=mes_mostrar)
 
     @bp.route('/inversiones', methods=['GET', 'POST'])
@@ -391,7 +443,7 @@ def register_routes(app):
             return redirect(url_for('main.inversiones'))
         usuario_id = session['usuario_id']
         inversiones_list = obtener_inversiones(usuario_id)
-        total_inversiones = sum(i['monto'] for i in inversiones_list)
+        total_inversiones = float(sum(i['monto'] for i in inversiones_list) or 0)
         return render_template('dashboard/inversiones.html', inversiones=inversiones_list, total_inversiones=total_inversiones)
 
     @bp.route('/registrar_usuario', methods=['GET', 'POST'])
@@ -421,16 +473,6 @@ def register_routes(app):
         
         mensaje = None
         if request.method == 'POST':
-            # Validar contraseña actual (requerida para cualquier cambio)
-            password_actual = request.form.get('password_actual', '').strip()
-            if not password_actual:
-                mensaje = '⚠️ Debes ingresar tu contraseña actual para guardar cambios'
-                return render_template('dashboard/perfil.html', usuario=usuario, mensaje=mensaje)
-            
-            if not check_password_hash(usuario['password_hash'], password_actual):
-                mensaje = '❌ La contraseña actual es incorrecta'
-                return render_template('dashboard/perfil.html', usuario=usuario, mensaje=mensaje)
-            
             # Actualizar Foto si se envió
             if 'foto_perfil' in request.files and request.files['foto_perfil'].filename:
                 file = request.files['foto_perfil']
@@ -458,51 +500,15 @@ def register_routes(app):
             ciudad = request.form.get('ciudad', '').strip()
             moneda = request.form.get('moneda', 'USD')
             
-            print(f"DEBUG: Guardando - nombre_completo={nombre_completo}, email={email}, telefono={telefono}, pais={pais}, ciudad={ciudad}, moneda={moneda}")
-            
             resultado = actualizar_perfil_usuario_db(usuario['id'], nombre_completo, email, telefono, pais, ciudad, moneda)
-            print(f"DEBUG: Resultado actualización: {resultado}")
             
-            # Cambiar contraseña si se proporcionan
-            nueva_password = request.form.get('nueva_password', '').strip()
-            confirmar_password = request.form.get('confirmar_password', '').strip()
-            
-            if nueva_password or confirmar_password:
-                if not nueva_password:
-                    mensaje = '❌ Debes ingresar una nueva contraseña'
-                    usuario = obtener_usuario_por_id(session['usuario_id'])
-                    return render_template('dashboard/perfil.html', usuario=usuario, mensaje=mensaje)
-                
-                if not confirmar_password:
-                    mensaje = '❌ Debes confirmar la nueva contraseña'
-                    usuario = obtener_usuario_por_id(session['usuario_id'])
-                    return render_template('dashboard/perfil.html', usuario=usuario, mensaje=mensaje)
-                
-                if nueva_password != confirmar_password:
-                    mensaje = '❌ Las contraseñas no coinciden'
-                    usuario = obtener_usuario_por_id(session['usuario_id'])
-                    return render_template('dashboard/perfil.html', usuario=usuario, mensaje=mensaje)
-                
-                if len(nueva_password) < 8:
-                    mensaje = '❌ La contraseña debe tener al menos 8 caracteres'
-                    usuario = obtener_usuario_por_id(session['usuario_id'])
-                    return render_template('dashboard/perfil.html', usuario=usuario, mensaje=mensaje)
-                
-                # Cambiar contraseña
-                nueva_password_hash = generate_password_hash(nueva_password)
-                actualizar_password_usuario(usuario['id'], nueva_password_hash)
-                print("DEBUG: Contraseña actualizada en BD")
-                mensaje = '✅ Contraseña actualizada exitosamente'
-            elif resultado:
-                print("DEBUG: Perfil actualizado en BD exitosamente")
+            if resultado:
                 mensaje = '✅ Perfil actualizado exitosamente'
             else:
-                print("DEBUG: Error al actualizar perfil en BD")
                 mensaje = '❌ Error al actualizar el perfil'
             
             # Recargar datos del usuario DESPUÉS de actualizar
             usuario = obtener_usuario_por_id(session['usuario_id'])
-            print(f"DEBUG: Datos recargados - nombre_completo: {usuario.get('nombre_completo')}, email: {usuario.get('email')}")
             
             return render_template('dashboard/perfil.html', usuario=usuario, mensaje=mensaje)
         
@@ -943,9 +949,10 @@ def register_routes(app):
             
         mis_metas = obtener_metas(usuario_id)
         for m in mis_metas:
-            # En una versión real, sumaríamos aportes. Aquí simulamos progreso.
-            m['monto_actual'] = float(m.get('monto_actual', 0))
-            m['porcentaje'] = round((m['monto_actual'] / float(m['monto_objetivo']) * 100), 1) if m['monto_objetivo'] > 0 else 0
+            # Convertir ambos a float para evitar errores de tipos
+            m['monto_actual'] = float(m.get('monto_actual') or 0)
+            m['monto_objetivo'] = float(m.get('monto_objetivo') or 0)
+            m['porcentaje'] = round((m['monto_actual'] / m['monto_objetivo'] * 100), 1) if m['monto_objetivo'] > 0 else 0
             
         return render_template('config/metas.html', metas=mis_metas)
 
@@ -956,6 +963,20 @@ def register_routes(app):
             flash('Meta eliminada', 'success')
         return redirect(url_for('main.metas'))
 
+    @bp.route('/aporte_meta/<int:id>', methods=['POST'])
+    @login_required_custom
+    def aporte_meta(id):
+        import json
+        data = json.loads(request.data)
+        monto = float(data.get('monto', 0))
+        
+        if monto <= 0:
+            return jsonify({'success': False, 'message': 'Monto inválido'})
+        
+        if actualizar_aporte_meta(id, session['usuario_id'], monto):
+            return jsonify({'success': True, 'message': 'Aporte registrado'})
+        else:
+            return jsonify({'success': False, 'message': 'Error al registrar aporte'})
 
 
     @bp.route('/recurrentes', methods=['GET', 'POST'])
@@ -993,9 +1014,9 @@ def register_routes(app):
             
             if request.method == 'POST':
                 # Checkbox state
-                MFA = 'MFA' in request.form
+                MFA = request.form.get('MFA') is not None
                 
-                # Si se está activando (y no estaba activo o se quiere regenerar)
+                # Si se está activando (y no estaba activo)
                 if MFA and not usuario.get('MFA'):
                     try:
                         import pyotp
@@ -1003,15 +1024,14 @@ def register_routes(app):
                         import io
                         import base64
                     except ImportError as e:
-                        print(f"Error importando librerias 2FA: {e}")
                         flash("Error: Faltan librerías de seguridad (pyotp/qrcode)", "error")
                         return redirect(url_for('main.seguridad'))
 
                     # Generar nuevo secreto
                     secret = pyotp.random_base32()
                     if not actualizar_totp_secret_db(usuario_id, secret):
-                         flash("Error al guardar secreto de seguridad en base de datos", "error")
-                         return redirect(url_for('main.seguridad'))
+                        flash("Error al guardar secreto de seguridad en base de datos", "error")
+                        return redirect(url_for('main.seguridad'))
                     
                     # Generar QR
                     uri = pyotp.totp.TOTP(secret).provisioning_uri(name=usuario['nombre_usuario'], issuer_name="App Money")
@@ -1023,9 +1043,12 @@ def register_routes(app):
                     # Activar en BD
                     actualizar_seguridad_usuario(usuario_id, True)
                     
+                    # Recargar usuario para verificar
+                    usuario_actualizado = obtener_usuario_por_id(usuario_id)
+                    
                     flash('2FA Activado. Escanea el código QR para configurar tu aplicación.', 'success')
                     # Renderizar con el código QR
-                    return render_template('auth/seguridad.html', usuario=obtener_usuario_por_id(usuario_id), qr_code=qr_b64, secret=secret)
+                    return render_template('auth/seguridad.html', usuario=usuario_actualizado, qr_code=qr_b64, secret=secret)
                 
                 elif not MFA and usuario.get('MFA'):
                     # Desactivar
@@ -1085,17 +1108,51 @@ def register_routes(app):
         usuario_id = session['usuario_id']
         if request.method == 'POST':
             categoria_id = request.form.get('categoria_id')
-            monto = request.form.get('monto')
+            try:
+                monto = float(request.form.get('monto', 0))
+            except (ValueError, TypeError):
+                monto = 0
             if agregar_o_actualizar_presupuesto(usuario_id, categoria_id, monto):
                 flash('Presupuesto actualizado', 'success')
             else:
                 flash('Error al actualizar presupuesto', 'error')
             return redirect(url_for('main.presupuestos'))
             
-        mis_presupuestos = obtener_presupuestos_detallados(usuario_id)
-        # Solo categorías de tipo gasto para presupuestos
-        mis_categorias = [c for c in obtener_categorias(usuario_id) if c['tipo'] == 'gasto']
-        return render_template('config/presupuestos.html', presupuestos=mis_presupuestos, categorias=mis_categorias)
+        mis_presupuestos = obtener_presupuestos_simples(usuario_id)
+        return render_template('config/presupuestos.html', presupuestos=mis_presupuestos)
+
+    @bp.route('/editar_presupuesto/<int:id>', methods=['POST'])
+    @login_required_custom
+    def editar_presupuesto(id):
+        usuario_id = session['usuario_id']
+        try:
+            gastado = float(request.form.get('gastado', 0))
+        except (ValueError, TypeError):
+            gastado = 0
+        
+        if actualizar_presupuesto_gastado(usuario_id, id, gastado):
+            # Si es una petición AJAX, devolver JSON
+            if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                return jsonify({'success': True, 'gastado': gastado})
+            flash('Presupuesto actualizado', 'success')
+        else:
+            if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                return jsonify({'success': False, 'message': 'Error al actualizar presupuesto'})
+            flash('Error al actualizar presupuesto', 'error')
+        
+        return redirect(url_for('main.presupuestos'))
+
+    @bp.route('/eliminar_presupuesto/<int:id>', methods=['GET'])
+    @login_required_custom
+    def eliminar_presupuesto(id):
+        usuario_id = session['usuario_id']
+        
+        if eliminar_presupuesto_db(usuario_id, id):
+            flash('Presupuesto eliminado', 'success')
+        else:
+            flash('Error al eliminar presupuesto', 'error')
+        
+        return redirect(url_for('main.presupuestos'))
 
     app.register_blueprint(bp)
 
@@ -1133,11 +1190,23 @@ def crear_usuario(nombre_usuario, password_hash):
     try:
         cursor = conn.cursor()
         cursor.execute('INSERT INTO usuarios (nombre_usuario, password_hash) VALUES (%s, %s)', (nombre_usuario, password_hash))
+        usuario_id = cursor.lastrowid
+        
+        # Crear categorías por defecto
+        categorias_defecto = [
+            ('Gastos Generales', 'gasto', '#dc2626'),
+            ('Ingresos Generales', 'ingreso', '#16a34a'),
+            ('Inversiones Generales', 'inversion', '#2563eb')
+        ]
+        
+        for nombre, tipo, color in categorias_defecto:
+            cursor.execute('INSERT INTO categorias (usuario_id, nombre, tipo, color) VALUES (%s, %s, %s, %s)',
+                          (usuario_id, nombre, tipo, color))
+        
         conn.commit()
         cursor.close()
         return True
     except Exception as e:
-        print(f"Error al crear usuario: {e}")
         return False
     finally:
         conn.close()
@@ -1168,18 +1237,32 @@ def obtener_gastos(usuario_id):
     finally:
         conn.close()
 
+def obtener_categoria_defecto(usuario_id, tipo):
+    """Obtiene la categoría por defecto para un tipo de transacción"""
+    conn = get_connection()
+    if conn is None:
+        return None
+    try:
+        cursor = conn.cursor(dictionary=True)
+        cursor.execute('SELECT id FROM categorias WHERE usuario_id = %s AND tipo = %s LIMIT 1', (usuario_id, tipo))
+        resultado = cursor.fetchone()
+        cursor.close()
+        return resultado['id'] if resultado else None
+    finally:
+        conn.close()
+
 def agregar_ingreso(usuario_id, monto, descripcion, fecha):
     conn = get_connection()
     if conn is None:
         return False
     try:
+        categoria_id = obtener_categoria_defecto(usuario_id, 'ingreso')
         cursor = conn.cursor()
-        cursor.execute('INSERT INTO ingresos (usuario_id, monto, descripcion, fecha) VALUES (%s, %s, %s, %s)', (usuario_id, monto, descripcion, fecha))
+        cursor.execute('INSERT INTO ingresos (usuario_id, monto, descripcion, fecha, categoria_id) VALUES (%s, %s, %s, %s, %s)', (usuario_id, monto, descripcion, fecha, categoria_id))
         conn.commit()
         cursor.close()
         return True
     except Exception as e:
-        print(f"Error al agregar ingreso: {e}")
         return False
     finally:
         conn.close()
@@ -1188,13 +1271,13 @@ def agregar_inversion(usuario_id, tipo, monto, descripcion, fecha):
     if conn is None:
         return False
     try:
+        categoria_id = obtener_categoria_defecto(usuario_id, 'inversion')
         cursor = conn.cursor()
-        cursor.execute('INSERT INTO inversiones (usuario_id, monto, descripcion, fecha) VALUES (%s, %s, %s, %s)', (usuario_id, monto, descripcion, fecha))
+        cursor.execute('INSERT INTO inversiones (usuario_id, monto, descripcion, fecha, categoria_id) VALUES (%s, %s, %s, %s, %s)', (usuario_id, monto, descripcion, fecha, categoria_id))
         conn.commit()
         cursor.close()
         return True
     except Exception as e:
-        print(f"Error al agregar inversión: {e}")
         return False
     finally:
         conn.close()
@@ -1224,18 +1307,19 @@ def obtener_inversiones_por_mes(usuario_id, anio, mes):
         return inversiones
     finally:
         conn.close()
-def agregar_gasto(usuario_id, monto, descripcion, fecha):
+def agregar_gasto(usuario_id, monto, descripcion, fecha, categoria_id=None):
+    """Agrega un gasto - categoria_id es opcional"""
     conn = get_connection()
     if conn is None:
         return False
     try:
         cursor = conn.cursor()
-        cursor.execute('INSERT INTO gastos (usuario_id, monto, descripcion, fecha) VALUES (%s, %s, %s, %s)', (usuario_id, monto, descripcion, fecha))
+        cursor.execute('INSERT INTO gastos (usuario_id, monto, descripcion, fecha, categoria_id) VALUES (%s, %s, %s, %s, %s)', 
+                      (usuario_id, monto, descripcion, fecha, categoria_id))
         conn.commit()
         cursor.close()
         return True
     except Exception as e:
-        print(f"Error al agregar gasto: {e}")
         return False
     finally:
         conn.close()
@@ -1276,7 +1360,6 @@ def actualizar_password_usuario(usuario_id, nueva_password_hash):
         cursor.close()
         return True
     except Exception as e:
-        print(f"Error al actualizar contraseña: {e}")
         return False
     finally:
         conn.close()
@@ -1292,7 +1375,6 @@ def eliminar_ingreso(ingreso_id, usuario_id):
         cursor.close()
         return True
     except Exception as e:
-        print(f"Error al eliminar ingreso: {e}")
         return False
     finally:
         conn.close()
@@ -1308,7 +1390,6 @@ def eliminar_gasto(gasto_id, usuario_id):
         cursor.close()
         return True
     except Exception as e:
-        print(f"Error al eliminar gasto: {e}")
         return False
     finally:
         conn.close()
@@ -1324,7 +1405,6 @@ def eliminar_inversion(inversion_id, usuario_id):
         cursor.close()
         return True
     except Exception as e:
-        print(f"Error al eliminar inversión: {e}")
         return False
     finally:
         conn.close()
@@ -1380,7 +1460,6 @@ def actualizar_ingreso(ingreso_id, usuario_id, monto, descripcion, fecha):
         cursor.close()
         return True
     except Exception as e:
-        print(f"Error al actualizar ingreso: {e}")
         return False
     finally:
         conn.close()
@@ -1397,7 +1476,6 @@ def actualizar_gasto(gasto_id, usuario_id, monto, descripcion, fecha):
         cursor.close()
         return True
     except Exception as e:
-        print(f"Error al actualizar gasto: {e}")
         return False
     finally:
         conn.close()
@@ -1414,7 +1492,6 @@ def actualizar_inversion(inversion_id, usuario_id, monto, descripcion, fecha):
         cursor.close()
         return True
     except Exception as e:
-        print(f"Error al actualizar inversión: {e}")
         return False
     finally:
         conn.close()
@@ -1431,7 +1508,6 @@ def crear_token_recuperacion(usuario_id, token, expires_at):
         cursor.close()
         return True
     except Exception as e:
-        print(f"Error al crear token de recuperación: {e}")
         return False
     finally:
         conn.close()
@@ -1460,7 +1536,6 @@ def eliminar_token_recuperacion(token):
         cursor.close()
         return True
     except Exception as e:
-        print(f"Error al eliminar token de recuperación: {e}")
         return False
     finally:
         conn.close()
@@ -1476,7 +1551,6 @@ def actualizar_token_verificado(token):
         cursor.close()
         return True
     except Exception as e:
-        print(f"Error al actualizar token verificado: {e}")
         return False
     finally:
         conn.close()
@@ -1492,7 +1566,6 @@ def incrementar_intentos_captcha(token, intentos):
         cursor.close()
         return True
     except Exception as e:
-        print(f"Error al incrementar intentos: {e}")
         return False
     finally:
         conn.close()
@@ -1529,6 +1602,18 @@ def eliminar_meta_db(id, usuario_id):
     try:
         cursor = conn.cursor()
         cursor.execute('DELETE FROM metas WHERE id = %s AND usuario_id = %s', (id, usuario_id))
+        conn.commit()
+        return True
+    finally:
+        conn.close()
+
+def actualizar_aporte_meta(meta_id, usuario_id, monto):
+    conn = get_connection()
+    if conn is None:
+        return False
+    try:
+        cursor = conn.cursor()
+        cursor.execute('UPDATE metas SET monto_actual = monto_actual + %s WHERE id = %s AND usuario_id = %s', (monto, meta_id, usuario_id))
         conn.commit()
         return True
     finally:
@@ -1627,7 +1712,7 @@ def procesar_recurrentes_usuario(usuario_id):
             
         conn.commit()
     except Exception as e:
-        print(f"Error procesando recurrentes: {e}")
+        pass
     finally:
         conn.close()
 
@@ -1642,7 +1727,6 @@ def actualizar_perfil_usuario_db(usuario_id, nombre_completo='', email='', telef
         conn.commit()
         return True
     except Exception as e:
-        print(f"Error al actualizar perfil: {e}")
         return False
     finally:
         conn.close()
@@ -1674,7 +1758,6 @@ def actualizar_nombre_usuario_db(usuario_id, nuevo_nombre):
         conn.commit()
         return True
     except Exception as e:
-        print(f"Error al actualizar nombre: {e}")
         return False
     finally:
         conn.close()
@@ -1776,6 +1859,50 @@ def obtener_presupuestos_detallados(usuario_id):
     finally:
         conn.close()
 
+def obtener_presupuestos_simples(usuario_id):
+    """Obtiene presupuestos con gastos reales del mes actual"""
+    conn = get_connection()
+    if conn is None:
+        return []
+    try:
+        cursor = conn.cursor(dictionary=True)
+        cursor.execute('SELECT id, usuario_id, categoria_id, monto, gastado FROM presupuestos WHERE usuario_id = %s', (usuario_id,))
+        presupuestos = cursor.fetchall()
+        
+        # Obtener gastos totales del mes actual
+        cursor.execute(
+            '''SELECT SUM(monto) as total_gastos 
+               FROM gastos 
+               WHERE usuario_id = %s 
+               AND MONTH(fecha) = MONTH(NOW()) 
+               AND YEAR(fecha) = YEAR(NOW())''',
+            (usuario_id,)
+        )
+        gasto_total_result = cursor.fetchone()
+        gasto_total = float(gasto_total_result['total_gastos'] or 0) if gasto_total_result else 0
+        
+        for p in presupuestos:
+            p['categoria_nombre'] = p.get('categoria_id', 'Sin categoría')
+            p['monto'] = float(p.get('monto') or 0)
+            p['gastado'] = float(p.get('gastado') or 0)
+            
+            # Por simplicidad, distribuir los gastos totales entre los presupuestos
+            # En un futuro, esto debería conectarse con categorías reales
+            if len(presupuestos) > 0:
+                p['gasto_actual'] = gasto_total / len(presupuestos)
+            else:
+                p['gasto_actual'] = 0
+            
+            # Calcular porcentaje usando gastado si está disponible, sino usar gasto_actual
+            gasto_para_calculo = p['gastado'] if p['gastado'] > 0 else p['gasto_actual']
+            p['porcentaje'] = round((gasto_para_calculo / p['monto'] * 100), 1) if p['monto'] > 0 else 0
+            # Para la progress bar, limitar a 100 visualmente pero guardar el valor real
+            p['porcentaje_visual'] = min(p['porcentaje'], 100)
+        
+        return presupuestos
+    finally:
+        conn.close()
+
 def agregar_o_actualizar_presupuesto(usuario_id, categoria_id, monto):
     conn = get_connection()
     if conn is None:
@@ -1817,7 +1944,96 @@ def actualizar_ultimo_login(usuario_id):
         conn.commit()
         return True
     except Exception as e:
-        print(f"Error al actualizar último login: {e}")
+        return False
+    finally:
+        conn.close()
+
+def actualizar_presupuesto(usuario_id, presupuesto_id, monto):
+    """Actualiza el monto de un presupuesto"""
+    conn = get_connection()
+    if conn is None:
+        return False
+    try:
+        cursor = conn.cursor()
+        cursor.execute('UPDATE presupuestos SET monto = %s WHERE id = %s AND usuario_id = %s', 
+                      (monto, presupuesto_id, usuario_id))
+        conn.commit()
+        return True
+    except Exception as e:
+        return False
+    finally:
+        conn.close()
+
+def actualizar_presupuesto_gastado(usuario_id, presupuesto_id, gastado):
+    """Actualiza el gastado de un presupuesto"""
+    conn = get_connection()
+    if conn is None:
+        return False
+    try:
+        cursor = conn.cursor()
+        cursor.execute('UPDATE presupuestos SET gastado = %s WHERE id = %s AND usuario_id = %s', 
+                      (gastado, presupuesto_id, usuario_id))
+        conn.commit()
+        return True
+    except Exception as e:
+        return False
+    finally:
+        conn.close()
+
+def eliminar_presupuesto_db(usuario_id, presupuesto_id):
+    """Elimina un presupuesto"""
+    conn = get_connection()
+    if conn is None:
+        return False
+    try:
+        cursor = conn.cursor()
+        cursor.execute('DELETE FROM presupuestos WHERE id = %s AND usuario_id = %s', 
+                      (presupuesto_id, usuario_id))
+        conn.commit()
+        return True
+    except Exception as e:
+        return False
+    finally:
+        conn.close()
+
+# --- Funciones auxiliares para MFA/TOTP ---
+def validar_totp(totp_secret, codigo):
+    """Valida un código TOTP contra el secreto del usuario"""
+    try:
+        totp = pyotp.TOTP(totp_secret)
+        # Permitir ventana de ±30 segundos (1 ventana antes y después)
+        return totp.verify(codigo, valid_window=1)
+    except Exception as e:
+        return False
+
+def obtener_totp_secret_usuario(usuario_id):
+    """Obtiene el secreto TOTP de un usuario"""
+    conn = get_connection()
+    if conn is None:
+        return None
+    try:
+        cursor = conn.cursor(dictionary=True)
+        cursor.execute('SELECT totp_secret FROM usuarios WHERE id = %s', (usuario_id,))
+        resultado = cursor.fetchone()
+        cursor.close()
+        return resultado['totp_secret'] if resultado else None
+    except Exception as e:
+        return None
+    finally:
+        conn.close()
+
+def usuario_tiene_mfa_activado(usuario_id):
+    """Verifica si un usuario tiene MFA activado"""
+    conn = get_connection()
+    if conn is None:
+        return False
+    try:
+        cursor = conn.cursor(dictionary=True)
+        cursor.execute('SELECT MFA FROM usuarios WHERE id = %s', (usuario_id,))
+        resultado = cursor.fetchone()
+        cursor.close()
+        return resultado['MFA'] if resultado else False
+    except Exception as e:
         return False
     finally:
         conn.close()

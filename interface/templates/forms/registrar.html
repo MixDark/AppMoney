@@ -7,11 +7,10 @@
     <form method="post" class="space-y-8 w-full">
         <div class="w-full">
             <label class="block text-[10px] font-black uppercase mb-2 tracking-widest opacity-60">Tipo</label>
-            <select name="tipo" class="input-glass appearance-none cursor-pointer">
+            <select name="tipo" class="input-glass appearance-none cursor-pointer h-12 px-4 py-3 text-sm font-semibold">
                 <option value="ingreso">Ingreso</option>
                 <option value="gasto">Gasto</option>
-                <option value="inversion" {% if request.args.get('tipo')=='inversion' %}selected{% endif %}>Inversión
-                </option>
+                <option value="inversion" {% if request.args.get('tipo')=='inversion' %}selected{% endif %}>Inversión</option>
             </select>
         </div>
 

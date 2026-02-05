@@ -9,22 +9,22 @@
         class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12 bg-white/30 p-8 rounded-3xl border border-white/20">
         <div>
             <label class="block text-[10px] font-black uppercase mb-2 tracking-widest opacity-60">Descripción</label>
-            <input type="text" name="descripcion" required class="input-glass h-10">
+            <input type="text" name="descripcion" required class="input-glass h-12 px-4 py-3">
         </div>
         <div>
             <label class="block text-[10px] font-black uppercase mb-2 tracking-widest opacity-60">Tipo</label>
-            <select name="tipo" class="input-glass appearance-none cursor-pointer h-10">
+            <select name="tipo" class="input-glass appearance-none cursor-pointer h-12 px-4 py-3">
                 <option value="gasto">Gasto</option>
                 <option value="ingreso">Ingreso</option>
             </select>
         </div>
         <div>
             <label class="block text-[10px] font-black uppercase mb-2 tracking-widest opacity-60">Monto</label>
-            <input type="number" step="0.01" name="monto" required class="input-glass h-10">
+            <input type="number" step="0.01" name="monto" required class="input-glass h-12 px-4 py-3">
         </div>
         <div>
             <label class="block text-[10px] font-black uppercase mb-2 tracking-widest opacity-60">Frecuencia</label>
-            <select name="frecuencia" class="input-glass appearance-none cursor-pointer h-10">
+            <select name="frecuencia" class="input-glass appearance-none cursor-pointer h-12 px-4 py-3">
                 <option value="mensual">Mensual</option>
                 <option value="semanal">Semanal</option>
                 <option value="diario">Diario</option>
@@ -33,7 +33,7 @@
         </div>
         <div>
             <label class="block text-[10px] font-black uppercase mb-2 tracking-widest opacity-60">Próxima fecha</label>
-            <input type="date" name="proxima_fecha" required class="input-glass text-xs h-10">
+            <input type="date" name="proxima_fecha" required class="input-glass text-xs h-12 px-4 py-3">
         </div>
         <div class="flex flex-col justify-end">
             <button type="submit" class="btn-fluent px-6 h-10 justify-center flex items-center gap-2"><i class="fas fa-clock"></i> Programar</button>
@@ -67,10 +67,10 @@
                     </td>
                     <td class="px-6 py-4">{{ r.proxima_fecha|format_date }}</td>
                     <td class="px-6 py-4 text-center">
-                        <a href="{{ url_for('main.eliminar_recurrente', id=r.id) }}"
-                            class="text-red-600 hover:scale-110 inline-block transition-transform">
+                        <button onclick="mostrarConfirmacion({{ r.id }}, '{{ r.descripcion }}')"
+                            class="text-red-600 hover:scale-110 inline-block transition-transform cursor-pointer">
                             <i class="fas fa-trash-alt"></i>
-                        </a>
+                        </button>
                     </td>
                 </tr>
                 {% endfor %}
@@ -84,4 +84,50 @@
         </table>
     </div>
 </div>
+
+<!-- Modal de Confirmación -->
+<div id="confirmModal" class="fixed inset-0 bg-black/50 hidden items-center justify-center z-50">
+    <div class="fluent-card p-10 max-w-sm w-full mx-4">
+        <h3 class="text-2xl font-black mb-6 text-center uppercase tracking-tight">Confirmar eliminación</h3>
+        <p class="text-center mb-8 opacity-70">¿Está seguro de que desea eliminar la programación <strong id="modalDescripcion"></strong>?</p>
+        <div class="flex gap-4 justify-center">
+            <button onclick="cancelarEliminacion()" class="btn-fluent flex-1 px-8 py-2 flex items-center justify-center gap-2">
+                <i class="fa-solid fa-xmark"></i> Cancelar
+            </button>
+            <button id="btnEliminar" onclick="confirmarEliminacion()" class="btn-fluent btn-red flex-1 px-8 py-2 flex items-center justify-center gap-2">
+                <i class="fa-solid fa-trash"></i> Eliminar
+            </button>
+        </div>
+    </div>
+</div>
+
+<script>
+    let idAEliminar = null;
+
+    function mostrarConfirmacion(id, descripcion) {
+        idAEliminar = id;
+        document.getElementById('modalDescripcion').textContent = `"${descripcion}"`;
+        document.getElementById('confirmModal').classList.remove('hidden');
+        document.getElementById('confirmModal').classList.add('flex');
+    }
+
+    function cancelarEliminacion() {
+        document.getElementById('confirmModal').classList.add('hidden');
+        document.getElementById('confirmModal').classList.remove('flex');
+        idAEliminar = null;
+    }
+
+    function confirmarEliminacion() {
+        if (idAEliminar) {
+            window.location.href = `/eliminar_recurrente/${idAEliminar}`;
+        }
+    }
+
+    // Cerrar modal al presionar Escape
+    document.addEventListener('keydown', function(event) {
+        if (event.key === 'Escape') {
+            cancelarEliminacion();
+        }
+    });
+</script>
 {% endblock %}

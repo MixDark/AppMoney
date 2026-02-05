@@ -42,8 +42,7 @@
             </div>
             <p class="text-lg font-semibold">
                 Último inicio de sesión detectado:
-                <span class="font-black text-blue-600 ml-2">{{ usuario.ultimo_login if usuario.ultimo_login else 'Primer
-                    ingreso' }}</span>
+                <span class="font-black text-blue-600 ml-2">{{ usuario.ultimo_login|format_date if usuario.ultimo_login else 'Primer ingreso' }}</span>
             </p>
         </div>
 

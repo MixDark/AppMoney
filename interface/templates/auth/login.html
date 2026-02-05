@@ -14,7 +14,7 @@
     <form method="post" class="space-y-8 w-full flex flex-col">
         <div class="w-full">
             <label class="block mb-2 text-sm font-bold">Usuario:</label>
-            <input type="text" name="nombre_usuario" required class="input-glass">
+            <input type="text" name="nombre_usuario" required class="input-glass" value="{{ nombre_usuario or '' }}">
         </div>
 
         <div class="w-full">
@@ -38,4 +38,155 @@
         </a>
     </div>
 </div>
+
+<!-- Modal flotante para verificación OTP -->
+{% if mostrar_otp_modal %}
+<div id="otp-modal" class="fixed inset-0 bg-black/50 flex items-center justify-center z-50 backdrop-blur-sm">
+    <div class="fluent-card p-8 max-w-sm w-full mx-4 flex flex-col items-center rounded-2xl">
+        <div class="text-4xl mb-4 text-blue-500">
+            <i class="fas fa-lock"></i>
+        </div>
+        
+        <h3 class="text-2xl font-bold mb-6 text-center">Verificación de dos factores</h3>
+
+        <form id="otp-form" class="w-full flex flex-col gap-4">
+            <div class="w-full">
+                <label class="block mb-2 text-sm font-bold">Código OTP:</label>
+                <input 
+                    type="text" 
+                    id="codigo_otp" 
+                    name="codigo_otp" 
+                    maxlength="6"
+                    required 
+                    class="input-glass text-center text-2xl font-bold tracking-widest"
+                    inputmode="numeric"
+                    autocomplete="off">
+            </div>
+
+            <div id="otp-error" class="text-red-600 text-sm font-bold bg-red-100/50 py-2 px-4 rounded-lg border border-red-200 hidden">
+                <!-- Mensaje de error dinámico -->
+            </div>
+
+            <div class="flex justify-center pt-2">
+                <button type="submit" class="btn-fluent px-8 py-3 justify-center flex items-center gap-2">
+                    <i class="fas fa-check"></i> Verificar
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<style>
+    @keyframes slideIn {
+        from {
+            opacity: 0;
+            transform: scale(0.95);
+        }
+        to {
+            opacity: 1;
+            transform: scale(1);
+        }
+    }
+
+    #otp-modal {
+        animation: slideIn 0.3s ease-out;
+    }
+
+    #codigo_otp {
+        font-variant-numeric: tabular-nums;
+    }
+
+    #codigo_otp:focus {
+        outline: none;
+        border-color: #3b82f6 !important;
+        box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1) !important;
+    }
+</style>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const form = document.getElementById('otp-form');
+        const inputOtp = document.getElementById('codigo_otp');
+        const errorDiv = document.getElementById('otp-error');
+
+        // Focus automático en el input
+        if (inputOtp) {
+            inputOtp.focus();
+        }
+
+        // Permitir solo números
+        inputOtp.addEventListener('input', function(e) {
+            this.value = this.value.replace(/[^0-9]/g, '').slice(0, 6);
+        });
+
+        // Permitir envío con Enter
+        inputOtp.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                form.submit();
+            }
+        });
+
+        // Manejar el envío del formulario
+        form.addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const codigoOtp = inputOtp.value.trim();
+
+            if (codigoOtp.length !== 6) {
+                mostrarError('Ingresa 6 dígitos');
+                return;
+            }
+
+            // Deshabilitar botón y mostrar cargando
+            const submitBtn = form.querySelector('button[type="submit"]');
+            submitBtn.disabled = true;
+            const btnText = submitBtn.innerHTML;
+            submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Verificando...';
+
+            try {
+                const response = await fetch('/verify-otp', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded',
+                    },
+                    body: 'codigo_otp=' + encodeURIComponent(codigoOtp)
+                });
+
+                const data = await response.json();
+
+                if (data.exito) {
+                    mostrarError('', false);
+                    submitBtn.innerHTML = '<i class="fas fa-check"></i> ¡Verificado!';
+                    submitBtn.style.backgroundColor = '#10b981';
+                    
+                    setTimeout(() => {
+                        window.location.href = data.redirect;
+                    }, 800);
+                } else {
+                    mostrarError(data.mensaje || 'Código inválido');
+                    inputOtp.value = '';
+                    inputOtp.focus();
+                    submitBtn.disabled = false;
+                    submitBtn.innerHTML = btnText;
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                mostrarError('Error al verificar');
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = btnText;
+            }
+        });
+
+        function mostrarError(mensaje, mostrar = true) {
+            if (mostrar && mensaje) {
+                errorDiv.textContent = mensaje;
+                errorDiv.classList.remove('hidden');
+            } else {
+                errorDiv.classList.add('hidden');
+            }
+        }
+    });
+</script>
+{% endif %}
 {% endblock %}

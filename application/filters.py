@@ -19,7 +19,6 @@ def register_template_filters(app):
             else:
                 return formatted.replace(',', '.')
         except Exception as e:
-            print(f"Error en format_money: {e}")
             return str(valor)
 
     @app.template_filter('format_date')
@@ -42,5 +41,4 @@ def register_template_filters(app):
             
             return str(fecha)
         except Exception as e:
-            print(f"Error en format_date: {e}")
             return str(fecha)

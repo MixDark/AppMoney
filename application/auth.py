@@ -41,7 +41,7 @@ def load_user(user_id):
                 usuario['moneda']
             )
     except Exception as e:
-        print(f"Error loading user: {e}")
+        pass
     return None
 
 

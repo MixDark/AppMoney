@@ -17,10 +17,10 @@
             <div class="relative">
                 <div
                     class="w-28 h-28 bg-black/5 rounded-full flex items-center justify-center text-black text-4xl font-black border-4 border-white/40 shadow-xl overflow-hidden backdrop-blur-xl">
-                    {% if current_user.foto_perfil %}
-                    <img src="{{ current_user.foto_perfil }}" class="w-full h-full object-cover">
+                    {% if usuario.foto_perfil %}
+                    <img src="{{ usuario.foto_perfil }}" class="w-full h-full object-cover">
                     {% else %}
-                    {{ current_user.nombre_usuario[0].upper() }}
+                    {{ usuario.nombre_usuario[0].upper() }}
                     {% endif %}
                 </div>
                 <!-- Input oculto para la foto -->
@@ -31,29 +31,52 @@
                     <i class="fas fa-camera text-xs"></i>
                 </button>
             </div>
-            <p class="text-2xl font-black mt-4 tracking-tight">{{ current_user.nombre_usuario }}</p>
-        </div>
-
-        <div class="grid grid-cols-1 gap-8">
+            <p class="text-2xl font-black mt-4 tracking-tight">{{ usuario.nombre_usuario }}</p>
         </div>
 
         <div class="pt-10 border-t border-black/5">
-            <h3 class="font-black text-xl mb-8 uppercase tracking-widest text-black/60">Preferencias</h3>
+            <h3 class="font-black text-xl mb-8 uppercase tracking-widest text-black/60">Información Personal</h3>
             <div class="space-y-8">
-                <div>
-                    <label class="block text-[10px] font-black uppercase mb-2 tracking-widest opacity-60">Moneda</label>
-                    <select name="moneda" class="input-glass appearance-none cursor-pointer">
-                        <option value="USD" {% if usuario.moneda == 'USD' %}selected{% endif %}>USD - Dólar Estadounidense</option>
-                        <option value="EUR" {% if usuario.moneda == 'EUR' %}selected{% endif %}>EUR - Euro</option>
-                        <option value="MXN" {% if usuario.moneda == 'MXN' %}selected{% endif %}>MXN - Peso Mexicano</option>
-                        <option value="ARS" {% if usuario.moneda == 'ARS' %}selected{% endif %}>ARS - Peso Argentino</option>
-                        <option value="COP" {% if usuario.moneda == 'COP' %}selected{% endif %}>COP - Peso Colombiano</option>
-                        <option value="CLP" {% if usuario.moneda == 'CLP' %}selected{% endif %}>CLP - Peso Chileno</option>
-                        <option value="BRL" {% if usuario.moneda == 'BRL' %}selected{% endif %}>BRL - Real Brasileño</option>
-                        <option value="PEN" {% if usuario.moneda == 'PEN' %}selected{% endif %}>PEN - Sol Peruano</option>
-                        <option value="UYU" {% if usuario.moneda == 'UYU' %}selected{% endif %}>UYU - Peso Uruguayo</option>
-                        <option value="VES" {% if usuario.moneda == 'VES' %}selected{% endif %}>VES - Bolívar Venezolano</option>
-                    </select>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                    <div>
+                        <label class="block text-[10px] font-black uppercase mb-2 tracking-widest opacity-60">Nombre Completo</label>
+                        <input type="text" name="nombre_completo" value="{{ usuario.nombre_completo or '' }}" class="input-glass">
+                    </div>
+                    <div>
+                        <label class="block text-[10px] font-black uppercase mb-2 tracking-widest opacity-60">Email</label>
+                        <input type="email" name="email" value="{{ usuario.email or '' }}" class="input-glass">
+                    </div>
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                    <div>
+                        <label class="block text-[10px] font-black uppercase mb-2 tracking-widest opacity-60">Teléfono</label>
+                        <input type="tel" name="telefono" value="{{ usuario.telefono or '' }}" class="input-glass">
+                    </div>
+                    <div>
+                        <label class="block text-[10px] font-black uppercase mb-2 tracking-widest opacity-60">Moneda predeterminada</label>
+                        <select name="moneda" class="input-glass appearance-none cursor-pointer">
+                            <option value="USD" {% if usuario.moneda == 'USD' %}selected{% endif %}>USD - Dólar Estadounidense</option>
+                            <option value="EUR" {% if usuario.moneda == 'EUR' %}selected{% endif %}>EUR - Euro</option>
+                            <option value="MXN" {% if usuario.moneda == 'MXN' %}selected{% endif %}>MXN - Peso Mexicano</option>
+                            <option value="ARS" {% if usuario.moneda == 'ARS' %}selected{% endif %}>ARS - Peso Argentino</option>
+                            <option value="COP" {% if usuario.moneda == 'COP' %}selected{% endif %}>COP - Peso Colombiano</option>
+                            <option value="CLP" {% if usuario.moneda == 'CLP' %}selected{% endif %}>CLP - Peso Chileno</option>
+                            <option value="BRL" {% if usuario.moneda == 'BRL' %}selected{% endif %}>BRL - Real Brasileño</option>
+                            <option value="PEN" {% if usuario.moneda == 'PEN' %}selected{% endif %}>PEN - Sol Peruano</option>
+                            <option value="UYU" {% if usuario.moneda == 'UYU' %}selected{% endif %}>UYU - Peso Uruguayo</option>
+                            <option value="VES" {% if usuario.moneda == 'VES' %}selected{% endif %}>VES - Bolívar Venezolano</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                    <div>
+                        <label class="block text-[10px] font-black uppercase mb-2 tracking-widest opacity-60">País</label>
+                        <input type="text" name="pais" value="{{ usuario.pais or '' }}" class="input-glass">
+                    </div>
+                    <div>
+                        <label class="block text-[10px] font-black uppercase mb-2 tracking-widest opacity-60">Ciudad</label>
+                        <input type="text" name="ciudad" value="{{ usuario.ciudad or '' }}" class="input-glass">
+                    </div>
                 </div>
             </div>
         </div>
