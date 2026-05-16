@@ -1,57 +1,102 @@
 {% extends 'layout/base.html' %}
 {% block title %}Reporte Financiero{% endblock %}
 {% block content %}
-<div class="fluent-card p-10 max-w-5xl w-full flex flex-col items-center">
-    <h2 class="text-3xl font-black mb-8 text-center uppercase tracking-tight">Reportes del mes: {{ mes_mostrar }}</h2>
+<style>
+    .stat-card {
+        background: var(--surface);
+        border: 1px solid rgba(148, 163, 184, 0.1);
+        transition: all 0.2s ease;
+    }
+    .stat-card.income {
+        border-color: rgba(16, 185, 129, 0.2);
+    }
+    .stat-card.expense {
+        border-color: rgba(239, 68, 68, 0.2);
+    }
+    .stat-card.investment {
+        border-color: rgba(168, 85, 247, 0.2);
+    }
+    .table-container {
+        background: var(--surface);
+        border: 1px solid rgba(148, 163, 184, 0.1);
+        border-radius: 16px;
+        overflow: hidden;
+    }
+    .table-header {
+        background: var(--surface-contrast);
+        border-bottom: 1px solid var(--border-subtle);
+    }
+    .table-row {
+        border-bottom: 1px solid var(--border-subtle);
+    }
+    .table-row:hover {
+        background: var(--surface-contrast);
+    }
+    .input-label {
+        display: block;
+        font-size: 0.75rem;
+        font-weight: 700;
+        letter-spacing: 0.1em;
+        text-transform: uppercase;
+        color: var(--text-secondary);
+        margin-bottom: 8px;
+    }
+</style>
+
+<div class="fluent-card p-10 max-w-6xl w-full flex flex-col items-center">
+    <h2 class="text-3xl font-black mb-8 text-center text-white">Reportes del mes: {{ mes_mostrar }}</h2>
 
     <form method="get" class="flex flex-wrap gap-4 items-center mb-12 justify-center w-full">
-        <input type="month" name="mes" value="{{ mes_actual }}" class="input-glass max-w-[200px] h-12">
-        <button type="submit" class="btn-fluent h-12 px-6">
-            <i class="fas fa-eye"></i> Ver
-        </button>
-        <a href="/exportar_pdf?mes={{ mes_actual }}" class="btn-fluent btn-red h-12 px-6 flex items-center gap-2">
-            <i class="fas fa-file-pdf"></i> PDF
-        </a>
-        <a href="/exportar_excel?mes={{ mes_actual }}" class="btn-fluent btn-green h-12 px-6 flex items-center gap-2">
-            <i class="fas fa-file-excel"></i> Excel
-        </a>
+        <div class="flex gap-2 items-end">
+            <div>
+                <label class="input-label">Seleccionar mes</label>
+                <input type="month" name="mes" value="{{ mes_actual }}" class="input-glass max-w-[200px] h-12">
+            </div>
+            <button type="submit" class="btn-fluent h-12 px-6 whitespace-nowrap">
+                <i class="fas fa-eye"></i> Ver
+            </button>
+            <a href="/exportar_pdf?mes={{ mes_actual }}" class="btn-fluent btn-red h-12 px-6 flex items-center gap-2 whitespace-nowrap">
+                <i class="fas fa-file-pdf"></i> PDF
+            </a>
+            <a href="/exportar_excel?mes={{ mes_actual }}" class="btn-fluent btn-green h-12 px-6 flex items-center gap-2 whitespace-nowrap">
+                <i class="fas fa-file-excel"></i> Excel
+            </a>
+        </div>
     </form>
 
     <div class="grid grid-cols-3 gap-8 w-full mb-12 text-center">
-        <div class="bg-green-50/50 p-4 rounded-2xl border border-green-100">
-            <p class="text-[10px] font-black uppercase tracking-widest opacity-40 mb-1">Total Ingresos</p>
-            <p class="text-xl font-black text-green-700">$ {{ total_ingresos|format_money }}</p>
+        <div class="stat-card income p-6 rounded-2xl">
+            <p class="text-xs font-black uppercase tracking-widest opacity-60 mb-2">Total Ingresos</p>
+            <p class="text-2xl font-black text-green-400">$ {{ total_ingresos|format_money }}</p>
         </div>
-        <div class="bg-red-50/50 p-4 rounded-2xl border border-red-100">
-            <p class="text-[10px] font-black uppercase tracking-widest opacity-40 mb-1">Total Gastos</p>
-            <p class="text-xl font-black text-red-700">$ {{ total_gastos|format_money }}</p>
+        <div class="stat-card expense p-6 rounded-2xl">
+            <p class="text-xs font-black uppercase tracking-widest opacity-60 mb-2">Total Gastos</p>
+            <p class="text-2xl font-black text-red-400">$ {{ total_gastos|format_money }}</p>
         </div>
-        <div class="bg-blue-50/50 p-4 rounded-2xl border border-blue-100">
-            <p class="text-[10px] font-black uppercase tracking-widest opacity-40 mb-1">Total Inversiones</p>
-            <p class="text-xl font-black text-blue-700">$ {{ total_inversiones|format_money }}</p>
+        <div class="stat-card investment p-6 rounded-2xl">
+            <p class="text-xs font-black uppercase tracking-widest opacity-60 mb-2">Total Inversiones</p>
+            <p class="text-2xl font-black text-blue-400">$ {{ total_inversiones|format_money }}</p>
         </div>
     </div>
 
     <!-- Tabla de Ingresos -->
     <div class="mb-10 w-full">
-        <h3 class="text-[11px] font-black uppercase tracking-widest mb-4 text-green-700">Ingresos</h3>
-        <div class="overflow-x-auto bg-white/40 rounded-2xl border border-white/20">
-            <table class="w-full text-[13px]">
-                <thead>
-                    <tr class="bg-black/5">
-                        <th class="px-6 py-4 text-left font-black uppercase tracking-widest text-[10px]">Fecha</th>
-                        <th class="px-6 py-4 text-left font-black uppercase tracking-widest text-[10px]">Descripción
-                        </th>
-                        <th class="px-6 py-4 text-right font-black uppercase tracking-widest text-[10px]">Monto</th>
+        <h3 class="text-sm font-black uppercase tracking-widest mb-4 text-green-400">Ingresos</h3>
+        <div class="table-container">
+            <table class="w-full text-sm">
+                <thead class="table-header">
+                    <tr>
+                        <th class="px-6 py-4 text-left font-black uppercase tracking-widest text-xs">Fecha</th>
+                        <th class="px-6 py-4 text-left font-black uppercase tracking-widest text-xs">Descripción</th>
+                        <th class="px-6 py-4 text-right font-black uppercase tracking-widest text-xs">Monto</th>
                     </tr>
                 </thead>
-                <tbody class="font-semibold">
+                <tbody>
                     {% for ingreso in ingresos %}
-                    <tr class="border-t border-black/5">
+                    <tr class="table-row">
                         <td class="px-6 py-4 opacity-70">{{ ingreso.fecha|format_date }}</td>
                         <td class="px-6 py-4">{{ ingreso.descripcion }}</td>
-                        <td class="px-6 py-4 text-right text-green-700 font-black">$ {{ ingreso.monto|format_money }}
-                        </td>
+                        <td class="px-6 py-4 text-right text-green-400 font-black">$ {{ ingreso.monto|format_money }}</td>
                     </tr>
                     {% else %}
                     <tr>
@@ -65,23 +110,22 @@
 
     <!-- Tabla de Gastos -->
     <div class="mb-10 w-full">
-        <h3 class="text-[11px] font-black uppercase tracking-widest mb-4 text-red-700">Gastos</h3>
-        <div class="overflow-x-auto bg-white/40 rounded-2xl border border-white/20">
-            <table class="w-full text-[13px]">
-                <thead>
-                    <tr class="bg-black/5">
-                        <th class="px-6 py-4 text-left font-black uppercase tracking-widest text-[10px]">Fecha</th>
-                        <th class="px-6 py-4 text-left font-black uppercase tracking-widest text-[10px]">Descripción
-                        </th>
-                        <th class="px-6 py-4 text-right font-black uppercase tracking-widest text-[10px]">Monto</th>
+        <h3 class="text-sm font-black uppercase tracking-widest mb-4 text-red-400">Gastos</h3>
+        <div class="table-container">
+            <table class="w-full text-sm">
+                <thead class="table-header">
+                    <tr>
+                        <th class="px-6 py-4 text-left font-black uppercase tracking-widest text-xs">Fecha</th>
+                        <th class="px-6 py-4 text-left font-black uppercase tracking-widest text-xs">Descripción</th>
+                        <th class="px-6 py-4 text-right font-black uppercase tracking-widest text-xs">Monto</th>
                     </tr>
                 </thead>
-                <tbody class="font-semibold">
+                <tbody>
                     {% for gasto in gastos %}
-                    <tr class="border-t border-black/5">
+                    <tr class="table-row">
                         <td class="px-6 py-4 opacity-70">{{ gasto.fecha|format_date }}</td>
                         <td class="px-6 py-4">{{ gasto.descripcion }}</td>
-                        <td class="px-6 py-4 text-right text-red-700 font-black">$ {{ gasto.monto|format_money }}</td>
+                        <td class="px-6 py-4 text-right text-red-400 font-black">$ {{ gasto.monto|format_money }}</td>
                     </tr>
                     {% else %}
                     <tr>
@@ -95,23 +139,22 @@
 
     <!-- Tabla de Inversiones -->
     <div class="mb-10 w-full">
-        <h3 class="text-[11px] font-black uppercase tracking-widest mb-4 text-blue-700">Inversiones</h3>
-        <div class="overflow-x-auto bg-white/40 rounded-2xl border border-white/20">
-            <table class="w-full text-[13px]">
-                <thead>
-                    <tr class="bg-black/5">
-                        <th class="px-6 py-4 text-left font-black uppercase tracking-widest text-[10px]">Fecha</th>
-                        <th class="px-6 py-4 text-left font-black uppercase tracking-widest text-[10px]">Descripción
-                        </th>
-                        <th class="px-6 py-4 text-right font-black uppercase tracking-widest text-[10px]">Monto</th>
+        <h3 class="text-sm font-black uppercase tracking-widest mb-4 text-blue-400">Inversiones</h3>
+        <div class="table-container">
+            <table class="w-full text-sm">
+                <thead class="table-header">
+                    <tr>
+                        <th class="px-6 py-4 text-left font-black uppercase tracking-widest text-xs">Fecha</th>
+                        <th class="px-6 py-4 text-left font-black uppercase tracking-widest text-xs">Descripción</th>
+                        <th class="px-6 py-4 text-right font-black uppercase tracking-widest text-xs">Monto</th>
                     </tr>
                 </thead>
-                <tbody class="font-semibold">
+                <tbody>
                     {% for inv in inversiones %}
-                    <tr class="border-t border-black/5">
+                    <tr class="table-row">
                         <td class="px-6 py-4 opacity-70">{{ inv.fecha|format_date }}</td>
                         <td class="px-6 py-4">{{ inv.descripcion }}</td>
-                        <td class="px-6 py-4 text-right text-blue-700 font-black">$ {{ inv.monto|format_money }}</td>
+                        <td class="px-6 py-4 text-right text-blue-400 font-black">$ {{ inv.monto|format_money }}</td>
                     </tr>
                     {% else %}
                     <tr>

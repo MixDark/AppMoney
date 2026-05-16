@@ -6,11 +6,16 @@ load_dotenv()
 
 def configure_app(app):
     """Configura la aplicación Flask con todas las opciones necesarias"""
-    app.config['SECRET_KEY'] = os.getenv('FLASK_SECRET_KEY', 'default-insecure-key')
+    secret_key = os.getenv('FLASK_SECRET_KEY')
+    if not secret_key or secret_key == 'default-insecure-key':
+        raise RuntimeError('FLASK_SECRET_KEY debe estar configurada con un valor seguro')
+    app.config['SECRET_KEY'] = secret_key
     app.config['SESSION_COOKIE_SECURE'] = True
     app.config['SESSION_COOKIE_HTTPONLY'] = True
     app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
     app.config['PERMANENT_SESSION_LIFETIME'] = int(os.getenv('SESSION_TIMEOUT', 1800))
+    app.config['PHOTO_MAX_BYTES'] = int(os.getenv('PHOTO_MAX_BYTES', 2 * 1024 * 1024))
+    app.config['MAX_CONTENT_LENGTH'] = app.config['PHOTO_MAX_BYTES']
 
 
 def configure_security_headers(app):

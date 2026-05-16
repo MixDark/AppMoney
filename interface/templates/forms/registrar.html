@@ -1,39 +1,90 @@
 {% extends 'layout/base.html' %}
 {% block title %}Registrar - App Money{% endblock %}
 {% block content %}
-<div class="fluent-card p-12 max-w-lg w-full flex flex-col items-center">
-    <h2 class="text-2xl font-black mb-10 text-center uppercase tracking-tight">Registrar transacción</h2>
+<style>
+    .form-label {
+        display: block;
+        font-size: 0.75rem;
+        font-weight: 700;
+        letter-spacing: 0.1em;
+        text-transform: uppercase;
+        color: var(--text-secondary);
+        margin-bottom: 8px;
+    }
+</style>
+<div class="fluent-card form-card p-12 max-w-lg w-full flex flex-col items-center">
+    <h2 class="page-title mb-2 text-center">Transacción</h2>
+    <p class="text-center text-sm opacity-60 mb-10">Agrega una nueva transacción a tu registro</p>
 
     <form method="post" class="space-y-8 w-full">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
         <div class="w-full">
-            <label class="block text-[10px] font-black uppercase mb-2 tracking-widest opacity-60">Tipo</label>
-            <select name="tipo" class="input-glass appearance-none cursor-pointer h-12 px-4 py-3 text-sm font-semibold">
-                <option value="ingreso">Ingreso</option>
-                <option value="gasto">Gasto</option>
-                <option value="inversion" {% if request.args.get('tipo')=='inversion' %}selected{% endif %}>Inversión</option>
+            <label class="form-label">Tipo de transacción</label>
+            <select name="tipo" class="input-glass appearance-none cursor-pointer">
+                <option value="ingreso">💰 Ingreso</option>
+                <option value="gasto">💸 Gasto</option>
+                <option value="inversion" {% if request.args.get('tipo')=='inversion' %}selected{% endif %}>🏦 Inversión</option>
             </select>
         </div>
 
         <div class="w-full">
-            <label class="block text-[10px] font-black uppercase mb-2 tracking-widest opacity-60">Monto</label>
+            <label class="form-label">Categoría (opcional)</label>
+            <select name="categoria_id" class="input-glass" id="selectCategoria">
+                <option value="">Sin categoría</option>
+                {% for cat in categorias %}
+                <option value="{{ cat.id }}" data-tipo="{{ cat.tipo }}">{{ cat.nombre }}</option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <div class="w-full">
+            <label class="form-label">Monto</label>
             <input type="number" step="0.01" name="monto" required class="input-glass">
         </div>
 
         <div class="w-full">
-            <label class="block text-[10px] font-black uppercase mb-2 tracking-widest opacity-60">Descripción</label>
+            <label class="form-label">Descripción</label>
             <input type="text" name="descripcion" class="input-glass">
         </div>
 
         <div class="w-full">
-            <label class="block text-[10px] font-black uppercase mb-2 tracking-widest opacity-60">Fecha</label>
-            <input type="date" name="fecha" required class="input-glass text-xs">
+            <label class="form-label">Fecha</label>
+            <input type="date" name="fecha" required class="input-glass text-sm">
         </div>
 
-        <div class="w-full flex justify-center pt-8">
-            <button type="submit" class="btn-fluent px-8 flex items-center justify-center gap-2 py-2">
-                <i class="fas fa-check-circle"></i> Registrar
+        <div class="w-full flex justify-center pt-6">
+            <button type="submit" class="btn-fluent px-12 py-3 flex items-center justify-center gap-2 text-base whitespace-nowrap">
+                <i class="fas fa-check-circle"></i> Guardar
             </button>
         </div>
     </form>
 </div>
 {% endblock %}
+
+<script>
+    (function(){
+        const tipoSelect = document.querySelector('select[name="tipo"]');
+        const catSelect = document.getElementById('selectCategoria');
+
+        if (!tipoSelect || !catSelect) return;
+
+        function filtrarCategorias(){
+            const tipo = tipoSelect.value;
+            Array.from(catSelect.options).forEach(opt => {
+                if (!opt.dataset.tipo) {
+                    opt.hidden = false; // Sin categoría
+                    return;
+                }
+                opt.hidden = opt.dataset.tipo !== tipo;
+            });
+            // Si la opción seleccionada está oculta, resetear a vacío
+            if (catSelect.selectedOptions.length && catSelect.selectedOptions[0].hidden) {
+                catSelect.value = '';
+            }
+        }
+
+        tipoSelect.addEventListener('change', filtrarCategorias);
+        // Filtrar al cargar
+        filtrarCategorias();
+    })();
+</script>

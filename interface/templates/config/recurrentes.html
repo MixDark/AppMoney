@@ -1,29 +1,76 @@
 {% extends 'layout/base.html' %}
 {% block title %}Recurrentes - App Money{% endblock %}
 {% block content %}
+<style>
+    .form-label {
+        display: block;
+        font-size: 0.75rem;
+        font-weight: 700;
+        letter-spacing: 0.1em;
+        text-transform: uppercase;
+        color: var(--text-secondary);
+        margin-bottom: 8px;
+    }
+    .table-container {
+        background: var(--surface);
+        border: 1px solid rgba(148, 163, 184, 0.1);
+        border-radius: 16px;
+        overflow: hidden;
+    }
+    .table-header {
+        background: var(--surface-contrast);
+        border-bottom: 1px solid var(--border-subtle);
+    }
+    .table-row {
+        border-bottom: 1px solid var(--border-subtle);
+    }
+    .table-row:hover {
+        background: var(--surface-contrast);
+    }
+    .action-btn {
+        padding: 4px 6px;
+        border-radius: 8px;
+        transition: all 0.2s;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        vertical-align: middle;
+        border: none;
+        background: transparent;
+        cursor: pointer;
+        color: inherit;
+        text-decoration: none;
+    }
+    .action-btn:hover { background: var(--surface-contrast); }
+    .action-btn.edit-btn { color: #60a5fa; margin-right: 8px; }
+    .action-btn.delete-btn { color: #ff6b6b; }
+</style>
+
 <div class="fluent-card p-10 max-w-6xl w-full">
-    <h2 class="text-3xl font-black mb-10 text-center uppercase tracking-tight">Transacciones recurrentes</h2>
+    <h2 class="text-3xl font-black mb-10 text-center text-white">Transacciones recurrentes</h2>
 
     <!-- Formulario -->
     <form method="POST"
-        class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12 bg-white/30 p-8 rounded-3xl border border-white/20">
+        class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12 p-8 panel-surface">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+        <input type="hidden" name="edit_id" id="edit_id" value="">
         <div>
-            <label class="block text-[10px] font-black uppercase mb-2 tracking-widest opacity-60">Descripción</label>
+            <label class="form-label">Descripción</label>
             <input type="text" name="descripcion" required class="input-glass h-12 px-4 py-3">
         </div>
         <div>
-            <label class="block text-[10px] font-black uppercase mb-2 tracking-widest opacity-60">Tipo</label>
+            <label class="form-label">Tipo</label>
             <select name="tipo" class="input-glass appearance-none cursor-pointer h-12 px-4 py-3">
                 <option value="gasto">Gasto</option>
                 <option value="ingreso">Ingreso</option>
             </select>
         </div>
         <div>
-            <label class="block text-[10px] font-black uppercase mb-2 tracking-widest opacity-60">Monto</label>
+            <label class="form-label">Monto</label>
             <input type="number" step="0.01" name="monto" required class="input-glass h-12 px-4 py-3">
         </div>
         <div>
-            <label class="block text-[10px] font-black uppercase mb-2 tracking-widest opacity-60">Frecuencia</label>
+            <label class="form-label">Frecuencia</label>
             <select name="frecuencia" class="input-glass appearance-none cursor-pointer h-12 px-4 py-3">
                 <option value="mensual">Mensual</option>
                 <option value="semanal">Semanal</option>
@@ -32,43 +79,52 @@
             </select>
         </div>
         <div>
-            <label class="block text-[10px] font-black uppercase mb-2 tracking-widest opacity-60">Próxima fecha</label>
-            <input type="date" name="proxima_fecha" required class="input-glass text-xs h-12 px-4 py-3">
+            <label class="form-label">Próxima fecha</label>
+            <input type="date" name="proxima_fecha" required class="input-glass h-12 px-4 py-3">
         </div>
-        <div class="flex flex-col justify-end">
-            <button type="submit" class="btn-fluent px-6 h-10 justify-center flex items-center gap-2"><i class="fas fa-clock"></i> Programar</button>
+        <div class="flex flex-col justify-end w-fit">
+            <div class="flex gap-2">
+                <button type="submit" id="submitRecurrente" class="btn-fluent h-12 px-6 justify-center flex items-center gap-2 whitespace-nowrap"><i class="fas fa-clock"></i> Programar</button>
+                <button type="button" id="cancelRecurrente" class="btn-fluent h-12 px-6 btn-red opacity-80 hidden"><i class="fas fa-times"></i> Cancelar</button>
+            </div>
         </div>
     </form>
 
     <!-- Lista de Recurrentes -->
-    <h3 class="text-lg font-bold mb-6 opacity-60 uppercase tracking-widest">Programaciones activas</h3>
-    <div class="overflow-hidden bg-white/40 rounded-3xl border border-white/20">
-        <table class="w-full text-[13px] text-left">
-            <thead>
-                <tr class="bg-black/5">
-                    <th class="px-6 py-5 font-black uppercase tracking-widest text-[10px]">Frecuencia</th>
-                    <th class="px-6 py-5 font-black uppercase tracking-widest text-[10px]">Descripción</th>
-                    <th class="px-6 py-5 font-black uppercase tracking-widest text-[10px]">Monto</th>
-                    <th class="px-6 py-5 font-black uppercase tracking-widest text-[10px]">Próxima Fecha</th>
-                    <th class="px-6 py-5 text-center font-black uppercase tracking-widest text-[10px]">Acciones</th>
+    <h3 class="text-lg font-bold mb-6 opacity-70 uppercase tracking-widest">Programaciones activas</h3>
+    <div class="table-container">
+        <table class="w-full text-sm">
+            <thead class="table-header">
+                <tr>
+                    <th class="px-6 py-4 text-left font-black uppercase tracking-widest text-xs">Frecuencia</th>
+                    <th class="px-6 py-4 text-left font-black uppercase tracking-widest text-xs">Descripción</th>
+                    <th class="px-6 py-4 text-left font-black uppercase tracking-widest text-xs">Monto</th>
+                    <th class="px-6 py-4 text-left font-black uppercase tracking-widest text-xs">Próxima Fecha</th>
+                    <th class="px-6 py-4 text-center font-black uppercase tracking-widest text-xs">Acciones</th>
                 </tr>
             </thead>
-            <tbody class="font-semibold">
+            <tbody>
                 {% for r in recurrentes %}
-                <tr class="border-t border-black/5 hover:bg-white/10 transition-all">
+                <tr class="table-row">
                     <td class="px-6 py-4">
-                        <span class="bg-black/5 px-2 py-1 rounded text-[10px] font-black uppercase tracking-tighter">{{
-                            r.frecuencia }}</span>
+                        <span class="px-3 py-1 rounded text-xs font-bold tracking-tight" style="background: var(--surface-contrast); color: var(--text-secondary);">{{ r.frecuencia }}</span>
                     </td>
                     <td class="px-6 py-4">{{ r.descripcion|capitalize }}</td>
-                    <td
-                        class="px-6 py-4 font-black {% if r.tipo == 'gasto' %}text-red-700{% else %}text-green-700{% endif %}">
+                    <td class="px-6 py-4 font-black {% if r.tipo == 'gasto' %}text-red-400{% else %}text-green-400{% endif %}">
                         $ {{ r.monto|format_money }}
                     </td>
                     <td class="px-6 py-4">{{ r.proxima_fecha|format_date }}</td>
                     <td class="px-6 py-4 text-center">
-                        <button onclick="mostrarConfirmacion({{ r.id }}, '{{ r.descripcion }}')"
-                            class="text-red-600 hover:scale-110 inline-block transition-transform cursor-pointer">
+                        <a href="#" class="action-btn edit-btn text-blue-400 js-recurrente-editar" title="Editar"
+                           data-id="{{ r.id }}"
+                           data-tipo="{{ r.tipo }}"
+                           data-monto="{{ '%.2f' % r.monto }}"
+                           data-descripcion="{{ r.descripcion|e }}"
+                           data-frecuencia="{{ r.frecuencia }}"
+                           data-proxima_fecha="{{ r.proxima_fecha }}">
+                            <i class="fas fa-pen"></i>
+                        </a>
+                        <button type="button" class="text-red-400 hover:scale-110 inline-block transition-transform cursor-pointer js-recurrente-eliminar" data-id="{{ r.id }}" data-descripcion="{{ r.descripcion|e }}">
                             <i class="fas fa-trash-alt"></i>
                         </button>
                     </td>
@@ -76,8 +132,7 @@
                 {% endfor %}
                 {% if not recurrentes %}
                 <tr>
-                    <td colspan="5" class="px-6 py-20 text-center opacity-40 italic">No hay transacciones recurrentes
-                        programadas.</td>
+                    <td colspan="5" class="px-6 py-20 text-center opacity-40 italic">No hay transacciones recurrentes programadas.</td>
                 </tr>
                 {% endif %}
             </tbody>
@@ -91,13 +146,56 @@
         <h3 class="text-2xl font-black mb-6 text-center uppercase tracking-tight">Confirmar eliminación</h3>
         <p class="text-center mb-8 opacity-70">¿Está seguro de que desea eliminar la programación <strong id="modalDescripcion"></strong>?</p>
         <div class="flex gap-4 justify-center">
-            <button onclick="cancelarEliminacion()" class="btn-fluent flex-1 px-8 py-2 flex items-center justify-center gap-2">
-                <i class="fa-solid fa-xmark"></i> Cancelar
+            <button onclick="cancelarEliminacion()" class="btn-fluent px-8 py-2 flex items-center justify-center gap-2 whitespace-nowrap">
+                <i class="fas fa-times"></i> Cancelar
             </button>
-            <button id="btnEliminar" onclick="confirmarEliminacion()" class="btn-fluent btn-red flex-1 px-8 py-2 flex items-center justify-center gap-2">
+            <button id="btnEliminar" onclick="confirmarEliminacion()" class="btn-fluent btn-red px-8 py-2 flex items-center justify-center gap-2 whitespace-nowrap">
                 <i class="fa-solid fa-trash"></i> Eliminar
             </button>
         </div>
+    </div>
+</div>
+
+<!-- Modal de Edición -->
+<div id="editModal" class="fixed inset-0 bg-black/50 hidden items-center justify-center z-50">
+    <div class="fluent-card p-12 max-w-md w-full mx-4">
+        <h2 class="text-3xl font-black mb-6 text-center">Editar registro</h2>
+        <form method="POST" action="{{ url_for('main.recurrentes') }}" id="formEditarModal">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+            <input type="hidden" name="edit_id" id="modal_edit_id" value="">
+            <div class="mb-4">
+                <label class="form-label">Tipo</label>
+                <select name="tipo" id="modal_tipo" class="input-glass">
+                    <option value="gasto">Gasto</option>
+                    <option value="ingreso">Ingreso</option>
+                </select>
+            </div>
+            <div class="mb-4">
+                <label class="form-label">Monto</label>
+                <input type="text" name="monto" id="modal_monto" class="input-glass">
+            </div>
+            <div class="mb-4">
+                <label class="form-label">Descripción</label>
+                <input type="text" name="descripcion" id="modal_descripcion" class="input-glass">
+            </div>
+            <div class="mb-4">
+                <label class="form-label">Fecha</label>
+                <input type="date" name="proxima_fecha" id="modal_proxima_fecha" class="input-glass">
+            </div>
+            <div class="mb-6">
+                <label class="form-label">Frecuencia</label>
+                <select name="frecuencia" id="modal_frecuencia" class="input-glass">
+                    <option value="mensual">Mensual</option>
+                    <option value="semanal">Semanal</option>
+                    <option value="diario">Diario</option>
+                    <option value="anual">Anual</option>
+                </select>
+            </div>
+            <div class="flex gap-4 justify-center">
+                <button type="submit" class="btn-fluent px-8 py-3"><i class="fas fa-save"></i> Guardar</button>
+                <button type="button" class="btn-fluent btn-red px-8 py-3" id="modalCancelar"><i class="fas fa-times"></i> Cancelar</button>
+            </div>
+        </form>
     </div>
 </div>
 
@@ -107,13 +205,15 @@
     function mostrarConfirmacion(id, descripcion) {
         idAEliminar = id;
         document.getElementById('modalDescripcion').textContent = `"${descripcion}"`;
-        document.getElementById('confirmModal').classList.remove('hidden');
-        document.getElementById('confirmModal').classList.add('flex');
+        const modal = document.getElementById('confirmModal');
+        modal.classList.remove('hidden');
+        modal.classList.add('flex');
     }
 
     function cancelarEliminacion() {
-        document.getElementById('confirmModal').classList.add('hidden');
-        document.getElementById('confirmModal').classList.remove('flex');
+        const modal = document.getElementById('confirmModal');
+        modal.classList.add('hidden');
+        modal.classList.remove('flex');
         idAEliminar = null;
     }
 
@@ -123,11 +223,215 @@
         }
     }
 
+    document.addEventListener('DOMContentLoaded', function() {
+        const botonesEliminar = document.querySelectorAll('.js-recurrente-eliminar');
+        botonesEliminar.forEach((button) => {
+            button.addEventListener('click', () => {
+                const id = Number(button.dataset.id || 0);
+                const descripcion = button.dataset.descripcion || '';
+                mostrarConfirmacion(id, descripcion);
+            });
+        });
+
+        // Delegación de eventos: manejar clicks en los botones de editar dentro de la tabla
+        const tableContainer = document.querySelector('.table-container');
+        const form = document.querySelector('form');
+        const submitBtn = document.getElementById('submitRecurrente');
+        const editIdInput = document.getElementById('edit_id');
+        const cancelBtn = document.getElementById('cancelRecurrente');
+
+        function enterEditMode(data) {
+            const { id, tipo, monto, descripcion, frecuencia, proxima_fecha } = data;
+            const descInput = document.querySelector('input[name="descripcion"]');
+            const tipoSelect = document.querySelector('select[name="tipo"]');
+            const montoInput = document.querySelector('input[name="monto"]');
+            const frecuenciaSelect = document.querySelector('select[name="frecuencia"]');
+            const fechaInput = document.querySelector('input[name="proxima_fecha"]');
+
+            if (descInput) descInput.value = descripcion;
+            if (tipoSelect) tipoSelect.value = tipo;
+            if (montoInput) montoInput.value = monto;
+            if (frecuenciaSelect) frecuenciaSelect.value = frequencyNormalize(frecuencia);
+            if (fechaInput) fechaInput.value = dateNormalize(proxima_fecha);
+            if (editIdInput) editIdInput.value = id;
+
+            if (submitBtn) submitBtn.innerHTML = '<i class="fas fa-save"></i> Actualizar';
+            if (cancelBtn) cancelBtn.classList.remove('hidden');
+            form.scrollIntoView({ behavior: 'smooth' });
+        }
+
+        function clearEditMode() {
+            const descInput = document.querySelector('input[name="descripcion"]');
+            const tipoSelect = document.querySelector('select[name="tipo"]');
+            const montoInput = document.querySelector('input[name="monto"]');
+            const frecuenciaSelect = document.querySelector('select[name="frecuencia"]');
+            const fechaInput = document.querySelector('input[name="proxima_fecha"]');
+
+            if (descInput) descInput.value = '';
+            if (tipoSelect) tipoSelect.value = 'gasto';
+            if (montoInput) montoInput.value = '';
+            if (frecuenciaSelect) frecuenciaSelect.value = 'mensual';
+            if (fechaInput) fechaInput.value = '';
+            if (editIdInput) editIdInput.value = '';
+            if (submitBtn) submitBtn.innerHTML = '<i class="fas fa-clock"></i> Programar';
+            if (cancelBtn) cancelBtn.classList.add('hidden');
+        }
+
+        function frequencyNormalize(v) { return v || 'mensual'; }
+        function dateNormalize(d) {
+            if (!d) return '';
+            if (d.indexOf('/') !== -1) {
+                const parts = d.split('/');
+                if (parts.length === 3) return `${parts[2]}-${parts[1].padStart(2,'0')}-${parts[0].padStart(2,'0')}`;
+            }
+            return d;
+        }
+
+        if (tableContainer) {
+            tableContainer.addEventListener('click', (e) => {
+                const btn = e.target.closest('.js-recurrente-editar');
+                if (!btn) return;
+                e.preventDefault();
+
+                // Read attributes
+                const id = btn.getAttribute('data-id') || '';
+                const tipo = btn.getAttribute('data-tipo') || 'gasto';
+                let monto = btn.getAttribute('data-monto') || '';
+                // fallback: leer texto de la celda Monto en la misma fila si el atributo no es fiable
+                if (!monto) {
+                    const row = btn.closest('tr');
+                    if (row) {
+                        // la columna Monto es la tercera celda (index 2)
+                        const montoCell = row.querySelectorAll('td')[2];
+                        if (montoCell) {
+                            let text = montoCell.innerText || montoCell.textContent || '';
+                            // quitar signo de $ y espacios
+                            text = text.replace(/\$/g, '').trim();
+                            // text viene en formato '24.000.000,00' — normalizar a '24000000.00'
+                            monto = text.replace(/[^0-9.,-]/g, '');
+                        }
+                    }
+                }
+                let descripcion = btn.getAttribute('data-descripcion') || '';
+                const frecuencia = btn.getAttribute('data-frecuencia') || 'mensual';
+                let proxima_fecha = btn.getAttribute('data-proxima_fecha') || '';
+
+                // Decode HTML entities
+                const txt = document.createElement('textarea');
+                txt.innerHTML = descripcion;
+                descripcion = txt.value;
+
+                // Normalize monto from the stored value without destroying decimal separators
+                monto = parseMontoValue(monto);
+
+                // Open modal and fill values
+                const editModal = document.getElementById('editModal');
+                const modalId = document.getElementById('modal_edit_id');
+                const modalTipo = document.getElementById('modal_tipo');
+                const modalMonto = document.getElementById('modal_monto');
+                const modalDesc = document.getElementById('modal_descripcion');
+                const modalFreq = document.getElementById('modal_frecuencia');
+                const modalFecha = document.getElementById('modal_proxima_fecha');
+
+                // Debug: valores leídos y normalizados
+                console.log('DEBUG recurrentes: prepared values', { id, tipo, raw_monto: btn.getAttribute('data-monto'), fallback_monto: monto, monto_normalized: monto, descripcion, frecuencia, proxima_fecha });
+
+                if (modalId) modalId.value = id;
+                if (modalTipo) modalTipo.value = tipo;
+                if (modalMonto) modalMonto.value = formatNoThousands(monto);
+                if (modalDesc) modalDesc.value = descripcion;
+                if (modalFreq) modalFreq.value = frecuencia;
+                if (modalFecha) modalFecha.value = dateNormalize(proxima_fecha);
+
+                // Debug: valores colocados en modal
+                console.log('DEBUG recurrentes: modal values', { modal_monto_display: modalMonto ? modalMonto.value : null });
+
+                if (editModal) {
+                    editModal.classList.remove('hidden');
+                    editModal.classList.add('flex');
+                }
+            });
+        }
+
+        if (cancelBtn) {
+            cancelBtn.addEventListener('click', () => { clearEditMode(); });
+        }
+    });
+
     // Cerrar modal al presionar Escape
     document.addEventListener('keydown', function(event) {
         if (event.key === 'Escape') {
             cancelarEliminacion();
         }
     });
+
+    // Edit modal cancel
+    const modalCancelarBtn = document.getElementById('modalCancelar');
+    const editModal = document.getElementById('editModal');
+    if (modalCancelarBtn && editModal) {
+        modalCancelarBtn.addEventListener('click', () => {
+            editModal.classList.add('hidden');
+            editModal.classList.remove('flex');
+        });
+    }
+
+    // Cerrar modal de edición si clic fuera del contenido
+    if (editModal) {
+        editModal.addEventListener('click', (e) => {
+            if (e.target === editModal) {
+                editModal.classList.add('hidden');
+                editModal.classList.remove('flex');
+            }
+        });
+    }
+
+    // Formateo: mostrar monto SIN separador de miles y con coma decimal (ej. 30000,00)
+    function parseMontoValue(value) {
+        if (value === null || value === undefined || value === '') return '';
+        let s = String(value).replace(/[^0-9,.-]/g, '').trim();
+        if (!s) return '';
+
+        const hasComma = s.includes(',');
+        const hasDot = s.includes('.');
+
+        if (hasComma && hasDot) {
+            // Decide según el último separador visible
+            if (s.lastIndexOf(',') > s.lastIndexOf('.')) {
+                // Formato latino: 24.000,00 -> 24000.00
+                s = s.replace(/\./g, '').replace(/,/g, '.');
+            } else {
+                // Formato US: 24000.00 -> 24000.00 (solo quitar comas de miles)
+                s = s.replace(/,/g, '');
+            }
+        } else if (hasComma && !hasDot) {
+            // 24000,00 -> 24000.00
+            s = s.replace(/,/g, '.');
+        }
+
+        const n = Number(s);
+        return isNaN(n) ? '' : n;
+    }
+
+    function formatNoThousands(value) {
+        const n = parseMontoValue(value);
+        if (n === '' || n === null || n === undefined || isNaN(Number(n))) return '';
+        return Number(n).toFixed(2).replace('.', ',');
+    }
+
+    function normalizeNumberForSubmitDisplay(s) {
+        const n = parseMontoValue(s);
+        return n === '' ? '' : String(n);
+    }
+
+    // Normalizar monto antes de enviar formulario del modal
+    const formEditarModal = document.getElementById('formEditarModal');
+    if (formEditarModal) {
+        formEditarModal.addEventListener('submit', (e) => {
+            const m = document.getElementById('modal_monto');
+            if (m && m.value) {
+                m.value = normalizeNumberForSubmitDisplay(m.value);
+            }
+        });
+    }
 </script>
 {% endblock %}

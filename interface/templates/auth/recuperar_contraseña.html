@@ -1,29 +1,42 @@
 {% extends 'layout/base.html' %}
 {% block title %}Recuperar - App Money{% endblock %}
 {% block content %}
-<div class="fluent-card p-12 max-w-md w-full flex flex-col items-center">
-    <h2 class="text-2xl font-black mb-2 text-center uppercase tracking-tight">Recuperar cuenta</h2>
+<style>
+    .form-label {
+        display: block;
+        font-size: 0.7rem;
+        font-weight: 700;
+        letter-spacing: 0.1em;
+        text-transform: uppercase;
+        color: var(--text-secondary);
+        margin-bottom: 5px;
+    }
+</style>
+
+<div class="fluent-card form-card p-8 max-w-md w-full flex flex-col items-center">
+    <h2 class="text-2xl font-black mb-1 text-center text-white">Recuperación de cuenta</h2>
+    <p class="text-center text-xs opacity-60 mb-6">Ingresa tu usuario para recibir instrucciones</p>
 
     {% if mensaje %}
-    <p
-        class="text-red-600 mb-6 text-center text-sm font-bold bg-red-100/50 py-2 px-4 rounded-lg w-full border border-red-200">
+    <p class="text-red-400 mb-6 text-center text-sm font-bold bg-red-500/10 py-3 px-4 rounded-lg w-full border border-red-500/30">
         {{ mensaje|capitalize }}
     </p>
     {% endif %}
 
     <form method="post" class="space-y-8 w-full flex flex-col">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
         <div class="w-full">
-            <label class="block mb-2 text-sm font-bold">Usuario:</label>
-            <input type="text" name="nombre_usuario" required class="input-glass">
+            <label class="form-label">Usuario</label>
+            <input type="text" name="nombre_usuario" required class="input-glass" >
         </div>
-        <div class="w-full flex justify-center pt-4">
-            <button type="submit" class="btn-fluent px-10 py-4 justify-center flex items-center gap-2">
-                <i class="fas fa-envelope"></i> Restablecer
+        <div class="w-full flex justify-center">
+            <button type="submit" class="btn-fluent px-10 py-2 justify-center flex items-center gap-2 whitespace-nowrap text-sm">
+                <i class="fas fa-key"></i> Restablecer
             </button>
         </div>
     </form>
-    <div class="mt-10">
-        <a href="/login" class="link-fluent text-sm font-bold">Volver al login</a>
+    <div class="mt-6">
+        <a href="/login" class="text-blue-400 hover:text-blue-300 text-xs font-bold">Volver al login</a>
     </div>
 </div>
 {% endblock %}

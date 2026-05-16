@@ -50,3 +50,10 @@ def validate_tipo(tipo):
         return False, "Tipo inválido"
     return True, "OK"
 
+def validate_totp(codigo):
+    if not codigo:
+        return False, "El código OTP es requerido"
+    if not re.match(r'^\d{6}$', codigo):
+        return False, "El código OTP debe tener 6 dígitos"
+    return True, "OK"
+

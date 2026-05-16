@@ -8,6 +8,7 @@ from application.config import configure_app, configure_security_headers
 from application.auth import init_auth
 from application.filters import register_template_filters
 from interface.routes import register_routes
+from infrastructure.schema import ensure_schema
 
 load_dotenv()
 sys.path.append(os.path.abspath(os.path.dirname(__file__)))
@@ -27,7 +28,8 @@ def create_app():
     init_auth(app)
     register_template_filters(app)
     register_routes(app)
-    
+    ensure_schema()
+
     return app
 
 

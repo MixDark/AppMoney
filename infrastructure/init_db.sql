@@ -6,6 +6,16 @@ CREATE TABLE IF NOT EXISTS usuarios (
     id INT AUTO_INCREMENT PRIMARY KEY,
     nombre_usuario VARCHAR(100) NOT NULL UNIQUE,
     password_hash VARCHAR(255) NOT NULL,
+    totp_secret VARCHAR(32),
+    MFA BOOLEAN DEFAULT FALSE,
+    ultimo_login DATETIME,
+    nombre_completo VARCHAR(255),
+    email VARCHAR(255),
+    telefono VARCHAR(50),
+    pais VARCHAR(100),
+    ciudad VARCHAR(100),
+    moneda VARCHAR(10) DEFAULT 'USD',
+    foto_perfil MEDIUMBLOB,
     creado_en TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
@@ -16,6 +26,7 @@ CREATE TABLE IF NOT EXISTS ingresos (
     monto DECIMAL(10,2) NOT NULL,
     descripcion VARCHAR(255),
     fecha DATE NOT NULL,
+    categoria_id INT NULL,
     creado_en TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (usuario_id) REFERENCES usuarios(id) ON DELETE CASCADE
 );
@@ -27,6 +38,7 @@ CREATE TABLE IF NOT EXISTS gastos (
     monto DECIMAL(10,2) NOT NULL,
     descripcion VARCHAR(255),
     fecha DATE NOT NULL,
+    categoria_id INT NULL,
     creado_en TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (usuario_id) REFERENCES usuarios(id) ON DELETE CASCADE
 );
@@ -35,9 +47,11 @@ CREATE TABLE IF NOT EXISTS gastos (
 CREATE TABLE IF NOT EXISTS inversiones (
     id INT AUTO_INCREMENT PRIMARY KEY,
     usuario_id INT NOT NULL,
+    tipo VARCHAR(50) NOT NULL DEFAULT 'otro',
     monto DECIMAL(10,2) NOT NULL,
     descripcion VARCHAR(255),
     fecha DATE NOT NULL,
+    categoria_id INT NULL,
     creado_en TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (usuario_id) REFERENCES usuarios(id) ON DELETE CASCADE
 );
@@ -70,12 +84,13 @@ CREATE TABLE IF NOT EXISTS presupuestos (
     usuario_id INT NOT NULL,
     categoria_id VARCHAR(255),
     monto DECIMAL(10,2) NOT NULL,
+    gastado DECIMAL(10,2) DEFAULT 0,
     creado_en TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (usuario_id) REFERENCES usuarios(id) ON DELETE CASCADE
 );
 
 -- Tabla de transacciones recurrentes
-CREATE TABLE IF NOT EXISTS recurrentes (
+CREATE TABLE IF NOT EXISTS transacciones_recurrentes (
     id INT AUTO_INCREMENT PRIMARY KEY,
     usuario_id INT NOT NULL,
     tipo VARCHAR(50),
@@ -83,6 +98,7 @@ CREATE TABLE IF NOT EXISTS recurrentes (
     monto DECIMAL(10,2) NOT NULL,
     frecuencia VARCHAR(50),
     proxima_fecha DATE,
+    activo BOOLEAN DEFAULT TRUE,
     creado_en TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (usuario_id) REFERENCES usuarios(id) ON DELETE CASCADE
 );
@@ -98,15 +114,3 @@ CREATE TABLE IF NOT EXISTS password_reset_tokens (
     creado_en TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (usuario_id) REFERENCES usuarios(id) ON DELETE CASCADE
 );
--- Contraseña: Alice12+
--- Hash generado con werkzeug.security.generate_password_hash()
-INSERT INTO usuarios (nombre_usuario, password_hash) VALUES (
-    'Esteban',
-    'pbkdf2:sha256:1000000$kBsuD8BkyZqtj2z2$8bda538153dbeafce6dc1ec1c5fa8ab34d6c982d88e19aafcb063cc8afd5f23c'
-);
-
--- Categorías por defecto para el usuario Esteban (id=1)
-INSERT INTO categorias (usuario_id, nombre, tipo, color) VALUES 
-(1, 'Gastos Generales', 'gasto', '#dc2626'),
-(1, 'Ingresos Generales', 'ingreso', '#16a34a'),
-(1, 'Inversiones Generales', 'inversion', '#2563eb');

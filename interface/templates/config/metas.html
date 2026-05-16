@@ -1,52 +1,84 @@
 {% extends 'layout/base.html' %}
 {% block title %}Metas - App Money{% endblock %}
 {% block content %}
+<style>
+    .form-label {
+        display: block;
+        font-size: 0.75rem;
+        font-weight: 700;
+        letter-spacing: 0.1em;
+        text-transform: uppercase;
+        color: var(--text-secondary);
+        margin-bottom: 8px;
+    }
+    .goal-card {
+        background: var(--surface);
+        border: 1px solid rgba(59, 130, 246, 0.2);
+        transition: all 0.3s ease;
+    }
+    .goal-card:hover {
+        border-color: rgba(59, 130, 246, 0.5);
+        transform: translateY(-4px);
+    }
+    .progress-bar {
+        height: 8px;
+        background: rgba(148, 163, 184, 0.1);
+        border-radius: 10px;
+        overflow: hidden;
+    }
+    .progress-fill {
+        height: 100%;
+        background: #3b82f6;
+        border-radius: 10px;
+        transition: width 0.3s ease;
+    }
+</style>
 <div class="fluent-card p-10 max-w-6xl w-full">
-    <h2 class="text-3xl font-black mb-10 text-center uppercase tracking-tight">Mis metas de ahorro</h2>
+    <h2 class="page-title mb-2 text-center">Mis metas de ahorro</h2>
+    <p class="text-center text-sm opacity-60 mb-10">Define y persigue tus objetivos financieros</p>
 
     <!-- Agregar Meta -->
-    <form method="POST"
-        class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-12 bg-white/30 p-8 rounded-3xl border border-white/20">
+    <form method="POST" action="{{ url_for('main.metas') }}"
+        class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-12 p-8 panel-surface">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
         <div class="md:col-span-2">
-            <label class="block text-[10px] font-black uppercase mb-2 tracking-widest opacity-60">Nombre De La
-                Meta</label>
-            <input type="text" name="nombre" required class="input-glass h-12 px-4 py-3">
+            <label class="form-label">Nombre de la Meta</label>
+            <input type="text" name="nombre" required class="input-glass h-12 px-4 py-3" >
         </div>
         <div>
-            <label class="block text-[10px] font-black uppercase mb-2 tracking-widest opacity-60">Monto Objetivo</label>
+            <label class="form-label">Monto Objetivo</label>
             <input type="number" step="0.01" name="monto_objetivo" required class="input-glass h-12 px-4 py-3">
         </div>
-        <div class="flex flex-col justify-end">
-            <button type="submit" class="btn-fluent h-12 px-8 justify-center flex items-center gap-2"><i class="fas fa-bullseye"></i> Crear</button>
+        <div class="flex flex-col justify-end w-fit">
+            <button type="submit" class="btn-fluent btn-green h-12 px-8 justify-center flex items-center gap-2 whitespace-nowrap"><i class="fas fa-bullseye"></i> Crear</button>
         </div>
     </form>
 
     <!-- Grid de Metas -->
     <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
         {% for m in metas %}
-        <div class="bg-white/40 p-8 rounded-[32px] border border-white/20 flex flex-col items-center">
-            <div class="w-20 h-20 bg-blue-500/10 rounded-full flex items-center justify-center mb-6">
-                <i class="fas fa-bullseye text-3xl text-blue-600"></i>
+        <div class="goal-card p-8 rounded-3xl flex flex-col items-center">
+            <div class="w-20 h-20 bg-blue-500/15 rounded-full flex items-center justify-center mb-6 border border-blue-500/30">
+                <i class="fas fa-bullseye text-3xl text-blue-400"></i>
             </div>
-            <h4 class="font-black text-xl mb-1">{{ m.nombre }}</h4>
-            <p class="text-2xl font-black text-blue-800 mb-6">$ {{ m.monto_objetivo|format_money }}</p>
+            <h4 class="font-black text-xl mb-2 text-center">{{ m.nombre }}</h4>
+            <p class="text-2xl font-black text-blue-400 mb-6">$ {{ m.monto_objetivo|format_money }}</p>
 
             <div class="w-full mb-4">
-                <div class="flex justify-between text-[10px] font-black uppercase tracking-widest mb-2 opacity-60">
+                <div class="flex justify-between text-xs font-bold uppercase tracking-widest mb-3 opacity-70">
                     <span>Progreso</span>
                     <span>{{ m.porcentaje }}%</span>
                 </div>
-                <div class="w-full bg-black/5 rounded-full h-3 overflow-hidden border border-black/5">
-                    <div class="h-full bg-blue-600" style="width: {{ m.porcentaje }}%"></div>
+                <div class="progress-bar">
+                    <div class="progress-fill js-progress-fill" data-percent="{{ m.porcentaje }}"></div>
                 </div>
             </div>
 
-            <p class="text-xs font-bold opacity-40 mb-4">Faltan: $ {{ (m.monto_objetivo - m.monto_actual)|format_money
-                }}</p>
+            <p class="text-sm font-semibold opacity-70 mb-6">Faltan: <span class="text-blue-400">$ {{ (m.monto_objetivo - m.monto_actual)|format_money }}</span></p>
 
             <div class="flex gap-3 w-full">
-                <button onclick="abrirModalAportar({{ m.id }}, '{{ m.nombre }}')" class="btn-fluent flex-1 py-2 px-3 text-xs justify-center flex items-center gap-1"><i class="fas fa-plus"></i> Aportar</button>
-                <button onclick="abrirModalEliminar({{ m.id }}, '{{ m.nombre }}')" class="btn-fluent btn-red flex-1 py-2 px-3 text-xs flex items-center justify-center gap-2">
+                <button type="button" class="btn-fluent btn-green flex-1 py-2 px-3 text-xs justify-center flex items-center gap-1 whitespace-nowrap js-aportar" data-id="{{ m.id }}" data-nombre="{{ m.nombre|e }}"><i class="fas fa-plus"></i> Aportar</button>
+                <button type="button" class="btn-fluent btn-red flex-1 py-2 px-3 text-xs flex items-center justify-center gap-2 whitespace-nowrap js-eliminar" data-id="{{ m.id }}" data-nombre="{{ m.nombre|e }}">
                     <i class="fas fa-trash"></i> Eliminar
                 </button>
             </div>
@@ -80,8 +112,8 @@
         <p class="text-center mb-8 opacity-70">¿Está seguro de que desea eliminar la meta <strong id="nombreMetaEliminar"></strong>?</p>
         
         <div class="flex gap-4 justify-center">
-            <button onclick="cerrarModalEliminar()" class="btn-fluent flex-1 px-8 py-2 flex items-center justify-center gap-2"><i class="fas fa-times"></i> Cancelar</button>
-            <button onclick="confirmarEliminar()" class="btn-fluent btn-red flex-1 px-8 py-2 flex items-center justify-center gap-2"><i class="fas fa-trash"></i> Eliminar</button>
+            <button onclick="cerrarModalEliminar()" class="btn-fluent px-8 py-2 flex items-center justify-center gap-2 whitespace-nowrap"><i class="fas fa-times"></i> Cancelar</button>
+            <button onclick="confirmarEliminar()" class="btn-fluent btn-red px-8 py-2 flex items-center justify-center gap-2 whitespace-nowrap"><i class="fas fa-trash"></i> Eliminar</button>
         </div>
     </div>
 </div>
@@ -109,12 +141,14 @@
             alert('Por favor ingresa un monto válido');
             return;
         }
+        const csrfToken = document.querySelector('input[name="csrf_token"]').value;
         
         // Enviar aporte al servidor
         fetch('/aporte_meta/' + metaActualId, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
+                'X-CSRF-Token': csrfToken,
             },
             body: JSON.stringify({ monto: parseFloat(monto) })
         })
@@ -158,6 +192,23 @@
     
     document.getElementById('modalEliminar')?.addEventListener('click', function(e) {
         if (e.target === this) cerrarModalEliminar();
+    });
+
+    document.querySelectorAll('.js-progress-fill').forEach((bar) => {
+        const percent = parseFloat(bar.dataset.percent || '0');
+        bar.style.width = `${Math.min(Math.max(percent, 0), 100)}%`;
+    });
+
+    document.querySelectorAll('.js-aportar').forEach((button) => {
+        button.addEventListener('click', () => {
+            abrirModalAportar(button.dataset.id, button.dataset.nombre || '');
+        });
+    });
+
+    document.querySelectorAll('.js-eliminar').forEach((button) => {
+        button.addEventListener('click', () => {
+            abrirModalEliminar(button.dataset.id, button.dataset.nombre || '');
+        });
     });
 </script>
 {% endblock %}

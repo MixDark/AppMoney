@@ -11,6 +11,7 @@ Una aplicación web para gestionar ingresos, gastos e inversiones de forma segur
 - Gestión de sesiones
 - Opción de editar perfil y cambiar contraseña
 - Recuperación de contraseña con CAPTCHA
+- Foto de perfil almacenada en base de datos
 
 ### 2. **Autenticación de dos factores (2FA)** ⭐
 - Configuración de TOTP (Time-based One-Time Password)
@@ -45,6 +46,7 @@ Una aplicación web para gestionar ingresos, gastos e inversiones de forma segur
 - Tablas detalladas de ingresos, gastos e inversiones
 - Totales por categoría
 - Saldo calculado automáticamente
+ - Exportar a Excel (.xlsx) con formato profesional (título, subtítulo, encabezados, formato de fecha y monto)
 
 ### 7. **Edición de perfil**
 - Cambio de contraseña
@@ -66,6 +68,7 @@ Una aplicación web para gestionar ingresos, gastos e inversiones de forma segur
 - ✅ **Validación de entrada**: Funciones de validación robustas
 - ✅ **Sesiones seguras**: Cookies HttpOnly, SameSite, timeout
 - ✅ **Recuperación de contraseña**: Con CAPTCHA y tokens únicos
+- ✅ **Rate limiting**: Límite de intentos en autenticación y recuperación
 
 ## 📋 Requisitos
 
@@ -83,6 +86,8 @@ python-dotenv==1.0.0
 Werkzeug==2.3.0
 waitress==2.1.2
 pyotp==2.9.0
+pandas==2.2.0
+openpyxl==3.1.5
 ```
 
 ## 🔧 Instalación
@@ -114,6 +119,7 @@ DB_PASSWORD=tu-contraseña
 DB_NAME=app_money
 FLASK_DEBUG=False
 SESSION_TIMEOUT=1800
+PHOTO_MAX_BYTES=2097152
 ```
 
 5. **Crear base de datos**
@@ -193,6 +199,16 @@ app_money/
    - id (PK)
    - nombre_usuario
    - password_hash
+   - totp_secret
+   - MFA
+   - ultimo_login
+   - nombre_completo
+   - email
+   - telefono
+   - pais
+   - ciudad
+   - moneda
+   - foto_perfil (BLOB)
    - creado_en
 
 2. **ingresos**
@@ -301,5 +317,5 @@ Desarrollado como gestor de finanzas personales.
 
 ---
 
-**Última actualización**: 5 de febrero de 2026
+**Última actualización**: 16 de mayo de 2026
 

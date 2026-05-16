@@ -1,36 +1,94 @@
 {% extends 'layout/base.html' %}
 {% block title %}Registro de usuario{% endblock %}
 {% block content %}
-<div class="fluent-card p-12 max-w-md w-full flex flex-col items-center">
-    <h2 class="text-2xl font-bold mb-10 text-center">Registro de usuario</h2>
+<style>
+    .form-label {
+        display: block;
+        font-size: 0.7rem;
+        font-weight: 700;
+        letter-spacing: 0.1em;
+        text-transform: uppercase;
+        color: var(--text-secondary);
+        margin-bottom: 5px;
+    }
+</style>
+<div class="fluent-card form-card p-8 max-w-md w-full flex flex-col items-center">
+    <h2 class="text-2xl font-black mb-1 text-center text-white">Información de cuenta</h2>
+    <p class="text-center text-xs opacity-60 mb-6">Únete a App Money hoy mismo</p>
 
     {% if mensaje %}
-    <p
-        class="text-red-600 mb-6 text-center text-sm font-bold bg-red-100/50 py-2 px-4 rounded-lg w-full border border-red-200">
-        {{ mensaje|capitalize }}
+    <p class="text-red-500 mb-5 text-center text-sm font-bold bg-red-500/10 py-2 px-3 rounded-lg w-full border border-red-500/30">
+        <i class="fas fa-exclamation-circle mr-2"></i> {{ mensaje|capitalize }}
     </p>
     {% endif %}
 
-    <form method="post" class="space-y-8 w-full flex flex-col">
+    <form method="post" enctype="multipart/form-data" class="space-y-6 w-full flex flex-col">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
         <div class="w-full">
-            <label class="block mb-2 text-sm font-bold">Usuario:</label>
+            <label class="form-label">Nombre de usuario</label>
             <input type="text" name="nombre_usuario" required class="input-glass">
         </div>
 
         <div class="w-full">
-            <label class="block mb-2 text-sm font-bold">Contraseña:</label>
+            <label class="form-label">Contraseña</label>
             <input type="password" name="password" required class="input-glass">
         </div>
 
-        <div class="w-full flex justify-center pt-4">
-            <button type="submit" class="btn-fluent px-12 py-3 flex items-center justify-center gap-2">
+        <div class="w-full">
+            <label class="form-label">Nombre completo</label>
+            <input type="text" name="nombre_completo" class="input-glass">
+        </div>
+
+        <div class="w-full">
+            <label class="form-label">Correo electrónico</label>
+            <input type="email" name="email" class="input-glass">
+        </div>
+
+        <div class="w-full">
+            <label class="form-label">Teléfono</label>
+            <input type="tel" name="telefono" class="input-glass">
+        </div>
+
+        <div class="w-full">
+            <label class="form-label">País</label>
+            <input type="text" name="pais" class="input-glass">
+        </div>
+
+        <div class="w-full">
+            <label class="form-label">Ciudad</label>
+            <input type="text" name="ciudad" class="input-glass">
+        </div>
+
+        <div class="w-full">
+            <label class="form-label">Moneda preferida</label>
+            <select name="moneda" class="input-glass appearance-none cursor-pointer">
+                <option value="USD" selected>USD - Dólar Estadounidense</option>
+                <option value="EUR">EUR - Euro</option>
+                <option value="MXN">MXN - Peso Mexicano</option>
+                <option value="ARS">ARS - Peso Argentino</option>
+                <option value="COP">COP - Peso Colombiano</option>
+                <option value="CLP">CLP - Peso Chileno</option>
+                <option value="BRL">BRL - Real Brasileño</option>
+                <option value="PEN">PEN - Sol Peruano</option>
+                <option value="UYU">UYU - Peso Uruguayo</option>
+                <option value="VES">VES - Bolívar Venezolano</option>
+            </select>
+        </div>
+
+        <div class="w-full">
+            <label class="form-label">Foto de perfil (opcional)</label>
+            <input type="file" name="foto_perfil" accept="image/*" class="input-glass">
+        </div>
+
+        <div class="w-full flex justify-center">
+            <button type="submit" class="btn-fluent px-10 py-2 flex items-center justify-center gap-2 whitespace-nowrap text-sm">
                 <i class="fas fa-user-plus"></i> Registrar
             </button>
         </div>
     </form>
 
-    <div class="mt-8 flex flex-col items-center">
-        <a href="/login" class="link-fluent text-sm px-4 py-2">Volver al login</a>
+    <div class="mt-6 flex flex-col items-center">
+        <a href="/login" class="text-blue-400 hover:text-blue-300 text-xs font-bold">Volver al login</a>
     </div>
 </div>
 {% endblock %}

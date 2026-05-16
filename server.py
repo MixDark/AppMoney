@@ -9,7 +9,7 @@ def abrir_navegador(url):
     """Abre el navegador automáticamente después de 1 segundo"""
     threading.Timer(1.0, lambda: webbrowser.open(url)).start()
 
-def run_server(host='127.0.0.1', port=8080, threads=4):
+def run_server(host='127.0.0.1', port=7700, threads=2):
     """
     Inicia el servidor Waitress con la aplicación Flask
     
@@ -49,7 +49,7 @@ def run_server(host='127.0.0.1', port=8080, threads=4):
 if __name__ == '__main__':
     # Configuración desde variables de entorno o valores por defecto
     host = os.getenv('SERVER_HOST', '127.0.0.1')
-    port = int(os.getenv('SERVER_PORT', 8080))
-    threads = int(os.getenv('SERVER_THREADS', 4))
+    port = int(os.getenv('SERVER_PORT', 7700))
+    threads = int(os.getenv('SERVER_THREADS', 2))
     
     run_server(host=host, port=port, threads=threads)

@@ -1,39 +1,70 @@
 {% extends 'layout/base.html' %}
 {% block title %}Inicio de sesión{% endblock %}
 {% block content %}
-<div class="fluent-card p-12 max-w-md w-full flex flex-col items-center">
-    <h2 class="text-3xl font-bold mb-10 text-center">Inicio de sesión</h2>
+<style>
+    .form-label {
+        display: block;
+        font-size: 0.7rem;
+        font-weight: 700;
+        letter-spacing: 0.1em;
+        text-transform: uppercase;
+        color: var(--text-secondary);
+        margin-bottom: 5px;
+    }
+    .divider {
+        height: 1px;
+        background: rgba(148, 163, 184, 0.1);
+        margin: 12px 0;
+    }
+    .icon-container {
+        margin-bottom: 8px;
+        filter: drop-shadow(0 4px 15px rgba(59, 130, 246, 0.3));
+    }
+    .icon-container img {
+        width: 80px;
+        height: 80px;
+        object-fit: contain;
+    }
+</style>
+<div class="fluent-card form-card p-8 max-w-md w-full flex flex-col items-center">
+    <div class="icon-container">
+        <img src="{{ url_for('static', filename='images/app_money.png') }}" alt="App Money Logo">
+    </div>
+    <h2 class="text-2xl font-black mb-1 text-center text-white">App Money</h2>
+    <p class="text-center text-xs opacity-60 mb-6">Inicia sesión en tu cuenta</p>
 
     {% if mensaje %}
-    <p
-        class="text-red-600 mb-6 text-center text-sm font-bold bg-red-100/50 py-2 px-4 rounded-lg w-full border border-red-200">
-        {{ mensaje|capitalize }}
+    <p class="text-red-500 mb-5 text-center text-sm font-bold bg-red-500/10 py-2 px-3 rounded-lg w-full border border-red-500/30">
+        <i class="fas fa-exclamation-circle mr-2"></i> {{ mensaje|capitalize }}
     </p>
     {% endif %}
 
-    <form method="post" class="space-y-8 w-full flex flex-col">
+    <form method="post" class="space-y-6 w-full flex flex-col">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
         <div class="w-full">
-            <label class="block mb-2 text-sm font-bold">Usuario:</label>
+            <label class="form-label">Usuario</label>
             <input type="text" name="nombre_usuario" required class="input-glass" value="{{ nombre_usuario or '' }}">
         </div>
 
         <div class="w-full">
-            <label class="block mb-2 text-sm font-bold">Contraseña:</label>
+            <label class="form-label">Contraseña</label>
             <input type="password" name="password" required class="input-glass">
         </div>
 
-        <div class="w-full flex justify-center pt-4">
-            <button type="submit" class="btn-fluent px-8 py-4 justify-center flex items-center gap-2">
+        <div class="w-full flex justify-center">
+            <button type="submit" class="btn-fluent px-10 py-2 justify-center flex items-center gap-2 whitespace-nowrap text-sm">
                 <i class="fas fa-sign-in-alt"></i> Ingresar
             </button>
         </div>
     </form>
 
-    <div class="mt-10 flex flex-col items-center gap-3">
-        <p class="text-center text-sm font-semibold">
-            ¿No tienes cuenta? <a href="/registrar_usuario" class="link-fluent">Regístrate aquí</a>
+    <div class="divider"></div>
+
+    <div class="w-full flex flex-col items-center gap-2">
+        <p class="text-center text-xs opacity-70">
+            ¿No tienes cuenta? <a href="/registrar_usuario" class="text-blue-400 hover:text-blue-300 font-semibold">Regístrate</a>
         </p>
-        <a href="/recuperar_contraseña" class="text-sm font-bold opacity-60 hover:opacity-100 transition-opacity">
+        <a href="/recuperar_contraseña" class="text-xs font-semibold opacity-70 hover:opacity-100 transition-opacity text-blue-400">
             ¿Olvidó su contraseña?
         </a>
     </div>
@@ -63,12 +94,12 @@
                     autocomplete="off">
             </div>
 
-            <div id="otp-error" class="text-red-600 text-sm font-bold bg-red-100/50 py-2 px-4 rounded-lg border border-red-200 hidden">
+            <div id="otp-error" class="text-red-400 text-sm font-bold bg-red-500/10 py-3 px-4 rounded-lg border border-red-500/30 hidden">
                 <!-- Mensaje de error dinámico -->
             </div>
 
             <div class="flex justify-center pt-2">
-                <button type="submit" class="btn-fluent px-8 py-3 justify-center flex items-center gap-2">
+                <button type="submit" class="btn-fluent px-8 py-3 justify-center flex items-center gap-2 whitespace-nowrap">
                     <i class="fas fa-check"></i> Verificar
                 </button>
             </div>
@@ -108,6 +139,7 @@
         const form = document.getElementById('otp-form');
         const inputOtp = document.getElementById('codigo_otp');
         const errorDiv = document.getElementById('otp-error');
+        const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
 
         // Focus automático en el input
         if (inputOtp) {
@@ -149,6 +181,7 @@
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/x-www-form-urlencoded',
+                        'X-CSRF-Token': csrfToken,
                     },
                     body: 'codigo_otp=' + encodeURIComponent(codigoOtp)
                 });

@@ -1,18 +1,41 @@
 {% extends 'layout/base.html' %}
 {% block title %}Categorías - App Money{% endblock %}
 {% block content %}
+<style>
+    .form-label {
+        display: block;
+        font-size: 0.75rem;
+        font-weight: 700;
+        letter-spacing: 0.1em;
+        text-transform: uppercase;
+        color: var(--text-secondary);
+        margin-bottom: 8px;
+    }
+    .category-card {
+        background: var(--surface);
+        border: 1px solid rgba(148, 163, 184, 0.1);
+        transition: all 0.2s ease;
+    }
+    .category-card:hover {
+        border-color: rgba(59, 130, 246, 0.3);
+        background: rgba(59, 130, 246, 0.05);
+        transform: translateY(-2px);
+    }
+</style>
 <div class="fluent-card p-10 max-w-5xl w-full mx-auto">
-    <h2 class="text-3xl font-black mb-10 text-center uppercase tracking-tight">Gestionar categorías</h2>
+    <h2 class="page-title mb-2 text-center">Gestionar categorías</h2>
+    <p class="text-center text-sm opacity-60 mb-10">Organiza tus transacciones con categorías personalizadas</p>
 
     <!-- Formulario para agregar -->
     <form method="POST"
-        class="grid grid-cols-1 md:grid-cols-5 gap-6 mb-12 bg-white/30 p-8 rounded-3xl border border-white/20 items-end">
+        class="grid grid-cols-1 md:grid-cols-5 gap-6 mb-12 p-8 panel-surface items-end">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
         <div class="md:col-span-2">
-            <label class="block text-[10px] font-black uppercase mb-2 tracking-widest opacity-60">Nombre</label>
-            <input type="text" name="nombre" required placeholder="Ej: Comida, Salario..." class="input-glass">
+            <label class="form-label">Nombre</label>
+            <input type="text" name="nombre" required class="input-glass">
         </div>
         <div>
-            <label class="block text-[10px] font-black uppercase mb-2 tracking-widest opacity-60">Tipo</label>
+            <label class="form-label">Tipo</label>
             <select name="tipo" class="input-glass appearance-none cursor-pointer">
                 <option value="gasto">Gasto</option>
                 <option value="ingreso">Ingreso</option>
@@ -20,9 +43,9 @@
             </select>
         </div>
         <div>
-            <label class="block text-[10px] font-black uppercase mb-2 tracking-widest opacity-60">Color</label>
+            <label class="form-label">Color</label>
             <input type="color" name="color" value="#3b82f6"
-                class="w-full h-[46px] border-none bg-transparent cursor-pointer rounded-xl">
+                class="w-full h-[46px] border border-blue-500/20 bg-transparent cursor-pointer rounded-xl">
         </div>
         <div>
             <button type="submit" class="btn-action w-full py-3 flex items-center justify-center gap-2"><i class="fas fa-folder-plus"></i> Agregar</button>
@@ -30,20 +53,21 @@
     </form>
 
     <!-- Lista de categorías -->
-    <h3 class="text-lg font-bold mb-6 opacity-60 uppercase tracking-widest">Tus categorías</h3>
+    <h3 class="text-lg font-bold mb-6 opacity-70 uppercase tracking-widest">Tus categorías</h3>
     <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
         {% for cat in categorias %}
-        <div class="bg-white/40 p-5 rounded-3xl border border-white/20 flex justify-between items-center transition-all hover:bg-white/50"
-            style="border-left: 6px solid {{ cat.color or '#ccc' }};">
+        <div class="category-card p-5 rounded-3xl flex justify-between items-center js-category-card"
+            data-color="{{ cat.color or '#3b82f6' }}">
             <div>
                 <p class="font-black text-lg tracking-tight">{{ cat.nombre }}</p>
-                <p class="text-[10px] font-black uppercase opacity-40 tracking-widest">{{ cat.tipo }}</p>
+                <p class="text-[10px] font-black uppercase opacity-50 tracking-widest">{{ cat.tipo }}</p>
             </div>
-            <a href="{{ url_for('main.eliminar_categoria_route', id=cat.id) }}"
-                class="text-red-600 hover:scale-110 transition-transform p-2"
-                onclick="return confirm('¿Estás seguro?')">
+            <button type="button"
+                class="text-red-500 hover:scale-110 transition-transform p-2 js-confirm-delete"
+                data-href="{{ url_for('main.eliminar_categoria_route', id=cat.id) }}"
+                data-nombre="{{ cat.nombre|e }}">
                 <i class="fas fa-trash-alt"></i>
-            </a>
+            </button>
         </div>
         {% endfor %}
         {% if not categorias %}
@@ -54,4 +78,60 @@
         {% endif %}
     </div>
 </div>
+
+<!-- Modal de Confirmacion -->
+<div id="confirmModal" class="fixed inset-0 bg-black/50 hidden items-center justify-center z-50">
+    <div class="fluent-card p-10 max-w-sm w-full mx-4">
+        <h3 class="text-2xl font-black mb-6 text-center uppercase tracking-tight">Confirmar eliminacion</h3>
+        <p class="text-center mb-8 opacity-70">¿Esta seguro de que desea eliminar la categoria <strong id="modalNombre"></strong>?</p>
+        <div class="flex gap-4 justify-center">
+            <button type="button" id="btnCancelar" class="btn-fluent px-8 py-2 flex items-center justify-center gap-2 whitespace-nowrap">
+                <i class="fas fa-times"></i> Cancelar
+            </button>
+            <button type="button" id="btnConfirmar" class="btn-fluent btn-red px-8 py-2 flex items-center justify-center gap-2 whitespace-nowrap">
+                <i class="fas fa-trash-alt"></i> Eliminar
+            </button>
+        </div>
+    </div>
+</div>
+<script>
+    document.querySelectorAll('.js-category-card').forEach((card) => {
+        const color = card.dataset.color || '#3b82f6';
+        card.style.borderLeft = `6px solid ${color}`;
+    });
+
+    const modal = document.getElementById('confirmModal');
+    const modalNombre = document.getElementById('modalNombre');
+    const btnCancelar = document.getElementById('btnCancelar');
+    const btnConfirmar = document.getElementById('btnConfirmar');
+    let deleteHref = null;
+
+    document.querySelectorAll('.js-confirm-delete').forEach((button) => {
+        button.addEventListener('click', () => {
+            deleteHref = button.dataset.href || null;
+            modalNombre.textContent = button.dataset.nombre || '';
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+        });
+    });
+
+    function cerrarModal() {
+        modal.classList.add('hidden');
+        modal.classList.remove('flex');
+        deleteHref = null;
+    }
+
+    btnCancelar.addEventListener('click', cerrarModal);
+    modal.addEventListener('click', (event) => {
+        if (event.target === modal) cerrarModal();
+    });
+
+    btnConfirmar.addEventListener('click', () => {
+        if (deleteHref) window.location.href = deleteHref;
+    });
+
+    document.addEventListener('keydown', (event) => {
+        if (event.key === 'Escape') cerrarModal();
+    });
+</script>
 {% endblock %}

@@ -1,15 +1,16 @@
-from flask import render_template, request, redirect, url_for, session, flash, send_file, jsonify
+from flask import render_template, request, redirect, url_for, session, flash, send_file, jsonify, current_app
 from flask import Blueprint
 from functools import wraps
-import sys
 import os
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../../')))
 from infrastructure.db import get_connection
 from infrastructure.validators import *
 from werkzeug.security import generate_password_hash, check_password_hash
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, date
+import calendar
 import secrets
 from io import BytesIO
+import time
+from threading import Lock
 import pandas as pd
 from reportlab.lib.pagesizes import letter, A4
 from reportlab.lib import colors
@@ -18,6 +19,8 @@ from reportlab.lib.units import inch
 from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer, PageBreak
 from reportlab.lib.enums import TA_CENTER, TA_RIGHT, TA_LEFT
 import pyotp
+from openpyxl.styles import Font, PatternFill, Border, Side, Alignment
+from openpyxl.utils import get_column_letter
 
 def login_required_custom(f):
     @wraps(f)
@@ -27,8 +30,66 @@ def login_required_custom(f):
         return f(*args, **kwargs)
     return decorated_function
 
+def detect_image_type(data):
+    if data.startswith(b'\xff\xd8\xff'):
+        return 'jpeg'
+    if data.startswith(b'\x89PNG\r\n\x1a\n'):
+        return 'png'
+    if data.startswith(b'GIF87a') or data.startswith(b'GIF89a'):
+        return 'gif'
+    if data.startswith(b'RIFF') and data[8:12] == b'WEBP':
+        return 'webp'
+    return None
+
+def get_csrf_token():
+    token = session.get('csrf_token')
+    if not token:
+        token = secrets.token_urlsafe(32)
+        session['csrf_token'] = token
+    return token
+
+_rate_limit_lock = Lock()
+_rate_limit_state = {}
+
+def rate_limited(key, limit, window_seconds):
+    now = time.time()
+    with _rate_limit_lock:
+        timestamps = _rate_limit_state.get(key, [])
+        timestamps = [ts for ts in timestamps if now - ts < window_seconds]
+        if len(timestamps) >= limit:
+            _rate_limit_state[key] = timestamps
+            return True
+        timestamps.append(now)
+        _rate_limit_state[key] = timestamps
+        return False
+
+def read_profile_image(file):
+    if not file or not file.filename:
+        return None, None
+    max_bytes = current_app.config.get('PHOTO_MAX_BYTES', 2 * 1024 * 1024)
+    data = file.read(max_bytes + 1)
+    if len(data) > max_bytes:
+        return None, "La imagen supera el tamaño permitido"
+    kind = detect_image_type(data)
+    if kind not in {'jpeg', 'png', 'gif', 'webp'}:
+        return None, "Formato de imagen no permitido"
+    return data, None
+
 def register_routes(app):
     bp = Blueprint('main', __name__)
+
+    @bp.before_app_request
+    def enforce_csrf():
+        if request.method in {'POST', 'PUT', 'DELETE', 'PATCH'}:
+            if request.endpoint and request.endpoint.startswith('static'):
+                return None
+            csrf_token = request.headers.get('X-CSRF-Token') or request.form.get('csrf_token')
+            if not csrf_token or csrf_token != session.get('csrf_token'):
+                return 'CSRF token inválido', 400
+
+    @bp.app_context_processor
+    def inject_csrf_token():
+        return {'csrf_token': get_csrf_token()}
 
     @bp.route('/', methods=['GET'])
     def consolidado():
@@ -104,6 +165,10 @@ def register_routes(app):
         mostrar_otp_modal = False
         
         if request.method == 'POST':
+            ip = request.remote_addr or 'unknown'
+            if rate_limited(f'login:{ip}', limit=5, window_seconds=60):
+                mensaje = 'Demasiados intentos. Intenta de nuevo más tarde'
+                return render_template('auth/login.html', mensaje=mensaje, mostrar_otp_modal=False)
             nombre_usuario = request.form.get('nombre_usuario', '').strip()
             password = request.form.get('password', '')
             
@@ -145,17 +210,51 @@ def register_routes(app):
         session.clear()
         return redirect(url_for('main.login'))
 
+    @bp.route('/usuario/<int:usuario_id>/foto')
+    @login_required_custom
+    def foto_perfil(usuario_id):
+        if session.get('usuario_id') != usuario_id:
+            return '', 403
+        conn = get_connection()
+        if conn is None:
+            return '', 404
+        try:
+            cursor = conn.cursor()
+            cursor.execute('SELECT foto_perfil FROM usuarios WHERE id = %s', (usuario_id,))
+            result = cursor.fetchone()
+            cursor.close()
+            if not result or not result[0]:
+                return '', 404
+            foto_bytes = result[0]
+            kind = detect_image_type(foto_bytes)
+            if kind == 'jpeg':
+                mime = 'image/jpeg'
+            elif kind:
+                mime = f"image/{kind}"
+            else:
+                mime = 'application/octet-stream'
+            response = send_file(BytesIO(foto_bytes), mimetype=mime)
+            response.headers['Cache-Control'] = 'no-store'
+            return response
+        finally:
+            conn.close()
+
     @bp.route('/verify-otp', methods=['POST'])
     def verify_otp():
         """Verifica el código OTP proporcionado por el usuario"""
         if 'temp_usuario_id' not in session:
             return jsonify({'exito': False, 'mensaje': 'Sesión inválida'}), 400
+
+        ip = request.remote_addr or 'unknown'
+        if rate_limited(f'otp:{ip}', limit=5, window_seconds=60):
+            return jsonify({'exito': False, 'mensaje': 'Demasiados intentos. Intenta de nuevo más tarde'}), 429
         
         codigo_otp = request.form.get('codigo_otp', '').strip()
         usuario_id = session['temp_usuario_id']
         
-        if not codigo_otp:
-            return jsonify({'exito': False, 'mensaje': 'Por favor ingresa el código OTP'}), 400
+        valid, msg = validate_totp(codigo_otp)
+        if not valid:
+            return jsonify({'exito': False, 'mensaje': msg}), 400
         
         # Obtener el secreto TOTP del usuario
         totp_secret = obtener_totp_secret_usuario(usuario_id)
@@ -185,6 +284,10 @@ def register_routes(app):
         mensaje = None
         exito = None
         if request.method == 'POST':
+            ip = request.remote_addr or 'unknown'
+            if rate_limited(f'recovery:{ip}', limit=3, window_seconds=300):
+                mensaje = 'Demasiados intentos. Intenta de nuevo más tarde'
+                return render_template('auth/recuperar_contraseña.html', mensaje=mensaje)
             nombre_usuario = request.form.get('nombre_usuario', '').strip()
             
             valid, msg = validate_username(nombre_usuario)
@@ -261,6 +364,10 @@ def register_routes(app):
                                  captcha_attempt=token_data['captcha_attempt'])
         
         elif request.method == 'POST':
+            ip = request.remote_addr or 'unknown'
+            if rate_limited(f'captcha:{ip}', limit=5, window_seconds=300):
+                mensaje = 'Demasiados intentos. Intenta de nuevo más tarde'
+                return render_template('auth/verificar_captcha.html', token=token, mensaje=mensaje)
             respuesta_usuario = request.form.get('captcha_answer', '')
             respuesta_correcta = session.get(f'captcha_{token}')
             
@@ -330,6 +437,10 @@ def register_routes(app):
             return redirect(url_for('main.verificar_captcha', token=token))
         
         if request.method == 'POST':
+            ip = request.remote_addr or 'unknown'
+            if rate_limited(f'reset:{ip}', limit=5, window_seconds=300):
+                mensaje = 'Demasiados intentos. Intenta de nuevo más tarde'
+                return render_template('auth/resetear_contraseña.html', mensaje=mensaje, token=token)
             password_nueva = request.form.get('password_nueva', '')
             password_confirmar = request.form.get('password_confirmar', '')
             
@@ -385,12 +496,19 @@ def register_routes(app):
                 return redirect(url_for('main.registrar'))
             
             monto = float(monto_str)
+            categoria_id = request.form.get('categoria_id') or None
+            if categoria_id:
+                try:
+                    categoria_id = int(categoria_id)
+                except ValueError:
+                    categoria_id = None
+
             if tipo == 'ingreso':
-                agregar_ingreso(usuario_id, monto, descripcion, fecha)
+                agregar_ingreso(usuario_id, monto, descripcion, fecha, categoria_id)
             elif tipo == 'gasto':
-                agregar_gasto(usuario_id, monto, descripcion, fecha)
+                agregar_gasto(usuario_id, monto, descripcion, fecha, categoria_id)
             elif tipo == 'inversion':
-                agregar_inversion(usuario_id, '', monto, descripcion, fecha)
+                agregar_inversion(usuario_id, '', monto, descripcion, fecha, categoria_id)
             
             flash(f'{tipo.capitalize()} registrado correctamente', 'success')
             return redirect(url_for('main.consolidado'))
@@ -400,7 +518,8 @@ def register_routes(app):
         ingresos = obtener_ingresos(usuario_id)
         gastos = obtener_gastos(usuario_id)
         inversiones = obtener_inversiones(usuario_id)
-        return render_template('forms/registrar.html', ingresos=ingresos, gastos=gastos, inversiones=inversiones)
+        categorias = obtener_categorias(usuario_id)
+        return render_template('forms/registrar.html', ingresos=ingresos, gastos=gastos, inversiones=inversiones, categorias=categorias)
 
     @bp.route('/reportes', methods=['GET'])
     def reportes():
@@ -432,31 +551,84 @@ def register_routes(app):
         if 'usuario_id' not in session:
             return redirect(url_for('main.login'))
         if request.method == 'POST':
-            tipo = request.form['tipo']
-            monto = float(request.form['monto'])
-            descripcion = request.form['descripcion']
-            fecha = request.form['fecha']
+            tipo = request.form.get('tipo', 'otro').strip()
+            descripcion = request.form.get('descripcion', '').strip()
+            fecha = request.form.get('fecha', '').strip()
             usuario_id = session.get('usuario_id')
             if not usuario_id:
                 return redirect(url_for('main.login'))
-            agregar_inversion(usuario_id, tipo, monto, descripcion, fecha)
+            valid, msg = validate_monto(request.form.get('monto', ''))
+            if not valid:
+                flash(msg, 'error')
+                return redirect(url_for('main.inversiones'))
+            valid, msg = validate_fecha(fecha)
+            if not valid:
+                flash(msg, 'error')
+                return redirect(url_for('main.inversiones'))
+            monto = float(request.form.get('monto'))
+            categoria_id = request.form.get('categoria_id') or None
+            if categoria_id:
+                try:
+                    categoria_id = int(categoria_id)
+                except ValueError:
+                    categoria_id = None
+
+            if agregar_inversion(usuario_id, tipo, monto, descripcion, fecha, categoria_id):
+                flash('Inversión registrada correctamente', 'success')
+            else:
+                flash('No se pudo registrar la inversión. Revisa la conexión a la base de datos.', 'error')
             return redirect(url_for('main.inversiones'))
         usuario_id = session['usuario_id']
         inversiones_list = obtener_inversiones(usuario_id)
         total_inversiones = float(sum(i['monto'] for i in inversiones_list) or 0)
-        return render_template('dashboard/inversiones.html', inversiones=inversiones_list, total_inversiones=total_inversiones)
+        categorias = obtener_categorias(usuario_id)
+        return render_template('dashboard/inversiones.html', inversiones=inversiones_list, total_inversiones=total_inversiones, categorias=categorias)
 
     @bp.route('/registrar_usuario', methods=['GET', 'POST'])
     def registrar_usuario():
         mensaje = None
         if request.method == 'POST':
-            nombre_usuario = request.form['nombre_usuario']
-            password = request.form['password']
+            nombre_usuario = request.form.get('nombre_usuario', '').strip()
+            password = request.form.get('password', '')
+            nombre_completo = request.form.get('nombre_completo', '').strip()
+            email = request.form.get('email', '').strip()
+            telefono = request.form.get('telefono', '').strip()
+            pais = request.form.get('pais', '').strip()
+            ciudad = request.form.get('ciudad', '').strip()
+            moneda = request.form.get('moneda', 'USD')
+
+            valid, msg = validate_username(nombre_usuario)
+            if not valid:
+                mensaje = msg
+                return render_template('auth/registrar_usuario.html', mensaje=mensaje)
+
+            valid, msg = validate_password(password)
+            if not valid:
+                mensaje = msg
+                return render_template('auth/registrar_usuario.html', mensaje=mensaje)
+
             if obtener_usuario_por_nombre(nombre_usuario):
                 mensaje = 'El usuario ya existe'
             else:
+                foto_perfil = None
+                file = request.files.get('foto_perfil')
+                if file and file.filename:
+                    foto_perfil, error = read_profile_image(file)
+                    if error:
+                        mensaje = error
+                        return render_template('auth/registrar_usuario.html', mensaje=mensaje)
                 password_hash = generate_password_hash(password)
-                crear_usuario(nombre_usuario, password_hash)
+                crear_usuario(
+                    nombre_usuario,
+                    password_hash,
+                    nombre_completo,
+                    email,
+                    telefono,
+                    pais,
+                    ciudad,
+                    moneda,
+                    foto_perfil
+                )
                 return redirect(url_for('main.login'))
         return render_template('auth/registrar_usuario.html', mensaje=mensaje)
 
@@ -477,20 +649,11 @@ def register_routes(app):
             if 'foto_perfil' in request.files and request.files['foto_perfil'].filename:
                 file = request.files['foto_perfil']
                 if file:
-                    from werkzeug.utils import secure_filename
-                    filename = secure_filename(file.filename)
-                    basedir = os.path.dirname(os.path.abspath(__file__))
-                    static_folder = os.path.join(basedir, '..', 'static', 'uploads', 'perfiles')
-                    if not os.path.exists(static_folder):
-                        os.makedirs(static_folder)
-                    
-                    ext = os.path.splitext(filename)[1]
-                    new_filename = f"user_{usuario['id']}_{int(datetime.now().timestamp())}{ext}"
-                    filepath = os.path.join(static_folder, new_filename)
-                    file.save(filepath)
-                    
-                    web_path = f"/static/uploads/perfiles/{new_filename}"
-                    actualizar_foto_perfil_db(usuario['id'], web_path)
+                    foto_bytes, error = read_profile_image(file)
+                    if error:
+                        mensaje = error
+                        return render_template('dashboard/perfil.html', usuario=usuario, mensaje=mensaje)
+                    actualizar_foto_perfil_db(usuario['id'], foto_bytes)
             
             # Actualizar datos personales
             nombre_completo = request.form.get('nombre_completo', '').strip()
@@ -503,9 +666,9 @@ def register_routes(app):
             resultado = actualizar_perfil_usuario_db(usuario['id'], nombre_completo, email, telefono, pais, ciudad, moneda)
             
             if resultado:
-                mensaje = '✅ Perfil actualizado exitosamente'
+                mensaje = 'Perfil actualizado exitosamente'
             else:
-                mensaje = '❌ Error al actualizar el perfil'
+                mensaje = 'Error al actualizar el perfil'
             
             # Recargar datos del usuario DESPUÉS de actualizar
             usuario = obtener_usuario_por_id(session['usuario_id'])
@@ -530,26 +693,11 @@ def register_routes(app):
             if 'foto_perfil' in request.files and request.files['foto_perfil'].filename:
                 file = request.files['foto_perfil']
                 if file:
-                    from werkzeug.utils import secure_filename
-                    filename = secure_filename(file.filename)
-                    # Asegurar que el directorio existe
-                    basedir = os.path.dirname(os.path.abspath(__file__))
-                    # Ir dos niveles arriba: interface/routes -> interface -> app_money -> interface/static ?
-                    # Estructura: d:\Proyectos Python - GUI\app_money\interface\routes\main.py
-                    # Static: d:\Proyectos Python - GUI\app_money\interface\static
-                    static_folder = os.path.join(basedir, '..', 'static', 'uploads', 'perfiles')
-                    if not os.path.exists(static_folder):
-                        os.makedirs(static_folder)
-                    
-                    # Generar nombre único
-                    ext = os.path.splitext(filename)[1]
-                    new_filename = f"user_{usuario['id']}_{int(datetime.now().timestamp())}{ext}"
-                    filepath = os.path.join(static_folder, new_filename)
-                    file.save(filepath)
-                    
-                    # Ruta web relativa
-                    web_path = f"/static/uploads/perfiles/{new_filename}"
-                    actualizar_foto_perfil_db(usuario['id'], web_path)
+                    foto_bytes, error = read_profile_image(file)
+                    if error:
+                        mensaje = error
+                        return render_template('dashboard/editar_perfil.html', usuario=usuario, mensaje=mensaje)
+                    actualizar_foto_perfil_db(usuario['id'], foto_bytes)
                     
                     # Si no hay contraseña actual, asumimos que es solo subida de foto y redirigimos
                     if not request.form.get('password_actual'):
@@ -615,7 +763,15 @@ def register_routes(app):
                 flash('Registro no encontrado', 'error')
                 return redirect(url_for('main.registrar'))
             
-            return render_template('forms/editar_registro.html', registro=registro, tipo=tipo)
+            categorias = obtener_categorias(usuario_id)
+            return render_template(
+                'forms/editar_registro.html',
+                registro=registro,
+                tipo=tipo,
+                categorias=categorias,
+                return_to=request.args.get('return_to', ''),
+                return_query=request.args.get('return_query', ''),
+            )
         
         elif request.method == 'POST':
             registro_id = request.form.get('registro_id')
@@ -639,14 +795,38 @@ def register_routes(app):
                 flash(msg, 'error')
                 return redirect(url_for('main.registrar'))
             
+            categoria_id = request.form.get('categoria_id') or None
+            if categoria_id:
+                try:
+                    categoria_id = int(categoria_id)
+                except ValueError:
+                    categoria_id = None
+
+            # Validar que la categoría (si existe) sea del tipo correcto
+            if categoria_id:
+                valid_cat, msg_cat = validar_categoria_para_tipo(usuario_id, categoria_id, tipo)
+                if not valid_cat:
+                    flash(msg_cat, 'error')
+                    return redirect(url_for('main.editar_registro', id=registro_id, tipo=tipo))
+
             if tipo == 'ingreso':
-                actualizar_ingreso(registro_id, usuario_id, monto, descripcion, fecha)
+                actualizar_ingreso(registro_id, usuario_id, monto, descripcion, fecha, categoria_id)
             elif tipo == 'gasto':
-                actualizar_gasto(registro_id, usuario_id, monto, descripcion, fecha)
+                actualizar_gasto(registro_id, usuario_id, monto, descripcion, fecha, categoria_id)
             elif tipo == 'inversion':
-                actualizar_inversion(registro_id, usuario_id, monto, descripcion, fecha)
+                actualizar_inversion(registro_id, usuario_id, monto, descripcion, fecha, categoria_id)
             
-            return redirect(url_for('main.registrar'))
+            destino = request.form.get('return_to', '')
+            if destino == 'buscar':
+                return _redirect_buscar(request.form.get('return_query', ''))
+            
+            # Redirigir según el tipo de registro
+            if tipo == 'inversion':
+                return redirect(url_for('main.inversiones'))
+            elif tipo == 'gasto':
+                return redirect(url_for('main.registrar'))
+            else:  # ingreso
+                return redirect(url_for('main.registrar'))
 
     @bp.route('/eliminar_registro', methods=['POST'])
     @login_required_custom
@@ -668,6 +848,9 @@ def register_routes(app):
             eliminar_inversion(registro_id, usuario_id)
         
         flash('Registro eliminado exitosamente', 'success')
+        destino = request.form.get('return_to', 'registrar')
+        if destino == 'buscar':
+            return _redirect_buscar(request.form.get('return_query', ''))
         return redirect(url_for('main.registrar'))
 
     @bp.route('/exportar_pdf', methods=['GET'])
@@ -989,10 +1172,23 @@ def register_routes(app):
             descripcion = request.form.get('descripcion')
             frecuencia = request.form.get('frecuencia')
             proxima_fecha = request.form.get('proxima_fecha')
-            if agregar_recurrente(usuario_id, tipo, monto, descripcion, frecuencia, proxima_fecha):
-                flash('Transacción recurrente programada', 'success')
+            edit_id = request.form.get('edit_id')
+
+            if edit_id:
+                try:
+                    edit_id_int = int(edit_id)
+                except ValueError:
+                    edit_id_int = None
+                if edit_id_int and actualizar_recurrente(edit_id_int, usuario_id, tipo, monto, descripcion, frecuencia, proxima_fecha):
+                    flash('Programación actualizada', 'success')
+                else:
+                    flash('Error al actualizar la programación', 'error')
             else:
-                flash('Error al programar transacción', 'error')
+                if agregar_recurrente(usuario_id, tipo, monto, descripcion, frecuencia, proxima_fecha):
+                    flash('Transacción recurrente programada', 'success')
+                else:
+                    flash('Error al programar transacción', 'error')
+
             return redirect(url_for('main.recurrentes'))
             
         mis_recurrentes = obtener_recurrentes(usuario_id)
@@ -1070,12 +1266,179 @@ def register_routes(app):
     @login_required_custom
     def buscar():
         usuario_id = session['usuario_id']
-        q = request.args.get('q', '')
-        desde = request.args.get('desde')
-        hasta = request.args.get('hasta')
-        
-        resultados = obtener_transacciones_filtradas(usuario_id, q, desde, hasta)
-        return render_template('dashboard/buscar.html', resultados=resultados)
+        filtros = _filtros_desde_request(request.args)
+        try:
+            pagina = max(1, int(request.args.get('page', 1)))
+        except (TypeError, ValueError):
+            pagina = 1
+
+        datos = explorar_transacciones(usuario_id, filtros, pagina=pagina, por_pagina=25)
+        categorias = obtener_categorias(usuario_id)
+
+        return render_template(
+            'dashboard/buscar.html',
+            resultados=datos['resultados'],
+            resumen=datos['resumen'],
+            paginacion=datos['paginacion'],
+            filtros=filtros,
+            categorias=categorias,
+        )
+
+    @bp.route('/buscar/exportar')
+    @login_required_custom
+    def exportar_buscar():
+        usuario_id = session['usuario_id']
+        filtros = _filtros_desde_request(request.args)
+        datos = explorar_transacciones(usuario_id, filtros, pagina=1, por_pagina=100000)
+        filas = []
+        for t in datos['resultados']:
+            filas.append({
+                'Fecha': t.get('fecha', ''),
+                'Descripción': t.get('descripcion', '') or '',
+                'Tipo': t.get('tipo', ''),
+                'Categoría': t.get('categoria_nombre') or 'Sin categoría',
+                'Monto': t.get('monto', ''),
+            })
+
+        df = pd.DataFrame(filas, columns=['Fecha', 'Descripción', 'Tipo', 'Categoría', 'Monto'])
+        output = BytesIO()
+        with pd.ExcelWriter(output, engine='openpyxl') as writer:
+            df.to_excel(writer, index=False, sheet_name='Transacciones', startrow=3)
+            worksheet = writer.book['Transacciones']
+            worksheet.sheet_view.showGridLines = False
+
+            # Título y subtítulo del informe
+            total_resultados = len(df)
+            titulo = 'Informe de transacciones'
+            
+            # Mapear filtros a texto legible
+            tipo_texto = 'Todos'
+            if filtros.get('tipo') == 'ingreso':
+                tipo_texto = 'Ingreso'
+            elif filtros.get('tipo') == 'gasto':
+                tipo_texto = 'Gasto'
+            elif filtros.get('tipo') == 'inversion':
+                tipo_texto = 'Inversión'
+            
+            categoria_texto = 'Todas'
+            if filtros.get('categoria_id'):
+                # Obtener nombre de la categoría
+                conn = get_connection()
+                if conn:
+                    try:
+                        cursor = conn.cursor(dictionary=True)
+                        cursor.execute('SELECT nombre FROM categorias WHERE id = %s', (filtros.get('categoria_id'),))
+                        cat = cursor.fetchone()
+                        if cat:
+                            categoria_texto = cat['nombre']
+                        cursor.close()
+                    finally:
+                        conn.close()
+            
+            subtitulo = (
+                f"Rango: {filtros.get('desde') or 'todos'} → {filtros.get('hasta') or 'todos'} | "
+                f"Tipo: {tipo_texto} | "
+                f"Categoría: {categoria_texto} | "
+                f"Movimientos: {total_resultados}"
+            )
+            
+            # Fila 1: Título
+            worksheet['A1'] = titulo
+            worksheet.merge_cells('A1:E1')
+            worksheet['A1'].font = Font(size=14, bold=True, color='000000')
+            worksheet['A1'].alignment = Alignment(horizontal='center', vertical='center')
+            worksheet.row_dimensions[1].height = 25
+            
+            # Fila 2: Subtítulo
+            worksheet['A2'] = subtitulo
+            worksheet.merge_cells('A2:E2')
+            worksheet['A2'].font = Font(size=10, italic=True, color='000000')
+            worksheet['A2'].alignment = Alignment(horizontal='left', vertical='center')
+            worksheet.row_dimensions[2].height = 20
+            
+            # Fila 3: Encabezados
+            thin_black = Side(style='thin', color='000000')
+            header_border = Border(left=thin_black, right=thin_black, top=thin_black, bottom=thin_black)
+            
+            for col_num, header in enumerate(['Fecha', 'Descripción', 'Tipo', 'Categoría', 'Monto'], 1):
+                cell = worksheet.cell(row=4, column=col_num)
+                cell.value = header
+                cell.font = Font(bold=True, color='000000', size=11)
+                cell.fill = PatternFill(fill_type='solid', fgColor='FFFFFF')
+                cell.border = header_border
+                cell.alignment = Alignment(horizontal='center', vertical='center')
+            
+            worksheet.row_dimensions[4].height = 20
+
+            # Formatear las filas de datos
+            for row_idx, row in enumerate(worksheet.iter_rows(min_row=5, max_row=worksheet.max_row, min_col=1, max_col=5), start=5):
+                for cell in row:
+                    cell.border = header_border
+                    cell.alignment = Alignment(vertical='center')
+
+                # Fecha (columna A): DD/MM/YYYY
+                try:
+                    raw_fecha = row[0].value
+                    if raw_fecha:
+                        if isinstance(raw_fecha, str):
+                            try:
+                                parsed = datetime.fromisoformat(raw_fecha)
+                            except Exception:
+                                parsed = datetime.strptime(raw_fecha, '%Y-%m-%d')
+                            row[0].value = parsed.date()
+                        row[0].number_format = 'DD/MM/YYYY'
+                        row[0].alignment = Alignment(horizontal='center', vertical='center')
+                except Exception:
+                    pass
+
+                # Descripción (columna B): sin cambios
+                try:
+                    row[1].alignment = Alignment(horizontal='left', vertical='center', wrap_text=True)
+                except Exception:
+                    pass
+
+                # Tipo (columna C): capitalizar
+                try:
+                    if row[2].value:
+                        row[2].value = str(row[2].value).capitalize()
+                        row[2].alignment = Alignment(horizontal='left', vertical='center')
+                except Exception:
+                    pass
+
+                # Categoría (columna D): capitalizar
+                try:
+                    if row[3].value:
+                        row[3].value = str(row[3].value)
+                        row[3].alignment = Alignment(horizontal='left', vertical='center')
+                except Exception:
+                    pass
+
+                # Monto (columna E): formato numérico con separadores de miles
+                try:
+                    if row[4].value is not None and row[4].value != '':
+                        monto_val = row[4].value
+                        if isinstance(monto_val, str):
+                            monto_val = float(str(monto_val).replace('.', '').replace(',', '.'))
+                        row[4].value = float(monto_val)
+                        row[4].number_format = '#,##0.00'
+                        row[4].alignment = Alignment(horizontal='right', vertical='center')
+                except Exception:
+                    pass
+
+            # Anchos de columnas
+            worksheet.column_dimensions['A'].width = 15
+            worksheet.column_dimensions['B'].width = 25
+            worksheet.column_dimensions['C'].width = 12
+            worksheet.column_dimensions['D'].width = 22
+            worksheet.column_dimensions['E'].width = 16
+            
+        output.seek(0)
+        return send_file(
+            output,
+            mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            as_attachment=True,
+            download_name=f'transacciones_{datetime.now().strftime("%Y%m%d")}.xlsx',
+        )
 
 
     @bp.route('/categorias', methods=['GET', 'POST'])
@@ -1183,13 +1546,27 @@ def obtener_usuario_por_nombre(nombre_usuario):
     finally:
         conn.close()
 
-def crear_usuario(nombre_usuario, password_hash):
+def crear_usuario(
+    nombre_usuario,
+    password_hash,
+    nombre_completo='',
+    email='',
+    telefono='',
+    pais='',
+    ciudad='',
+    moneda='USD',
+    foto_perfil=None
+):
     conn = get_connection()
     if conn is None:
         return False
     try:
         cursor = conn.cursor()
-        cursor.execute('INSERT INTO usuarios (nombre_usuario, password_hash) VALUES (%s, %s)', (nombre_usuario, password_hash))
+        cursor.execute(
+            'INSERT INTO usuarios (nombre_usuario, password_hash, nombre_completo, email, telefono, pais, ciudad, moneda, foto_perfil) '
+            'VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)',
+            (nombre_usuario, password_hash, nombre_completo, email, telefono, pais, ciudad, moneda, foto_perfil)
+        )
         usuario_id = cursor.lastrowid
         
         # Crear categorías por defecto
@@ -1251,12 +1628,13 @@ def obtener_categoria_defecto(usuario_id, tipo):
     finally:
         conn.close()
 
-def agregar_ingreso(usuario_id, monto, descripcion, fecha):
+def agregar_ingreso(usuario_id, monto, descripcion, fecha, categoria_id=None):
     conn = get_connection()
     if conn is None:
         return False
     try:
-        categoria_id = obtener_categoria_defecto(usuario_id, 'ingreso')
+        if not categoria_id:
+            categoria_id = obtener_categoria_defecto(usuario_id, 'ingreso')
         cursor = conn.cursor()
         cursor.execute('INSERT INTO ingresos (usuario_id, monto, descripcion, fecha, categoria_id) VALUES (%s, %s, %s, %s, %s)', (usuario_id, monto, descripcion, fecha, categoria_id))
         conn.commit()
@@ -1266,18 +1644,26 @@ def agregar_ingreso(usuario_id, monto, descripcion, fecha):
         return False
     finally:
         conn.close()
-def agregar_inversion(usuario_id, tipo, monto, descripcion, fecha):
+def agregar_inversion(usuario_id, tipo, monto, descripcion, fecha, categoria_id=None):
     conn = get_connection()
     if conn is None:
         return False
     try:
-        categoria_id = obtener_categoria_defecto(usuario_id, 'inversion')
+        if not categoria_id:
+            categoria_id = obtener_categoria_defecto(usuario_id, 'inversion')
         cursor = conn.cursor()
-        cursor.execute('INSERT INTO inversiones (usuario_id, monto, descripcion, fecha, categoria_id) VALUES (%s, %s, %s, %s, %s)', (usuario_id, monto, descripcion, fecha, categoria_id))
+        cursor.execute(
+            """
+            INSERT INTO inversiones (usuario_id, tipo, monto, descripcion, fecha, categoria_id)
+            VALUES (%s, %s, %s, %s, %s, %s)
+            """,
+            (usuario_id, tipo, monto, descripcion, fecha, categoria_id),
+        )
         conn.commit()
         cursor.close()
         return True
     except Exception as e:
+        print(f"agregar_inversion: {e}")
         return False
     finally:
         conn.close()
@@ -1448,14 +1834,18 @@ def obtener_inversion_por_id(inversion_id, usuario_id):
     finally:
         conn.close()
 
-def actualizar_ingreso(ingreso_id, usuario_id, monto, descripcion, fecha):
+def actualizar_ingreso(ingreso_id, usuario_id, monto, descripcion, fecha, categoria_id=None):
     conn = get_connection()
     if conn is None:
         return False
     try:
         cursor = conn.cursor()
-        cursor.execute('UPDATE ingresos SET monto = %s, descripcion = %s, fecha = %s WHERE id = %s AND usuario_id = %s', 
-                      (monto, descripcion, fecha, ingreso_id, usuario_id))
+        if categoria_id is not None:
+            cursor.execute('UPDATE ingresos SET monto = %s, descripcion = %s, fecha = %s, categoria_id = %s WHERE id = %s AND usuario_id = %s', 
+                          (monto, descripcion, fecha, categoria_id, ingreso_id, usuario_id))
+        else:
+            cursor.execute('UPDATE ingresos SET monto = %s, descripcion = %s, fecha = %s WHERE id = %s AND usuario_id = %s', 
+                          (monto, descripcion, fecha, ingreso_id, usuario_id))
         conn.commit()
         cursor.close()
         return True
@@ -1464,14 +1854,18 @@ def actualizar_ingreso(ingreso_id, usuario_id, monto, descripcion, fecha):
     finally:
         conn.close()
 
-def actualizar_gasto(gasto_id, usuario_id, monto, descripcion, fecha):
+def actualizar_gasto(gasto_id, usuario_id, monto, descripcion, fecha, categoria_id=None):
     conn = get_connection()
     if conn is None:
         return False
     try:
         cursor = conn.cursor()
-        cursor.execute('UPDATE gastos SET monto = %s, descripcion = %s, fecha = %s WHERE id = %s AND usuario_id = %s', 
-                      (monto, descripcion, fecha, gasto_id, usuario_id))
+        if categoria_id is not None:
+            cursor.execute('UPDATE gastos SET monto = %s, descripcion = %s, fecha = %s, categoria_id = %s WHERE id = %s AND usuario_id = %s', 
+                          (monto, descripcion, fecha, categoria_id, gasto_id, usuario_id))
+        else:
+            cursor.execute('UPDATE gastos SET monto = %s, descripcion = %s, fecha = %s WHERE id = %s AND usuario_id = %s', 
+                          (monto, descripcion, fecha, gasto_id, usuario_id))
         conn.commit()
         cursor.close()
         return True
@@ -1480,14 +1874,18 @@ def actualizar_gasto(gasto_id, usuario_id, monto, descripcion, fecha):
     finally:
         conn.close()
 
-def actualizar_inversion(inversion_id, usuario_id, monto, descripcion, fecha):
+def actualizar_inversion(inversion_id, usuario_id, monto, descripcion, fecha, categoria_id=None):
     conn = get_connection()
     if conn is None:
         return False
     try:
         cursor = conn.cursor()
-        cursor.execute('UPDATE inversiones SET monto = %s, descripcion = %s, fecha = %s WHERE id = %s AND usuario_id = %s', 
-                      (monto, descripcion, fecha, inversion_id, usuario_id))
+        if categoria_id is not None:
+            cursor.execute('UPDATE inversiones SET monto = %s, descripcion = %s, fecha = %s, categoria_id = %s WHERE id = %s AND usuario_id = %s', 
+                          (monto, descripcion, fecha, categoria_id, inversion_id, usuario_id))
+        else:
+            cursor.execute('UPDATE inversiones SET monto = %s, descripcion = %s, fecha = %s WHERE id = %s AND usuario_id = %s', 
+                          (monto, descripcion, fecha, inversion_id, usuario_id))
         conn.commit()
         cursor.close()
         return True
@@ -1645,6 +2043,24 @@ def agregar_recurrente(usuario_id, tipo, monto, descripcion, frecuencia, proxima
     finally:
         conn.close()
 
+def actualizar_recurrente(id, usuario_id, tipo, monto, descripcion, frecuencia, proxima_fecha):
+    conn = get_connection()
+    if conn is None:
+        return False
+    try:
+        cursor = conn.cursor()
+        cursor.execute('''
+            UPDATE transacciones_recurrentes
+            SET tipo = %s, monto = %s, descripcion = %s, frecuencia = %s, proxima_fecha = %s
+            WHERE id = %s AND usuario_id = %s
+        ''', (tipo, monto, descripcion, frecuencia, proxima_fecha, id, usuario_id))
+        conn.commit()
+        return True
+    except Exception:
+        return False
+    finally:
+        conn.close()
+
 def eliminar_recurrente_db(id, usuario_id):
     conn = get_connection()
     if conn is None:
@@ -1731,13 +2147,13 @@ def actualizar_perfil_usuario_db(usuario_id, nombre_completo='', email='', telef
     finally:
         conn.close()
 
-def actualizar_foto_perfil_db(usuario_id, foto_path):
+def actualizar_foto_perfil_db(usuario_id, foto_bytes):
     conn = get_connection()
     if conn is None:
         return False
     try:
         cursor = conn.cursor()
-        cursor.execute('UPDATE usuarios SET foto_perfil = %s WHERE id = %s', (foto_path, usuario_id))
+        cursor.execute('UPDATE usuarios SET foto_perfil = %s WHERE id = %s', (foto_bytes, usuario_id))
         conn.commit()
         return True
     finally:
@@ -1762,38 +2178,227 @@ def actualizar_nombre_usuario_db(usuario_id, nuevo_nombre):
     finally:
         conn.close()
 
-def obtener_transacciones_filtradas(usuario_id, q, desde, hasta):
+def _redirect_buscar(return_query):
+    base = url_for('main.buscar')
+    if return_query:
+        return redirect(f"{base}?{return_query}")
+    return redirect(base)
+
+
+def calcular_rango_periodo(periodo):
+    hoy = date.today()
+    if periodo == 'este_mes':
+        return hoy.replace(day=1).isoformat(), hoy.isoformat()
+    if periodo == 'mes_anterior':
+        primero_mes = hoy.replace(day=1)
+        ultimo_anterior = primero_mes - timedelta(days=1)
+        return ultimo_anterior.replace(day=1).isoformat(), ultimo_anterior.isoformat()
+    if periodo == 'ultimos_30':
+        return (hoy - timedelta(days=30)).isoformat(), hoy.isoformat()
+    if periodo == 'este_anio':
+        return hoy.replace(month=1, day=1).isoformat(), date(hoy.year, 12, 31).isoformat()
+    return None, None
+
+
+def calcular_rango_mes_actual():
+    hoy = date.today()
+    ultimo_dia = calendar.monthrange(hoy.year, hoy.month)[1]
+    return hoy.replace(day=1).isoformat(), hoy.replace(day=ultimo_dia).isoformat()
+
+
+def _filtros_desde_request(args):
+    filtros = {
+        'q': (args.get('q') or '').strip(),
+        'desde': args.get('desde') or '',
+        'hasta': args.get('hasta') or '',
+        'tipo': args.get('tipo') or '',
+        'categoria_id': args.get('categoria_id') or '',
+        'monto_min': args.get('monto_min') or '',
+        'monto_max': args.get('monto_max') or '',
+        'orden': args.get('orden') or 'fecha_desc',
+        'periodo': args.get('periodo') or '',
+    }
+    if filtros['periodo'] and not filtros['desde'] and not filtros['hasta']:
+        desde, hasta = calcular_rango_periodo(filtros['periodo'])
+        if desde and hasta:
+            filtros['desde'] = desde
+            filtros['hasta'] = hasta
+    elif not filtros['desde'] and not filtros['hasta']:
+        desde, hasta = calcular_rango_mes_actual()
+        filtros['desde'] = desde
+        filtros['hasta'] = hasta
+    return filtros
+
+
+def _orden_sql(orden):
+    opciones = {
+        'fecha_asc': 'fecha ASC, id ASC',
+        'monto_desc': 'monto DESC, fecha DESC',
+        'monto_asc': 'monto ASC, fecha DESC',
+        'descripcion_asc': 'descripcion ASC, fecha DESC',
+    }
+    return opciones.get(orden, 'fecha DESC, id DESC')
+
+
+def _sql_union_transacciones(con_categorias=True):
+    if con_categorias:
+        return """
+            SELECT i.id, 'ingreso' AS tipo, i.monto, i.descripcion, i.fecha,
+                   i.categoria_id, c.nombre AS categoria_nombre, c.color AS categoria_color
+            FROM ingresos i
+            LEFT JOIN categorias c ON i.categoria_id = c.id
+            WHERE i.usuario_id = %s
+            UNION ALL
+            SELECT g.id, 'gasto', g.monto, g.descripcion, g.fecha,
+                   g.categoria_id, c.nombre, c.color
+            FROM gastos g
+            LEFT JOIN categorias c ON g.categoria_id = c.id
+            WHERE g.usuario_id = %s
+            UNION ALL
+            SELECT inv.id, 'inversion', inv.monto, inv.descripcion, inv.fecha,
+                   inv.categoria_id, c.nombre, c.color
+            FROM inversiones inv
+            LEFT JOIN categorias c ON inv.categoria_id = c.id
+            WHERE inv.usuario_id = %s
+        """
+    return """
+        SELECT id, 'ingreso' AS tipo, monto, descripcion, fecha,
+               NULL AS categoria_id, NULL AS categoria_nombre, NULL AS categoria_color
+        FROM ingresos WHERE usuario_id = %s
+        UNION ALL
+        SELECT id, 'gasto', monto, descripcion, fecha,
+               NULL, NULL, NULL
+        FROM gastos WHERE usuario_id = %s
+        UNION ALL
+        SELECT id, 'inversion', monto, descripcion, fecha,
+               NULL, NULL, NULL
+        FROM inversiones WHERE usuario_id = %s
+    """
+
+
+def _where_transacciones(filtros, params):
+    condiciones = ['1=1']
+    if filtros.get('q'):
+        condiciones.append('descripcion LIKE %s')
+        params.append(f"%{filtros['q']}%")
+    if filtros.get('desde'):
+        condiciones.append('fecha >= %s')
+        params.append(filtros['desde'])
+    if filtros.get('hasta'):
+        condiciones.append('fecha <= %s')
+        params.append(filtros['hasta'])
+    if filtros.get('tipo') in ('ingreso', 'gasto', 'inversion'):
+        condiciones.append('tipo = %s')
+        params.append(filtros['tipo'])
+    if filtros.get('categoria_id'):
+        condiciones.append('categoria_id = %s')
+        params.append(filtros['categoria_id'])
+    if filtros.get('monto_min'):
+        try:
+            condiciones.append('monto >= %s')
+            params.append(float(filtros['monto_min']))
+        except ValueError:
+            pass
+    if filtros.get('monto_max'):
+        try:
+            condiciones.append('monto <= %s')
+            params.append(float(filtros['monto_max']))
+        except ValueError:
+            pass
+    return ' AND '.join(condiciones)
+
+
+def explorar_transacciones(usuario_id, filtros, pagina=1, por_pagina=25):
+    vacio = {
+        'resultados': [],
+        'resumen': {
+            'total_ingresos': 0,
+            'total_gastos': 0,
+            'total_inversiones': 0,
+            'balance': 0,
+            'cantidad': 0,
+        },
+        'paginacion': {'pagina': 1, 'total_paginas': 1, 'total': 0, 'por_pagina': por_pagina},
+    }
     conn = get_connection()
     if conn is None:
-        return []
+        return vacio
     try:
         cursor = conn.cursor(dictionary=True)
-        sql = """
-            SELECT tipo, monto, descripcion, fecha FROM (
-                SELECT 'ingreso' as tipo, monto, descripcion, fecha FROM ingresos WHERE usuario_id = %s
-                UNION ALL
-                SELECT 'gasto' as tipo, monto, descripcion, fecha FROM gastos WHERE usuario_id = %s
-                UNION ALL
-                SELECT 'inversion' as tipo, monto, descripcion, fecha FROM inversiones WHERE usuario_id = %s
-            ) as t WHERE 1=1
-        """
-        params = [usuario_id, usuario_id, usuario_id]
-        
-        if q:
-            sql += " AND descripcion LIKE %s"
-            params.append(f"%{q}%")
-        if desde:
-            sql += " AND fecha >= %s"
-            params.append(desde)
-        if hasta:
-            sql += " AND fecha <= %s"
-            params.append(hasta)
-            
-        sql += " ORDER BY fecha DESC"
-        cursor.execute(sql, tuple(params))
-        return cursor.fetchall()
+        base_params = [usuario_id, usuario_id, usuario_id]
+        where_params = []
+        where_sql = _where_transacciones(filtros, where_params)
+        params_base = base_params + where_params
+        orden = _orden_sql(filtros.get('orden', 'fecha_desc'))
+
+        for con_categorias in (True, False):
+            try:
+                union_sql = _sql_union_transacciones(con_categorias)
+                subquery = f"SELECT * FROM ({union_sql}) AS t WHERE {where_sql}"
+
+                cursor.execute(
+                    f"""
+                    SELECT
+                        COALESCE(SUM(CASE WHEN tipo = 'ingreso' THEN monto ELSE 0 END), 0) AS total_ingresos,
+                        COALESCE(SUM(CASE WHEN tipo = 'gasto' THEN monto ELSE 0 END), 0) AS total_gastos,
+                        COALESCE(SUM(CASE WHEN tipo = 'inversion' THEN monto ELSE 0 END), 0) AS total_inversiones,
+                        COUNT(*) AS cantidad
+                    FROM ({subquery}) AS resumen
+                    """,
+                    tuple(params_base),
+                )
+                resumen_row = cursor.fetchone() or {}
+                total_ingresos = float(resumen_row.get('total_ingresos') or 0)
+                total_gastos = float(resumen_row.get('total_gastos') or 0)
+                total_inversiones = float(resumen_row.get('total_inversiones') or 0)
+                cantidad = int(resumen_row.get('cantidad') or 0)
+                resumen = {
+                    'total_ingresos': total_ingresos,
+                    'total_gastos': total_gastos,
+                    'total_inversiones': total_inversiones,
+                    'balance': total_ingresos - total_gastos - total_inversiones,
+                    'cantidad': cantidad,
+                }
+
+                total_paginas = max(1, (cantidad + por_pagina - 1) // por_pagina) if cantidad else 1
+                pagina_actual = min(max(1, pagina), total_paginas)
+                offset = (pagina_actual - 1) * por_pagina
+
+                cursor.execute(
+                    f"""
+                    SELECT id, tipo, monto, descripcion, fecha, categoria_id,
+                           categoria_nombre, categoria_color
+                    FROM ({subquery}) AS datos
+                    ORDER BY {orden}
+                    LIMIT %s OFFSET %s
+                    """,
+                    tuple(params_base + [por_pagina, offset]),
+                )
+                resultados = cursor.fetchall()
+
+                return {
+                    'resultados': resultados,
+                    'resumen': resumen,
+                    'paginacion': {
+                        'pagina': pagina_actual,
+                        'total_paginas': total_paginas,
+                        'total': cantidad,
+                        'por_pagina': por_pagina,
+                    },
+                }
+            except Exception as e:
+                if con_categorias:
+                    continue
+                print(f"Error explorar_transacciones: {e}")
+                return vacio
+        return vacio
     finally:
         conn.close()
+
+
+def obtener_transacciones_filtradas(usuario_id, q, desde, hasta):
+    filtros = {'q': q or '', 'desde': desde or '', 'hasta': hasta or '', 'orden': 'fecha_desc'}
+    return explorar_transacciones(usuario_id, filtros, pagina=1, por_pagina=10000)['resultados']
 
 def obtener_categorias(usuario_id):
     conn = get_connection()
@@ -1806,11 +2411,64 @@ def obtener_categorias(usuario_id):
     finally:
         conn.close()
 
+def validar_categoria_para_tipo(usuario_id, categoria_id, tipo_transaccion):
+    """
+    Valida que una categoría sea válida para el tipo de transacción especificado.
+    
+    Args:
+        usuario_id: ID del usuario
+        categoria_id: ID de la categoría (puede ser None)
+        tipo_transaccion: Tipo de transacción ('ingreso', 'gasto', 'inversion')
+    
+    Returns:
+        tuple: (es_valida, mensaje_error)
+    """
+    # Si no hay categoría, es válido (las categorías son opcionales)
+    if not categoria_id:
+        return True, ""
+    
+    # Validar que el tipo de transacción sea válido
+    tipos_validos = ['ingreso', 'gasto', 'inversion']
+    if tipo_transaccion not in tipos_validos:
+        return False, f"Tipo de transacción inválido: {tipo_transaccion}"
+    
+    conn = get_connection()
+    if conn is None:
+        return False, "Error de conexión a la base de datos"
+    
+    try:
+        cursor = conn.cursor(dictionary=True)
+        
+        # Obtener la categoría
+        cursor.execute(
+            'SELECT * FROM categorias WHERE id = %s AND usuario_id = %s',
+            (categoria_id, usuario_id)
+        )
+        categoria = cursor.fetchone()
+        
+        if not categoria:
+            return False, "Categoría no encontrada"
+        
+        # Validar que el tipo de la categoría coincida con el tipo de transacción
+        tipo_categoria = categoria.get('tipo', '').lower()
+        
+        if tipo_categoria and tipo_categoria != tipo_transaccion:
+            return False, f"La categoría '{categoria['nombre']}' es para {tipo_categoria}s, no para {tipo_transaccion}s"
+        
+        return True, ""
+    finally:
+        conn.close()
+
 def agregar_categoria(usuario_id, nombre, tipo, color):
     conn = get_connection()
     if conn is None:
         return False
     try:
+        # Validar que el tipo sea válido
+        tipos_validos = ['ingreso', 'gasto', 'inversion']
+        if tipo not in tipos_validos:
+            return False
+        
         cursor = conn.cursor()
         cursor.execute('INSERT INTO categorias (usuario_id, nombre, tipo, color) VALUES (%s, %s, %s, %s)', 
                       (usuario_id, nombre, tipo, color))
