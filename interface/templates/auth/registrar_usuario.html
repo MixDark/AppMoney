@@ -16,12 +16,6 @@
     <h2 class="text-2xl font-black mb-1 text-center text-white">Información de cuenta</h2>
     <p class="text-center text-xs opacity-60 mb-6">Únete a App Money hoy mismo</p>
 
-    {% if mensaje %}
-    <p class="text-red-500 mb-5 text-center text-sm font-bold bg-red-500/10 py-2 px-3 rounded-lg w-full border border-red-500/30">
-        <i class="fas fa-exclamation-circle mr-2"></i> {{ mensaje|capitalize }}
-    </p>
-    {% endif %}
-
     <form method="post" enctype="multipart/form-data" class="space-y-6 w-full flex flex-col">
         <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
         <div class="w-full">

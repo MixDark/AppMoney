@@ -33,12 +33,6 @@
     <h2 class="text-2xl font-black mb-1 text-center text-white">App Money</h2>
     <p class="text-center text-xs opacity-60 mb-6">Inicia sesión en tu cuenta</p>
 
-    {% if mensaje %}
-    <p class="text-red-500 mb-5 text-center text-sm font-bold bg-red-500/10 py-2 px-3 rounded-lg w-full border border-red-500/30">
-        <i class="fas fa-exclamation-circle mr-2"></i> {{ mensaje|capitalize }}
-    </p>
-    {% endif %}
-
     <form method="post" class="space-y-6 w-full flex flex-col">
         <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
         <div class="w-full">
@@ -94,10 +88,6 @@
                     autocomplete="off">
             </div>
 
-            <div id="otp-error" class="text-red-400 text-sm font-bold bg-red-500/10 py-3 px-4 rounded-lg border border-red-500/30 hidden">
-                <!-- Mensaje de error dinámico -->
-            </div>
-
             <div class="flex justify-center pt-2">
                 <button type="submit" class="btn-fluent px-8 py-3 justify-center flex items-center gap-2 whitespace-nowrap">
                     <i class="fas fa-check"></i> Verificar
@@ -138,7 +128,6 @@
     document.addEventListener('DOMContentLoaded', function() {
         const form = document.getElementById('otp-form');
         const inputOtp = document.getElementById('codigo_otp');
-        const errorDiv = document.getElementById('otp-error');
         const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
 
         // Focus automático en el input
@@ -166,7 +155,7 @@
             const codigoOtp = inputOtp.value.trim();
 
             if (codigoOtp.length !== 6) {
-                mostrarError('Ingresa 6 dígitos');
+                window.showToast('Ingresa 6 dígitos', 'error');
                 return;
             }
 
@@ -189,7 +178,6 @@
                 const data = await response.json();
 
                 if (data.exito) {
-                    mostrarError('', false);
                     submitBtn.innerHTML = '<i class="fas fa-check"></i> ¡Verificado!';
                     submitBtn.style.backgroundColor = '#10b981';
                     
@@ -197,7 +185,7 @@
                         window.location.href = data.redirect;
                     }, 800);
                 } else {
-                    mostrarError(data.mensaje || 'Código inválido');
+                    window.showToast(data.mensaje || 'Código inválido', 'error');
                     inputOtp.value = '';
                     inputOtp.focus();
                     submitBtn.disabled = false;
@@ -205,20 +193,11 @@
                 }
             } catch (error) {
                 console.error('Error:', error);
-                mostrarError('Error al verificar');
+                window.showToast('Error al verificar', 'error');
                 submitBtn.disabled = false;
                 submitBtn.innerHTML = btnText;
             }
         });
-
-        function mostrarError(mensaje, mostrar = true) {
-            if (mostrar && mensaje) {
-                errorDiv.textContent = mensaje;
-                errorDiv.classList.remove('hidden');
-            } else {
-                errorDiv.classList.add('hidden');
-            }
-        }
     });
 </script>
 {% endif %}

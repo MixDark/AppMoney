@@ -193,7 +193,7 @@
         const nuevoGastado = document.getElementById('gastadoEditar').value;
         
         if (!nuevoGastado || parseFloat(nuevoGastado) < 0) {
-            alert('Por favor ingresa un gastado válido');
+            window.showToast('Por favor ingresa un gastado válido', 'error');
             return;
         }
         const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
@@ -216,12 +216,12 @@
                 document.getElementById('gastado-' + presupuestoActualId).textContent = formatoMoneda(nuevoGastadoNum);
                 cerrarModalEditar();
             } else {
-                alert('Error: ' + data.message);
+                window.showToast('Error: ' + data.message, 'error');
             }
         })
         .catch(error => {
             console.error('Error:', error);
-            alert('Error al actualizar el presupuesto');
+            window.showToast('Error al actualizar el presupuesto', 'error');
         });
     }
     

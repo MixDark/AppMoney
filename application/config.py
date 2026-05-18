@@ -14,7 +14,7 @@ def configure_app(app):
     app.config['SESSION_COOKIE_HTTPONLY'] = True
     app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
     app.config['PERMANENT_SESSION_LIFETIME'] = int(os.getenv('SESSION_TIMEOUT', 1800))
-    app.config['PHOTO_MAX_BYTES'] = int(os.getenv('PHOTO_MAX_BYTES', 2 * 1024 * 1024))
+    app.config['PHOTO_MAX_BYTES'] = int(os.getenv('PHOTO_MAX_BYTES', 8 * 1024 * 1024))
     app.config['MAX_CONTENT_LENGTH'] = app.config['PHOTO_MAX_BYTES']
 
 

@@ -16,12 +16,6 @@
 <div class="fluent-card form-card p-8 max-w-md w-full flex flex-col items-center">
     <h2 class="text-2xl font-black mb-6 text-center text-white">Cambio de contraseña</h2>
 
-    {% if mensaje %}
-    <p class="text-red-400 mb-6 text-center text-sm font-bold bg-red-500/10 py-3 px-4 rounded-lg w-full border border-red-500/30">
-        {{ mensaje|capitalize }}
-    </p>
-    {% endif %}
-
     <form method="post" class="space-y-8 w-full flex flex-col">
         <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
         <input type="hidden" name="token" value="{{ token }}">

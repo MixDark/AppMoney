@@ -21,19 +21,13 @@
     <!-- Title -->
     <h2 class="text-3xl font-black mb-12 text-center text-white">Información del perfil</h2>
 
-    {% if mensaje %}
-    <p class="{% if 'incorrecta' in mensaje.lower() or 'requerida' in mensaje.lower() or 'no coinciden' in mensaje.lower() %}text-red-400 bg-red-500/10 border-red-500/30{% else %}text-green-400 bg-green-500/10 border-green-500/30{% endif %} mb-8 text-center text-sm font-bold py-3 px-6 rounded-xl border">
-        {{ mensaje }}
-    </p>
-    {% endif %}
-
     <form method="post" enctype="multipart/form-data" class="space-y-8">
         <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
         <div class="grid grid-cols-1 md:grid-cols-3 gap-8 mb-12">
         <!-- Photo Section -->
         <div class="md:col-span-1 flex flex-col items-center">
             <div class="relative mb-6">
-                <div class="profile-avatar w-32 h-32 rounded-full flex items-center justify-center text-white text-5xl font-black shadow-xl overflow-hidden backdrop-blur-xl">
+                <div id="foto-perfil-preview" class="profile-avatar w-32 h-32 rounded-full flex items-center justify-center text-white text-5xl font-black shadow-xl overflow-hidden backdrop-blur-xl" data-initial="{{ usuario.nombre_usuario[0].upper() }}" data-original-src="{% if usuario.foto_perfil %}{{ url_for('main.foto_perfil', usuario_id=usuario.id) }}{% endif %}">
                     {% if usuario.foto_perfil %}
                     <img src="{{ url_for('main.foto_perfil', usuario_id=usuario.id) }}" class="w-full h-full object-cover">
                     {% else %}
@@ -92,4 +86,45 @@
         </div>
     </form>
 </div>
+<script>
+    (() => {
+        const input = document.getElementById('foto_perfil');
+        const preview = document.getElementById('foto-perfil-preview');
+
+        if (!input || !preview) {
+            return;
+        }
+
+        const initial = preview.dataset.initial || '';
+        const originalSrc = preview.dataset.originalSrc || '';
+
+        const renderText = (text) => {
+            preview.innerHTML = '';
+            preview.textContent = text;
+        };
+
+        const renderImage = (src) => {
+            preview.innerHTML = `<img src="${src}" alt="Vista previa de foto de perfil" class="w-full h-full object-cover">`;
+        };
+
+        input.addEventListener('change', () => {
+            const file = input.files && input.files[0];
+
+            if (!file) {
+                if (originalSrc) {
+                    renderImage(originalSrc);
+                } else {
+                    renderText(initial);
+                }
+                return;
+            }
+
+            const reader = new FileReader();
+            reader.onload = (event) => {
+                renderImage(event.target.result);
+            };
+            reader.readAsDataURL(file);
+        });
+    })();
+</script>
 {% endblock %}

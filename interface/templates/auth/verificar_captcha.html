@@ -21,12 +21,6 @@
     <h2 class="text-3xl font-black mb-2 text-center text-white">Verificación</h2>
     <p class="text-center text-xs font-bold opacity-50 uppercase tracking-widest mb-10">Resuelve el captcha para continuar</p>
 
-    {% if mensaje %}
-    <p class="text-red-400 mb-6 text-center text-sm font-bold bg-red-500/10 py-3 px-4 rounded-lg w-full border border-red-500/30">
-        {{ mensaje|capitalize }}
-    </p>
-    {% endif %}
-
     <form method="post" class="space-y-8 w-full flex flex-col">
         <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
         <input type="hidden" name="token" value="{{ token }}">

@@ -138,7 +138,7 @@
     function confirmarAportar() {
         const monto = document.getElementById('montoAportar').value;
         if (!monto || parseFloat(monto) <= 0) {
-            alert('Por favor ingresa un monto válido');
+            window.showToast('Por favor ingresa un monto válido', 'error');
             return;
         }
         const csrfToken = document.querySelector('input[name="csrf_token"]').value;
@@ -159,12 +159,12 @@
                 // Recargar la página para actualizar los datos
                 location.reload();
             } else {
-                alert('Error: ' + data.message);
+                window.showToast('Error: ' + data.message, 'error');
             }
         })
         .catch(error => {
             console.error('Error:', error);
-            alert('Error al registrar el aporte');
+            window.showToast('Error al registrar el aporte', 'error');
         });
     }
     

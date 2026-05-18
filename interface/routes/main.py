@@ -12,6 +12,7 @@ from io import BytesIO
 import time
 from threading import Lock
 import pandas as pd
+import traceback
 from reportlab.lib.pagesizes import letter, A4
 from reportlab.lib import colors
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
@@ -161,28 +162,27 @@ def register_routes(app):
 
     @bp.route('/login', methods=['GET', 'POST'])
     def login():
-        mensaje = None
         mostrar_otp_modal = False
         
         if request.method == 'POST':
             ip = request.remote_addr or 'unknown'
             if rate_limited(f'login:{ip}', limit=5, window_seconds=60):
-                mensaje = 'Demasiados intentos. Intenta de nuevo más tarde'
-                return render_template('auth/login.html', mensaje=mensaje, mostrar_otp_modal=False)
+                flash('Demasiados intentos. Intenta de nuevo más tarde', 'error')
+                return render_template('auth/login.html', mostrar_otp_modal=False)
             nombre_usuario = request.form.get('nombre_usuario', '').strip()
             password = request.form.get('password', '')
             
             valid, msg = validate_username(nombre_usuario)
             if not valid:
-                mensaje = msg
-                return render_template('auth/login.html', mensaje=mensaje, mostrar_otp_modal=False)
+                flash(msg, 'error')
+                return render_template('auth/login.html', mostrar_otp_modal=False)
             
             usuario = obtener_usuario_por_nombre(nombre_usuario)
             
             if not usuario:
-                mensaje = 'Usuario no encontrado'
+                flash('Usuario no encontrado', 'error')
             elif not check_password_hash(usuario['password_hash'], password):
-                mensaje = 'Contraseña incorrecta'
+                flash('Contraseña incorrecta', 'error')
             else:
                 # Usuario y contraseña son correctos
                 # Verificar si tiene MFA habilitado
@@ -203,7 +203,7 @@ def register_routes(app):
                     session.pop('username_temp', None)
                     return redirect(url_for('main.consolidado'))
         
-        return render_template('auth/login.html', mensaje=mensaje, mostrar_otp_modal=False)
+        return render_template('auth/login.html', mostrar_otp_modal=False)
 
     @bp.route('/logout')
     def logout():
@@ -281,24 +281,23 @@ def register_routes(app):
 
     @bp.route('/recuperar_contraseña', methods=['GET', 'POST'])
     def recuperar_contraseña():
-        mensaje = None
         exito = None
         if request.method == 'POST':
             ip = request.remote_addr or 'unknown'
             if rate_limited(f'recovery:{ip}', limit=3, window_seconds=300):
-                mensaje = 'Demasiados intentos. Intenta de nuevo más tarde'
-                return render_template('auth/recuperar_contraseña.html', mensaje=mensaje)
+                flash('Demasiados intentos. Intenta de nuevo más tarde', 'error')
+                return render_template('auth/recuperar_contraseña.html')
             nombre_usuario = request.form.get('nombre_usuario', '').strip()
             
             valid, msg = validate_username(nombre_usuario)
             if not valid:
-                mensaje = msg
-                return render_template('auth/recuperar_contraseña.html', mensaje=mensaje)
+                flash(msg, 'error')
+                return render_template('auth/recuperar_contraseña.html')
             
             usuario = obtener_usuario_por_nombre(nombre_usuario)
             
             if not usuario:
-                mensaje = 'Usuario no encontrado'
+                flash('Usuario no encontrado', 'error')
             else:
                 # Generar token único
                 token = secrets.token_urlsafe(32)
@@ -309,23 +308,23 @@ def register_routes(app):
                     # Redirigir al CAPTCHA
                     return redirect(url_for('main.verificar_captcha', token=token))
                 else:
-                    mensaje = 'Error al procesar tu solicitud'
+                    flash('Error al procesar tu solicitud', 'error')
         
-        return render_template('auth/recuperar_contraseña.html', mensaje=mensaje, exito=exito)
+        return render_template('auth/recuperar_contraseña.html', exito=exito)
 
     @bp.route('/verificar_captcha', methods=['GET', 'POST'])
     def verificar_captcha():
         token = request.args.get('token') or request.form.get('token')
-        mensaje = None
         
         if not token:
+            flash('Token inválido', 'error')
             return redirect(url_for('main.recuperar_contraseña'))
         
         # Verificar que el token sea válido
         token_data = obtener_token_recuperacion(token)
         
         if not token_data:
-            mensaje = 'Token inválido o expirado'
+            flash('Token inválido o expirado', 'error')
             return redirect(url_for('main.recuperar_contraseña'))
         
         # Verificar si el token ha expirado
@@ -334,7 +333,7 @@ def register_routes(app):
             expires_at = datetime.fromisoformat(expires_at)
         
         if expires_at < datetime.now():
-            mensaje = 'El enlace de recuperación ha expirado'
+            flash('El enlace de recuperación ha expirado', 'error')
             eliminar_token_recuperacion(token)
             return redirect(url_for('main.recuperar_contraseña'))
         
@@ -344,7 +343,7 @@ def register_routes(app):
         
         # Si ya alcanzó 3 intentos, bloquear
         if token_data['captcha_attempt'] >= 3:
-            mensaje = 'Demasiados intentos. Solicita una nueva recuperación'
+            flash('Demasiados intentos. Solicita una nueva recuperación', 'error')
             eliminar_token_recuperacion(token)
             return redirect(url_for('main.recuperar_contraseña'))
         
@@ -366,8 +365,8 @@ def register_routes(app):
         elif request.method == 'POST':
             ip = request.remote_addr or 'unknown'
             if rate_limited(f'captcha:{ip}', limit=5, window_seconds=300):
-                mensaje = 'Demasiados intentos. Intenta de nuevo más tarde'
-                return render_template('auth/verificar_captcha.html', token=token, mensaje=mensaje)
+                flash('Demasiados intentos. Intenta de nuevo más tarde', 'error')
+                return render_template('auth/verificar_captcha.html', token=token)
             respuesta_usuario = request.form.get('captcha_answer', '')
             respuesta_correcta = session.get(f'captcha_{token}')
             
@@ -387,11 +386,11 @@ def register_routes(app):
                 incrementar_intentos_captcha(token, nuevos_intentos)
                 
                 if nuevos_intentos >= 3:
-                    mensaje = 'Demasiados intentos incorrectos. Solicita una nueva recuperación'
+                    flash('Demasiados intentos incorrectos. Solicita una nueva recuperación', 'error')
                     eliminar_token_recuperacion(token)
                     return redirect(url_for('main.recuperar_contraseña'))
                 
-                mensaje = 'Respuesta incorrecta. Intenta de nuevo'
+                flash('Respuesta incorrecta. Intenta de nuevo', 'error')
                 
                 # Generar nuevo CAPTCHA
                 captcha_num1 = secrets.randbelow(50) + 1
@@ -403,24 +402,22 @@ def register_routes(app):
                                      token=token, 
                                      captcha_num1=captcha_num1, 
                                      captcha_num2=captcha_num2,
-                                     captcha_attempt=nuevos_intentos,
-                                     mensaje=mensaje)
+                                     captcha_attempt=nuevos_intentos)
 
     @bp.route('/resetear_contraseña', methods=['GET', 'POST'])
     def resetear_contraseña():
         token = request.args.get('token') or request.form.get('token')
-        mensaje = None
         
         if not token:
-            mensaje = 'Token inválido'
-            return render_template('auth/resetear_contraseña.html', mensaje=mensaje, token='')
+            flash('Token inválido', 'error')
+            return render_template('auth/resetear_contraseña.html', token='')
         
         # Verificar que el token sea válido
         token_data = obtener_token_recuperacion(token)
         
         if not token_data:
-            mensaje = 'Token inválido o expirado'
-            return render_template('auth/resetear_contraseña.html', mensaje=mensaje, token='')
+            flash('Token inválido o expirado', 'error')
+            return render_template('auth/resetear_contraseña.html', token='')
         
         # Verificar si el token ha expirado
         expires_at = token_data['expires_at']
@@ -428,9 +425,9 @@ def register_routes(app):
             expires_at = datetime.fromisoformat(expires_at)
         
         if expires_at < datetime.now():
-            mensaje = 'El enlace de recuperación ha expirado'
+            flash('El enlace de recuperación ha expirado', 'error')
             eliminar_token_recuperacion(token)
-            return render_template('auth/resetear_contraseña.html', mensaje=mensaje, token='')
+            return render_template('auth/resetear_contraseña.html', token='')
         
         # Verificar que el CAPTCHA fue verificado
         if not token_data['verified']:
@@ -439,19 +436,19 @@ def register_routes(app):
         if request.method == 'POST':
             ip = request.remote_addr or 'unknown'
             if rate_limited(f'reset:{ip}', limit=5, window_seconds=300):
-                mensaje = 'Demasiados intentos. Intenta de nuevo más tarde'
-                return render_template('auth/resetear_contraseña.html', mensaje=mensaje, token=token)
+                flash('Demasiados intentos. Intenta de nuevo más tarde', 'error')
+                return render_template('auth/resetear_contraseña.html', token=token)
             password_nueva = request.form.get('password_nueva', '')
             password_confirmar = request.form.get('password_confirmar', '')
             
             valid, msg = validate_password(password_nueva)
             if not valid:
-                mensaje = msg
-                return render_template('auth/resetear_contraseña.html', mensaje=mensaje, token=token)
+                flash(msg, 'error')
+                return render_template('auth/resetear_contraseña.html', token=token)
             
             if password_nueva != password_confirmar:
-                mensaje = 'Las contraseñas no coinciden'
-                return render_template('auth/resetear_contraseña.html', mensaje=mensaje, token=token)
+                flash('Las contraseñas no coinciden', 'error')
+                return render_template('auth/resetear_contraseña.html', token=token)
             
             # Actualizar contraseña
             nueva_password_hash = generate_password_hash(password_nueva)
@@ -461,9 +458,9 @@ def register_routes(app):
                 flash('Contraseña actualizada exitosamente. Inicia sesión con tu nueva contraseña.', 'success')
                 return redirect(url_for('main.login'))
             else:
-                mensaje = 'Error al actualizar la contraseña'
+                flash('Error al actualizar la contraseña', 'error')
         
-        return render_template('auth/resetear_contraseña.html', mensaje=mensaje, token=token)
+        return render_template('auth/resetear_contraseña.html', token=token)
 
     @bp.route('/registrar', methods=['GET', 'POST'])
     @login_required_custom
@@ -586,51 +583,59 @@ def register_routes(app):
 
     @bp.route('/registrar_usuario', methods=['GET', 'POST'])
     def registrar_usuario():
-        mensaje = None
         if request.method == 'POST':
-            nombre_usuario = request.form.get('nombre_usuario', '').strip()
-            password = request.form.get('password', '')
-            nombre_completo = request.form.get('nombre_completo', '').strip()
-            email = request.form.get('email', '').strip()
-            telefono = request.form.get('telefono', '').strip()
-            pais = request.form.get('pais', '').strip()
-            ciudad = request.form.get('ciudad', '').strip()
-            moneda = request.form.get('moneda', 'USD')
+            try:
+                nombre_usuario = request.form.get('nombre_usuario', '').strip()
+                password = request.form.get('password', '')
+                nombre_completo = request.form.get('nombre_completo', '').strip()
+                email = request.form.get('email', '').strip()
+                telefono = request.form.get('telefono', '').strip()
+                pais = request.form.get('pais', '').strip()
+                ciudad = request.form.get('ciudad', '').strip()
+                moneda = request.form.get('moneda', 'USD')
 
-            valid, msg = validate_username(nombre_usuario)
-            if not valid:
-                mensaje = msg
-                return render_template('auth/registrar_usuario.html', mensaje=mensaje)
+                valid, msg = validate_username(nombre_usuario)
+                if not valid:
+                    flash(msg, 'error')
+                    return render_template('auth/registrar_usuario.html')
 
-            valid, msg = validate_password(password)
-            if not valid:
-                mensaje = msg
-                return render_template('auth/registrar_usuario.html', mensaje=mensaje)
+                valid, msg = validate_password(password)
+                if not valid:
+                    flash(msg, 'error')
+                    return render_template('auth/registrar_usuario.html')
 
-            if obtener_usuario_por_nombre(nombre_usuario):
-                mensaje = 'El usuario ya existe'
-            else:
-                foto_perfil = None
-                file = request.files.get('foto_perfil')
-                if file and file.filename:
-                    foto_perfil, error = read_profile_image(file)
-                    if error:
-                        mensaje = error
-                        return render_template('auth/registrar_usuario.html', mensaje=mensaje)
-                password_hash = generate_password_hash(password)
-                crear_usuario(
-                    nombre_usuario,
-                    password_hash,
-                    nombre_completo,
-                    email,
-                    telefono,
-                    pais,
-                    ciudad,
-                    moneda,
-                    foto_perfil
-                )
-                return redirect(url_for('main.login'))
-        return render_template('auth/registrar_usuario.html', mensaje=mensaje)
+                if obtener_usuario_por_nombre(nombre_usuario):
+                    flash('El usuario ya existe', 'error')
+                else:
+                    foto_perfil = None
+                    file = request.files.get('foto_perfil')
+                    if file and file.filename:
+                        foto_perfil, error = read_profile_image(file)
+                        if error:
+                            flash(error, 'error')
+                            return render_template('auth/registrar_usuario.html')
+                    password_hash = generate_password_hash(password)
+                    created = crear_usuario(
+                        nombre_usuario,
+                        password_hash,
+                        nombre_completo,
+                        email,
+                        telefono,
+                        pais,
+                        ciudad,
+                        moneda,
+                        foto_perfil
+                    )
+                    if not created:
+                        flash('Error al crear el usuario. Revisa la configuración del servidor.', 'error')
+                        return render_template('auth/registrar_usuario.html')
+                    flash('Usuario registrado correctamente', 'success')
+                    return redirect(url_for('main.login'))
+            except Exception:
+                traceback.print_exc()
+                flash('Error interno al procesar el registro', 'error')
+                return render_template('auth/registrar_usuario.html')
+        return render_template('auth/registrar_usuario.html')
 
     @bp.route('/perfil', methods=['GET', 'POST'])
     @login_required_custom
@@ -643,7 +648,6 @@ def register_routes(app):
             session.clear()
             return redirect(url_for('main.login'))
         
-        mensaje = None
         if request.method == 'POST':
             # Actualizar Foto si se envió
             if 'foto_perfil' in request.files and request.files['foto_perfil'].filename:
@@ -651,8 +655,8 @@ def register_routes(app):
                 if file:
                     foto_bytes, error = read_profile_image(file)
                     if error:
-                        mensaje = error
-                        return render_template('dashboard/perfil.html', usuario=usuario, mensaje=mensaje)
+                        flash(error, 'error')
+                        return render_template('dashboard/perfil.html', usuario=usuario)
                     actualizar_foto_perfil_db(usuario['id'], foto_bytes)
             
             # Actualizar datos personales
@@ -666,16 +670,15 @@ def register_routes(app):
             resultado = actualizar_perfil_usuario_db(usuario['id'], nombre_completo, email, telefono, pais, ciudad, moneda)
             
             if resultado:
-                mensaje = 'Perfil actualizado exitosamente'
+                flash('Perfil actualizado exitosamente', 'success')
             else:
-                mensaje = 'Error al actualizar el perfil'
+                flash('Error al actualizar el perfil', 'error')
             
             # Recargar datos del usuario DESPUÉS de actualizar
             usuario = obtener_usuario_por_id(session['usuario_id'])
-            
-            return render_template('dashboard/perfil.html', usuario=usuario, mensaje=mensaje)
+            return redirect(url_for('main.perfil'))
         
-        return render_template('dashboard/perfil.html', usuario=usuario, mensaje=mensaje)
+        return render_template('dashboard/perfil.html', usuario=usuario)
 
     @bp.route('/editar_perfil', methods=['GET', 'POST'])
     def editar_perfil():
@@ -686,7 +689,6 @@ def register_routes(app):
         if usuario is None:
             session.clear()
             return redirect(url_for('main.login'))
-        mensaje = None
         
         if request.method == 'POST':
             # Verificar si es solo actualización de foto (sin contraseña)
@@ -695,14 +697,9 @@ def register_routes(app):
                 if file:
                     foto_bytes, error = read_profile_image(file)
                     if error:
-                        mensaje = error
-                        return render_template('dashboard/editar_perfil.html', usuario=usuario, mensaje=mensaje)
+                        flash(error, 'error')
+                        return render_template('dashboard/editar_perfil.html', usuario=usuario)
                     actualizar_foto_perfil_db(usuario['id'], foto_bytes)
-                    
-                    # Si no hay contraseña actual, asumimos que es solo subida de foto y redirigimos
-                    if not request.form.get('password_actual'):
-                         flash('Foto de perfil actualizada', 'success')
-                         return redirect(url_for('main.editar_perfil'))
 
             password_actual = request.form.get('password_actual', '')
             password_nueva = request.form.get('password_nueva', '')
@@ -715,7 +712,7 @@ def register_routes(app):
             ciudad = request.form.get('ciudad', '')
             
             if not check_password_hash(usuario['password_hash'], password_actual):
-                mensaje = 'La contraseña actual es incorrecta para aplicar cambios'
+                flash('La contraseña actual es incorrecta para aplicar cambios', 'error')
             else:
                 # Actualizar datos personales y moneda
                 actualizar_perfil_usuario_db(usuario['id'], nombre_completo, email, telefono, pais, ciudad, moneda)
@@ -724,20 +721,21 @@ def register_routes(app):
                 if password_nueva:
                     valid, msg = validate_password(password_nueva)
                     if not valid:
-                        mensaje = msg
+                        flash(msg, 'error')
                     elif password_nueva != password_confirmar:
-                        mensaje = 'Las nuevas contraseñas no coinciden'
+                        flash('Las nuevas contraseñas no coinciden', 'error')
                     else:
                         nueva_password_hash = generate_password_hash(password_nueva)
                         actualizar_password_usuario(usuario['id'], nueva_password_hash)
-                        mensaje = 'Perfil y contraseña actualizados exitosamente'
+                        flash('Perfil y contraseña actualizados exitosamente', 'success')
                 else:
-                    mensaje = 'Preferencias actualizadas correctamente'
+                    flash('Preferencias actualizadas correctamente', 'success')
                 
                 # Recargar datos del usuario
                 usuario = obtener_usuario_por_id(session['usuario_id'])
+                return redirect(url_for('main.editar_perfil'))
         
-        return render_template('dashboard/editar_perfil.html', usuario=usuario, mensaje=mensaje)
+        return render_template('dashboard/editar_perfil.html', usuario=usuario)
 
     @bp.route('/editar_registro', methods=['GET', 'POST'])
     @login_required_custom
@@ -1242,14 +1240,12 @@ def register_routes(app):
                     # Recargar usuario para verificar
                     usuario_actualizado = obtener_usuario_por_id(usuario_id)
                     
-                    flash('2FA Activado. Escanea el código QR para configurar tu aplicación.', 'success')
                     # Renderizar con el código QR
                     return render_template('auth/seguridad.html', usuario=usuario_actualizado, qr_code=qr_b64, secret=secret)
                 
                 elif not MFA and usuario.get('MFA'):
                     # Desactivar
                     actualizar_seguridad_usuario(usuario_id, False)
-                    flash('2FA Desactivado', 'success')
                     return redirect(url_for('main.seguridad'))
                 
                 # Si no hubo cambio de estado pero se hizo post
