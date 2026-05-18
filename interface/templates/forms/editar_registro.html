@@ -13,7 +13,7 @@
     }
 </style>
 
-<div class="fluent-card form-card p-12 max-w-lg w-full flex flex-col items-center">
+<div class="fluent-card form-card p-6 sm:p-12 max-w-lg w-full flex flex-col items-center">
     <h2 class="text-3xl font-black mb-10 text-center text-white">Editar registro</h2>
 
     <form method="post" class="space-y-8 w-full">
@@ -57,14 +57,14 @@
             </select>
         </div>
 
-        <div class="w-full flex gap-4 justify-center pt-8">
-            <button type="submit" class="btn-fluent px-6 flex items-center justify-center gap-2 py-3 whitespace-nowrap"><i class="fas fa-save"></i> Guardar</button>
+        <div class="w-full flex flex-col sm:flex-row gap-4 justify-center pt-8">
+            <button type="submit" class="btn-fluent px-6 flex items-center justify-center gap-2 py-3 whitespace-nowrap w-full sm:w-auto"><i class="fas fa-save"></i> Guardar</button>
             {% if return_to == 'buscar' %}
-            <a href="{{ url_for('main.buscar') }}{% if return_query %}?{{ return_query }}{% endif %}" class="btn-fluent btn-red px-6 flex items-center justify-center gap-2 py-3 whitespace-nowrap"><i class="fas fa-times"></i> Cancelar</a>
+            <a href="{{ url_for('main.buscar') }}{% if return_query %}?{{ return_query }}{% endif %}" class="btn-fluent btn-red px-6 flex items-center justify-center gap-2 py-3 whitespace-nowrap w-full sm:w-auto"><i class="fas fa-times"></i> Cancelar</a>
             {% elif tipo == 'inversion' %}
-            <a href="{{ url_for('main.inversiones') }}" class="btn-fluent btn-red px-6 flex items-center justify-center gap-2 py-3 whitespace-nowrap"><i class="fas fa-times"></i> Cancelar</a>
+            <a href="{{ url_for('main.inversiones') }}" class="btn-fluent btn-red px-6 flex items-center justify-center gap-2 py-3 whitespace-nowrap w-full sm:w-auto"><i class="fas fa-times"></i> Cancelar</a>
             {% else %}
-            <a href="/registrar" class="btn-fluent btn-red px-6 flex items-center justify-center gap-2 py-3 whitespace-nowrap"><i class="fas fa-times"></i> Cancelar</a>
+            <a href="/registrar" class="btn-fluent btn-red px-6 flex items-center justify-center gap-2 py-3 whitespace-nowrap w-full sm:w-auto"><i class="fas fa-times"></i> Cancelar</a>
             {% endif %}
         </div>
     </form>

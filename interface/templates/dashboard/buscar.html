@@ -147,6 +147,63 @@
         justify-content: space-between;
         margin-bottom: 16px;
     }
+
+    @media (max-width: 768px) {
+        .summary-card {
+            padding: 16px;
+        }
+
+        .summary-value {
+            font-size: 1rem;
+        }
+
+        .toolbar {
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 8px;
+        }
+
+        .mobile-stack-table thead {
+            display: none;
+        }
+
+        .mobile-stack-table,
+        .mobile-stack-table tbody,
+        .mobile-stack-table tr,
+        .mobile-stack-table td {
+            display: block;
+            width: 100%;
+        }
+
+        .mobile-stack-table tr {
+            border-bottom: 1px solid var(--border-subtle);
+            padding: 8px 0;
+        }
+
+        .mobile-stack-table td {
+            border: 0;
+            padding: 8px 12px;
+            text-align: left !important;
+            white-space: normal;
+        }
+
+        .mobile-stack-table td::before {
+            content: attr(data-label);
+            display: block;
+            font-size: 0.68rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            color: var(--text-secondary);
+            margin-bottom: 4px;
+        }
+
+        .mobile-stack-table td.actions-cell {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+    }
 </style>
 
 {% set query_string = request.query_string.decode() if request.query_string else '' %}
@@ -165,7 +222,7 @@
     </div>
 
     <!-- Resumen -->
-    <div class="grid grid-cols-2 lg:grid-cols-5 gap-4 mb-8">
+    <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-5 gap-4 mb-8">
         <div class="summary-card income">
             <p class="summary-label">Ingresos</p>
             <p class="summary-value text-green-400">$ {{ resumen.total_ingresos|format_money }}</p>
@@ -191,7 +248,7 @@
     </div>
 
     <!-- Filtros -->
-    <form method="GET" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5 mb-6 p-8 panel-surface">
+    <form method="GET" class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-5 mb-6 p-8 panel-surface">
         <div>
             <label class="form-label">Texto / descripción</label>
             <input type="text" name="q" value="{{ filtros.q }}" class="input-glass">
@@ -242,15 +299,15 @@
             <label class="form-label">Monto máximo</label>
             <input type="number" step="0.01" name="monto_max" value="{{ filtros.monto_max }}" class="input-glass">
         </div>
-        <div class="md:col-span-2 lg:col-span-4 flex flex-wrap gap-3 items-end">
-            <button type="submit" class="btn-fluent h-10 px-6 flex items-center gap-2">
+        <div class="md:col-span-2 xl:col-span-4 flex flex-col sm:flex-row flex-wrap gap-3 items-stretch sm:items-end">
+            <button type="submit" class="btn-fluent h-10 px-6 flex items-center gap-2 w-full sm:w-auto">
                 <i class="fas fa-search"></i> Filtrar
             </button>
-            <a href="{{ url_for('main.buscar') }}" class="btn-fluent h-10 px-6 flex items-center gap-2">
+            <a href="{{ url_for('main.buscar') }}" class="btn-fluent h-10 px-6 flex items-center gap-2 w-full sm:w-auto">
                 <i class="fas fa-eraser"></i> Limpiar
             </a>
             <a href="{{ url_for('main.exportar_buscar', q=filtros.q, desde=filtros.desde, hasta=filtros.hasta, tipo=filtros.tipo, categoria_id=filtros.categoria_id, monto_min=filtros.monto_min, monto_max=filtros.monto_max, orden=filtros.orden, periodo=filtros.periodo) }}"
-                class="btn-fluent h-10 px-6 flex items-center gap-2">
+                class="btn-fluent h-10 px-6 flex items-center gap-2 w-full sm:w-auto">
                 <i class="fas fa-file-csv"></i> Exportar
             </a>
         </div>
@@ -265,8 +322,8 @@
     </div>
 
     <!-- Tabla -->
-    <div class="table-container overflow-x-auto">
-        <table class="w-full text-sm min-w-[800px]">
+    <div class="table-container table-responsive">
+        <table class="w-full text-sm min-w-[800px] mobile-stack-table">
             <thead class="table-header">
                 <tr>
                     <th class="px-4 py-4 text-left text-xs font-bold text-[var(--text-secondary)]">Fecha</th>
@@ -280,9 +337,9 @@
             <tbody>
                 {% for t in resultados %}
                 <tr class="table-row">
-                    <td class="px-4 py-4 whitespace-nowrap">{{ t.fecha|format_date }}</td>
-                    <td class="px-4 py-4">{% if t.descripcion %}{{ t.descripcion|capitalize }}{% else %}—{% endif %}</td>
-                    <td class="px-4 py-4">
+                    <td class="px-4 py-4 whitespace-nowrap" data-label="Fecha">{{ t.fecha|format_date }}</td>
+                    <td class="px-4 py-4" data-label="Descripción">{% if t.descripcion %}{{ t.descripcion|capitalize }}{% else %}—{% endif %}</td>
+                    <td class="px-4 py-4" data-label="Tipo">
                         <span class="tipo-badge {{ t.tipo }}">
                             {% if t.tipo == 'ingreso' %}<i class="fas fa-arrow-up"></i>
                             {% elif t.tipo == 'gasto' %}<i class="fas fa-arrow-down"></i>
@@ -290,7 +347,7 @@
                             {{ t.tipo|capitalize }}
                         </span>
                     </td>
-                    <td class="px-4 py-4">
+                    <td class="px-4 py-4" data-label="Categoría">
                         {% if t.categoria_nombre %}
                         <span class="cat-badge{% if t.categoria_color %} cat-badge--colored{% endif %}"
                             {% if t.categoria_color %}style="--cat-color: {{ t.categoria_color }}; --cat-border: {{ t.categoria_color }}55;"{% endif %}>
@@ -300,12 +357,11 @@
                         <span class="cat-badge cat-badge--default">Sin categoría</span>
                         {% endif %}
                     </td>
-                    <td class="px-4 py-4 text-right font-bold whitespace-nowrap
-                        {% if t.tipo == 'gasto' or t.tipo == 'inversion' %}text-red-400{% else %}text-green-400{% endif %}">
+                    <td class="px-4 py-4 text-right font-bold whitespace-nowrap {% if t.tipo == 'gasto' or t.tipo == 'inversion' %}text-red-400{% else %}text-green-400{% endif %}" data-label="Monto">
                         {% if t.tipo == 'ingreso' %}+{% else %}−{% endif %}
                         $ {{ t.monto|format_money }}
                     </td>
-                    <td class="px-4 py-4 text-center whitespace-nowrap">
+                    <td class="px-4 py-4 text-center whitespace-nowrap actions-cell" data-label="Acciones">
                         <a href="{{ url_for('main.editar_registro', id=t.id, tipo=t.tipo, return_to='buscar', return_query=query_string) }}"
                             class="action-btn text-blue-400" title="Editar">
                             <i class="fas fa-pen"></i>
@@ -368,9 +424,9 @@
             <input type="hidden" name="tipo" id="eliminarTipo">
             <input type="hidden" name="return_to" value="buscar">
             <input type="hidden" name="return_query" value="{{ query_string }}">
-            <div class="flex gap-4 justify-center">
-                <button type="button" onclick="cerrarModal()" class="btn-fluent px-6 py-2 flex items-center justify-center gap-2">Cancelar</button>
-                <button type="submit" class="btn-fluent btn-red px-6 py-2 flex items-center gap-2">
+            <div class="flex flex-col sm:flex-row gap-4 justify-center">
+                <button type="button" onclick="cerrarModal()" class="btn-fluent px-6 py-2 flex items-center justify-center gap-2 w-full sm:w-auto">Cancelar</button>
+                <button type="submit" class="btn-fluent btn-red px-6 py-2 flex items-center gap-2 w-full sm:w-auto">
                     <i class="fas fa-trash-alt"></i> Eliminar
                 </button>
             </div>

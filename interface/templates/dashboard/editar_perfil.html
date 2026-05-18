@@ -21,7 +21,7 @@
     }
 </style>
 
-<div class="fluent-card p-10 max-w-4xl w-full mx-auto">
+<div class="fluent-card p-6 sm:p-10 max-w-4xl w-full mx-auto">
     <h2 class="text-3xl font-black mb-10 text-center text-white">Perfil y preferencias</h2>
 
     <form method="post" enctype="multipart/form-data" class="space-y-10">
@@ -113,9 +113,9 @@
             </div>
         </div>
 
-        <div class="flex gap-4 justify-end mt-12">
-            <a href="/" class="btn-fluent btn-red px-6 flex items-center gap-2 whitespace-nowrap"><i class="fas fa-times"></i> Cancelar</a>
-            <button type="submit" class="btn-fluent px-6 flex items-center gap-2 whitespace-nowrap">
+        <div class="flex flex-col sm:flex-row gap-4 justify-end mt-12">
+            <a href="/" class="btn-fluent btn-red px-6 flex items-center gap-2 whitespace-nowrap w-full sm:w-auto"><i class="fas fa-times"></i> Cancelar</a>
+            <button type="submit" class="btn-fluent px-6 flex items-center gap-2 whitespace-nowrap w-full sm:w-auto">
                 <i class="fas fa-save"></i> Guardar
             </button>
         </div>

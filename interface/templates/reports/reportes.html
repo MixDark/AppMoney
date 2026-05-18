@@ -41,13 +41,62 @@
         color: var(--text-secondary);
         margin-bottom: 8px;
     }
+
+    @media (max-width: 768px) {
+        .mobile-stack-table thead {
+            display: none;
+        }
+
+        .mobile-stack-table,
+        .mobile-stack-table tbody,
+        .mobile-stack-table tr,
+        .mobile-stack-table td {
+            display: block;
+            width: 100%;
+        }
+
+        .mobile-stack-table tr {
+            border-bottom: 1px solid var(--border-subtle);
+            padding: 8px 0;
+        }
+
+        .mobile-stack-table td {
+            border: 0;
+            padding: 8px 12px;
+            text-align: left !important;
+            white-space: normal;
+        }
+
+        .mobile-stack-table td::before {
+            content: attr(data-label);
+            display: block;
+            font-size: 0.68rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            color: var(--text-secondary);
+            margin-bottom: 4px;
+        }
+
+        .report-tools {
+            width: 100%;
+        }
+
+        .report-tools > * {
+            width: 100%;
+        }
+
+        .report-tools .btn-fluent {
+            justify-content: center;
+        }
+    }
 </style>
 
 <div class="fluent-card p-10 max-w-6xl w-full flex flex-col items-center">
     <h2 class="text-3xl font-black mb-8 text-center text-white">Reportes del mes: {{ mes_mostrar }}</h2>
 
-    <form method="get" class="flex flex-wrap gap-4 items-center mb-12 justify-center w-full">
-        <div class="flex gap-2 items-end">
+    <form method="get" class="flex flex-col sm:flex-row flex-wrap gap-4 items-stretch sm:items-end mb-12 justify-center w-full">
+        <div class="flex flex-col sm:flex-row gap-2 items-stretch sm:items-end w-full sm:w-auto report-tools">
             <div>
                 <label class="input-label">Seleccionar mes</label>
                 <input type="month" name="mes" value="{{ mes_actual }}" class="input-glass max-w-[200px] h-12">
@@ -64,7 +113,7 @@
         </div>
     </form>
 
-    <div class="grid grid-cols-3 gap-8 w-full mb-12 text-center">
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-8 w-full mb-12 text-center">
         <div class="stat-card income p-6 rounded-2xl">
             <p class="text-xs font-black uppercase tracking-widest opacity-60 mb-2">Total Ingresos</p>
             <p class="text-2xl font-black text-green-400">$ {{ total_ingresos|format_money }}</p>
@@ -82,8 +131,8 @@
     <!-- Tabla de Ingresos -->
     <div class="mb-10 w-full">
         <h3 class="text-sm font-black uppercase tracking-widest mb-4 text-green-400">Ingresos</h3>
-        <div class="table-container">
-            <table class="w-full text-sm">
+        <div class="table-container table-responsive">
+            <table class="w-full text-sm mobile-stack-table">
                 <thead class="table-header">
                     <tr>
                         <th class="px-6 py-4 text-left font-black uppercase tracking-widest text-xs">Fecha</th>
@@ -94,9 +143,9 @@
                 <tbody>
                     {% for ingreso in ingresos %}
                     <tr class="table-row">
-                        <td class="px-6 py-4 opacity-70">{{ ingreso.fecha|format_date }}</td>
-                        <td class="px-6 py-4">{{ ingreso.descripcion }}</td>
-                        <td class="px-6 py-4 text-right text-green-400 font-black">$ {{ ingreso.monto|format_money }}</td>
+                        <td class="px-6 py-4 opacity-70" data-label="Fecha">{{ ingreso.fecha|format_date }}</td>
+                        <td class="px-6 py-4" data-label="Descripción">{{ ingreso.descripcion }}</td>
+                        <td class="px-6 py-4 text-right text-green-400 font-black" data-label="Monto">$ {{ ingreso.monto|format_money }}</td>
                     </tr>
                     {% else %}
                     <tr>
@@ -111,8 +160,8 @@
     <!-- Tabla de Gastos -->
     <div class="mb-10 w-full">
         <h3 class="text-sm font-black uppercase tracking-widest mb-4 text-red-400">Gastos</h3>
-        <div class="table-container">
-            <table class="w-full text-sm">
+        <div class="table-container table-responsive">
+            <table class="w-full text-sm mobile-stack-table">
                 <thead class="table-header">
                     <tr>
                         <th class="px-6 py-4 text-left font-black uppercase tracking-widest text-xs">Fecha</th>
@@ -123,9 +172,9 @@
                 <tbody>
                     {% for gasto in gastos %}
                     <tr class="table-row">
-                        <td class="px-6 py-4 opacity-70">{{ gasto.fecha|format_date }}</td>
-                        <td class="px-6 py-4">{{ gasto.descripcion }}</td>
-                        <td class="px-6 py-4 text-right text-red-400 font-black">$ {{ gasto.monto|format_money }}</td>
+                        <td class="px-6 py-4 opacity-70" data-label="Fecha">{{ gasto.fecha|format_date }}</td>
+                        <td class="px-6 py-4" data-label="Descripción">{{ gasto.descripcion }}</td>
+                        <td class="px-6 py-4 text-right text-red-400 font-black" data-label="Monto">$ {{ gasto.monto|format_money }}</td>
                     </tr>
                     {% else %}
                     <tr>
@@ -140,8 +189,8 @@
     <!-- Tabla de Inversiones -->
     <div class="mb-10 w-full">
         <h3 class="text-sm font-black uppercase tracking-widest mb-4 text-blue-400">Inversiones</h3>
-        <div class="table-container">
-            <table class="w-full text-sm">
+        <div class="table-container table-responsive">
+            <table class="w-full text-sm mobile-stack-table">
                 <thead class="table-header">
                     <tr>
                         <th class="px-6 py-4 text-left font-black uppercase tracking-widest text-xs">Fecha</th>
@@ -152,9 +201,9 @@
                 <tbody>
                     {% for inv in inversiones %}
                     <tr class="table-row">
-                        <td class="px-6 py-4 opacity-70">{{ inv.fecha|format_date }}</td>
-                        <td class="px-6 py-4">{{ inv.descripcion }}</td>
-                        <td class="px-6 py-4 text-right text-blue-400 font-black">$ {{ inv.monto|format_money }}</td>
+                        <td class="px-6 py-4 opacity-70" data-label="Fecha">{{ inv.fecha|format_date }}</td>
+                        <td class="px-6 py-4" data-label="Descripción">{{ inv.descripcion }}</td>
+                        <td class="px-6 py-4 text-right text-blue-400 font-black" data-label="Monto">$ {{ inv.monto|format_money }}</td>
                     </tr>
                     {% else %}
                     <tr>

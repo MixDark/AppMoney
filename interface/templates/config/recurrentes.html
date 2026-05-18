@@ -44,6 +44,89 @@
     .action-btn:hover { background: var(--surface-contrast); }
     .action-btn.edit-btn { color: #60a5fa; margin-right: 8px; }
     .action-btn.delete-btn { color: #ff6b6b; }
+
+    @media (max-width: 768px) {
+        .recurrente-actions {
+            width: 100%;
+        }
+
+        .recurrente-actions-inner {
+            width: 100%;
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 10px;
+        }
+
+        .recurrente-actions-inner .btn-fluent {
+            width: 100%;
+            justify-content: center;
+        }
+
+        #confirmModal .fluent-card,
+        #editModal .fluent-card {
+            padding: 20px;
+            max-height: 88vh;
+            overflow-y: auto;
+        }
+
+        #editModal .fluent-card h2,
+        #confirmModal .fluent-card h3 {
+            font-size: 1.25rem;
+            line-height: 1.6rem;
+        }
+
+        #editModal .flex.gap-4.justify-center,
+        #confirmModal .flex.gap-4.justify-center {
+            flex-direction: column;
+        }
+
+        #editModal .flex.gap-4.justify-center .btn-fluent,
+        #confirmModal .flex.gap-4.justify-center .btn-fluent {
+            width: 100%;
+            justify-content: center;
+        }
+
+        .mobile-stack-table thead {
+            display: none;
+        }
+
+        .mobile-stack-table,
+        .mobile-stack-table tbody,
+        .mobile-stack-table tr,
+        .mobile-stack-table td {
+            display: block;
+            width: 100%;
+        }
+
+        .mobile-stack-table tr {
+            border-bottom: 1px solid var(--border-subtle);
+            padding: 8px 0;
+        }
+
+        .mobile-stack-table td {
+            border: 0;
+            padding: 8px 12px;
+            text-align: left !important;
+            white-space: normal;
+        }
+
+        .mobile-stack-table td::before {
+            content: attr(data-label);
+            display: block;
+            font-size: 0.68rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            color: var(--text-secondary);
+            margin-bottom: 4px;
+        }
+
+        .mobile-stack-table td.actions-cell {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+    }
 </style>
 
 <div class="fluent-card p-10 max-w-6xl w-full">
@@ -51,7 +134,7 @@
 
     <!-- Formulario -->
     <form method="POST"
-        class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12 p-8 panel-surface">
+        class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 mb-12 p-8 panel-surface">
         <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
         <input type="hidden" name="edit_id" id="edit_id" value="">
         <div>
@@ -82,8 +165,8 @@
             <label class="form-label">Próxima fecha</label>
             <input type="date" name="proxima_fecha" required class="input-glass h-12 px-4 py-3">
         </div>
-        <div class="flex flex-col justify-end w-fit">
-            <div class="flex gap-2">
+        <div class="flex flex-col justify-end w-fit recurrente-actions">
+            <div class="flex gap-2 recurrente-actions-inner">
                 <button type="submit" id="submitRecurrente" class="btn-fluent h-12 px-6 justify-center flex items-center gap-2 whitespace-nowrap"><i class="fas fa-clock"></i> Programar</button>
                 <button type="button" id="cancelRecurrente" class="btn-fluent h-12 px-6 btn-red opacity-80 hidden"><i class="fas fa-times"></i> Cancelar</button>
             </div>
@@ -92,8 +175,8 @@
 
     <!-- Lista de Recurrentes -->
     <h3 class="text-lg font-bold mb-6 opacity-70 uppercase tracking-widest">Programaciones activas</h3>
-    <div class="table-container">
-        <table class="w-full text-sm">
+    <div class="table-container table-responsive">
+        <table class="w-full text-sm min-w-[760px] mobile-stack-table">
             <thead class="table-header">
                 <tr>
                     <th class="px-6 py-4 text-left font-black uppercase tracking-widest text-xs">Frecuencia</th>
@@ -106,15 +189,15 @@
             <tbody>
                 {% for r in recurrentes %}
                 <tr class="table-row">
-                    <td class="px-6 py-4">
+                    <td class="px-6 py-4" data-label="Frecuencia">
                         <span class="px-3 py-1 rounded text-xs font-bold tracking-tight" style="background: var(--surface-contrast); color: var(--text-secondary);">{{ r.frecuencia }}</span>
                     </td>
-                    <td class="px-6 py-4">{{ r.descripcion|capitalize }}</td>
-                    <td class="px-6 py-4 font-black {% if r.tipo == 'gasto' %}text-red-400{% else %}text-green-400{% endif %}">
+                    <td class="px-6 py-4" data-label="Descripción">{{ r.descripcion|capitalize }}</td>
+                    <td class="px-6 py-4 font-black {% if r.tipo == 'gasto' %}text-red-400{% else %}text-green-400{% endif %}" data-label="Monto">
                         $ {{ r.monto|format_money }}
                     </td>
-                    <td class="px-6 py-4">{{ r.proxima_fecha|format_date }}</td>
-                    <td class="px-6 py-4 text-center">
+                    <td class="px-6 py-4" data-label="Próxima fecha">{{ r.proxima_fecha|format_date }}</td>
+                    <td class="px-6 py-4 text-center actions-cell" data-label="Acciones">
                         <a href="#" class="action-btn edit-btn text-blue-400 js-recurrente-editar" title="Editar"
                            data-id="{{ r.id }}"
                            data-tipo="{{ r.tipo }}"

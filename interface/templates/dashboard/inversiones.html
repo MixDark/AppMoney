@@ -47,13 +47,56 @@
     .action-btn.delete-btn {
         color: #ff6b6b;
     }
+
+    @media (max-width: 768px) {
+        .mobile-stack-table thead {
+            display: none;
+        }
+
+        .mobile-stack-table,
+        .mobile-stack-table tbody,
+        .mobile-stack-table tr,
+        .mobile-stack-table td {
+            display: block;
+            width: 100%;
+        }
+
+        .mobile-stack-table tr {
+            border-bottom: 1px solid rgba(148, 163, 184, 0.12);
+            padding: 8px 0;
+        }
+
+        .mobile-stack-table td {
+            border: 0;
+            padding: 8px 12px;
+            text-align: left !important;
+            white-space: normal;
+        }
+
+        .mobile-stack-table td::before {
+            content: attr(data-label);
+            display: block;
+            font-size: 0.68rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            color: var(--text-secondary);
+            margin-bottom: 4px;
+        }
+
+        .mobile-stack-table td.actions-cell {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+    }
 </style>
 
 <div class="w-full max-w-6xl space-y-12">
     <!-- Mensajes ahora se renderizan globalmente en layout/base.html -->
 
     <!-- Formulario de registro -->
-    <div class="fluent-card p-12 max-w-lg w-full mx-auto flex flex-col items-center">
+    <div class="fluent-card p-6 sm:p-12 max-w-lg w-full mx-auto flex flex-col items-center">
         <h2 class="text-3xl font-black mb-10 text-center text-white">Información de la inversión</h2>
         <form method="post" class="space-y-8 w-full">
             <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
@@ -92,23 +135,23 @@
                 <input type="date" name="fecha" required class="input-glass text-sm h-12 px-4 py-3">
             </div>
             <div class="flex justify-center pt-4">
-                <button type="submit" class="btn-fluent px-8 flex items-center justify-center gap-2 py-3 whitespace-nowrap"><i class="fas fa-check-circle"></i> Registrar</button>
+                <button type="submit" class="btn-fluent px-8 flex items-center justify-center gap-2 py-3 whitespace-nowrap w-full sm:w-auto"><i class="fas fa-check-circle"></i> Registrar</button>
             </div>
         </form>
     </div>
 
     <!-- Tabla de inversiones -->
-    <div class="fluent-card p-10">
-        <div class="flex justify-between items-center mb-10">
+    <div class="fluent-card p-6 sm:p-10">
+        <div class="flex flex-col sm:flex-row justify-between sm:items-center gap-4 mb-10">
             <h3 class="text-xl font-bold opacity-70 uppercase tracking-widest">Historial de inversiones</h3>
-            <div class="text-right">
+            <div class="text-left sm:text-right">
                 <p class="text-xs font-black opacity-50 uppercase">Total acumulado</p>
                 <p class="text-3xl font-black text-blue-400">$ {{ total_inversiones|format_money }}</p>
             </div>
         </div>
 
-        <div class="table-container">
-            <table class="w-full text-sm">
+        <div class="table-container table-responsive">
+            <table class="w-full text-sm min-w-[760px] mobile-stack-table">
                 <thead class="table-header">
                     <tr>
                         <th class="px-6 py-5 text-left font-black uppercase tracking-widest text-xs">Fecha</th>
@@ -122,13 +165,13 @@
                     {% if inversiones %}
                     {% for inversion in inversiones %}
                     <tr class="table-row">
-                        <td class="px-6 py-4">{{ inversion.fecha|format_date }}</td>
-                        <td class="px-6 py-4">
+                        <td class="px-6 py-4" data-label="Fecha">{{ inversion.fecha|format_date }}</td>
+                        <td class="px-6 py-4" data-label="Tipo">
                             <span class="bg-blue-500/20 px-3 py-1 rounded text-xs font-black uppercase tracking-tighter">{{ inversion.tipo|replace('_', ' ') }}</span>
                         </td>
-                        <td class="px-6 py-4">{{ inversion.descripcion }}</td>
-                        <td class="px-6 py-4 text-left font-black text-blue-400">$ {{ inversion.monto|format_money }}</td>
-                        <td class="px-6 py-4 text-left whitespace-nowrap">
+                        <td class="px-6 py-4" data-label="Descripción">{{ inversion.descripcion }}</td>
+                        <td class="px-6 py-4 text-left font-black text-blue-400" data-label="Monto">$ {{ inversion.monto|format_money }}</td>
+                        <td class="px-6 py-4 text-left whitespace-nowrap actions-cell" data-label="Acciones">
                             <a href="{{ url_for('main.editar_registro', id=inversion.id, tipo='inversion') }}"
                                 class="action-btn edit-btn" title="Editar">
                                 <i class="fas fa-pen"></i>
@@ -155,16 +198,16 @@
 
 <!-- Modal eliminar -->
 <div id="confirmModal" class="fixed inset-0 bg-black/50 hidden items-center justify-center z-50">
-    <div class="fluent-card p-10 max-w-sm w-full mx-4">
+    <div class="fluent-card p-6 sm:p-10 max-w-sm w-full mx-4">
         <h3 class="text-xl font-bold mb-4 text-center">Eliminar inversión</h3>
         <p class="text-center mb-6 opacity-70 text-sm">¿Eliminar <strong id="modalDescripcion"></strong>?</p>
         <form id="formEliminar" method="POST" action="{{ url_for('main.eliminar_registro') }}">
             <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
             <input type="hidden" name="registro_id" id="eliminarId">
             <input type="hidden" name="tipo" id="eliminarTipo">
-            <div class="flex gap-4 justify-center">
-                <button type="button" onclick="cerrarModal()" class="btn-fluent px-6 py-2 flex items-center justify-center gap-2"><i class="fas fa-times mr-2"></i> Cancelar</button>
-                <button type="submit" class="btn-fluent btn-red px-6 py-2 flex items-center gap-2">
+            <div class="flex flex-col sm:flex-row gap-4 justify-center">
+                <button type="button" onclick="cerrarModal()" class="btn-fluent px-6 py-2 flex items-center justify-center gap-2 w-full sm:w-auto"><i class="fas fa-times mr-2"></i> Cancelar</button>
+                <button type="submit" class="btn-fluent btn-red px-6 py-2 flex items-center gap-2 w-full sm:w-auto">
                     <i class="fas fa-trash-alt"></i> Eliminar
                 </button>
             </div>

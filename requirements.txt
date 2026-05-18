@@ -8,3 +8,4 @@ pandas==2.2.0
 Werkzeug==2.3.0
 python-dotenv==1.0.0
 reportlab==4.4.9
+qrcode==8.2

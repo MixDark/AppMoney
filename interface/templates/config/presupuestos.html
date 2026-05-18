@@ -58,7 +58,7 @@
 
     <!-- Agregar Presupuesto -->
     <form method="POST"
-        class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-12 p-8 panel-surface">
+        class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6 mb-12 p-8 panel-surface">
         <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
         <div class="md:col-span-2">
             <label class="form-label">Categoría</label>
@@ -74,7 +74,7 @@
     </form>
 
     <!-- Lista de presupuestos -->
-    <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-6 md:gap-8">
         {% for p in presupuestos %}
         <div id="presupuesto-{{ p.id }}" class="budget-card p-8 rounded-3xl">
             <div class="flex justify-between items-center mb-6">

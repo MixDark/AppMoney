@@ -39,7 +39,7 @@
 
     <!-- Agregar Meta -->
     <form method="POST" action="{{ url_for('main.metas') }}"
-        class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-12 p-8 panel-surface">
+        class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6 mb-12 p-8 panel-surface">
         <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
         <div class="md:col-span-2">
             <label class="form-label">Nombre de la Meta</label>
@@ -55,7 +55,7 @@
     </form>
 
     <!-- Grid de Metas -->
-    <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+    <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 md:gap-8">
         {% for m in metas %}
         <div class="goal-card p-8 rounded-3xl flex flex-col items-center">
             <div class="w-20 h-20 bg-blue-500/15 rounded-full flex items-center justify-center mb-6 border border-blue-500/30">
