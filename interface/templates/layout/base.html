@@ -12,7 +12,8 @@
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&display=swap">
 
     <!-- Favicon personalizado -->
-    <link rel="icon" type="image/png" href="{{ url_for('static', filename='images/app_money.png') }}">
+    <link rel="icon" href="{{ url_for('static', filename='images/favicon.ico') }}">
+    <link rel="shortcut icon" href="{{ url_for('static', filename='images/favicon.ico') }}">
 
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
@@ -131,6 +132,7 @@
         }
 
         input[type="number"].input-glass[type="number"] {
+            appearance: textfield;
             -moz-appearance: textfield;
         }
 
@@ -529,9 +531,11 @@
     <script>
         // Renderizado de flashes desde Flask en el contenedor de toasts
         (function() {
-            const messages = {{ get_flashed_messages(with_categories=true) | tojson | safe }} || [];
+            const messages = JSON.parse('{{ get_flashed_messages(with_categories=True) | tojson | forceescape }}');
 
-            if (!messages.length) return;
+            if (!messages.length) {
+                return;
+            }
 
             const container = document.getElementById('toastContainer');
             messages.forEach((m) => {
@@ -550,16 +554,19 @@
                 toast.style.gap = '10px';
                 toast.style.alignItems = 'center';
 
-                if (m.category === 'error' || m.category === 'danger') {
+                const category = Array.isArray(m) ? (m[0] || 'info') : (m.category || 'info');
+                const messageText = Array.isArray(m) ? (m[1] || '') : (m.text || '');
+
+                if (category === 'error' || category === 'danger') {
                     toast.style.background = 'linear-gradient(90deg,#ef4444,#dc2626)';
-                } else if (m.category === 'warning' || m.category === 'warn') {
+                } else if (category === 'warning' || category === 'warn') {
                     toast.style.background = 'linear-gradient(90deg,#f59e0b,#d97706)';
                 } else {
                     toast.style.background = 'linear-gradient(90deg,#10b981,#06b6d4)';
                 }
 
                 const text = document.createElement('div');
-                text.innerText = m.text.charAt(0).toUpperCase() + m.text.slice(1);
+                text.innerText = messageText.charAt(0).toUpperCase() + messageText.slice(1);
                 text.style.flex = '1';
 
                 const closeBtn = document.createElement('button');
