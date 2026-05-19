@@ -623,14 +623,16 @@ def register_routes(app):
             ingresos = obtener_ingresos_por_mes(usuario_id, anio, mes_num)
             gastos = obtener_gastos_por_mes(usuario_id, anio, mes_num)
             inversiones = obtener_inversiones_por_mes(usuario_id, anio, mes_num)
-            mes_mostrar = f'{mes_num}/{anio}'
+            desde_mes, hasta_mes = calcular_rango_mes(anio, mes_num)
+            mes_mostrar = f'{_formatear_fecha_ddmmaa(desde_mes)} - {_formatear_fecha_ddmmaa(hasta_mes)}'
         else:
             hoy = datetime.now()
             anio, mes_num = hoy.year, hoy.month
             ingresos = obtener_ingresos_por_mes(usuario_id, anio, mes_num)
             gastos = obtener_gastos_por_mes(usuario_id, anio, mes_num)
             inversiones = obtener_inversiones_por_mes(usuario_id, anio, mes_num)
-            mes_mostrar = f'{mes_num}/{anio}'
+            desde_mes, hasta_mes = calcular_rango_mes(anio, mes_num)
+            mes_mostrar = f'{_formatear_fecha_ddmmaa(desde_mes)} - {_formatear_fecha_ddmmaa(hasta_mes)}'
         total_ingresos = float(sum(i['monto'] for i in ingresos) or 0)
         total_gastos = float(sum(g['monto'] for g in gastos) or 0)
         total_inversiones = float(sum(inv['monto'] for inv in inversiones) or 0)
@@ -974,6 +976,21 @@ def register_routes(app):
         title_style = ParagraphStyle('CustomTitle', parent=styles['Heading1'], fontSize=22, textColor=colors.HexColor('#1a1a1a'), spaceAfter=24, alignment=TA_CENTER, fontName='Helvetica-Bold')
         subtitle_style = ParagraphStyle('Subtitle', parent=styles['Normal'], fontSize=11, textColor=colors.HexColor('#555555'), spaceAfter=6, alignment=TA_LEFT)
         heading_style = ParagraphStyle('CustomHeading', parent=styles['Heading2'], fontSize=13, textColor=colors.HexColor('#1a1a1a'), spaceAfter=10, spaceBefore=12, fontName='Helvetica-Bold', alignment=TA_LEFT)
+
+        def formatear_fecha_reporte(fecha):
+            if isinstance(fecha, datetime):
+                return fecha.strftime('%d/%m/%Y')
+            if isinstance(fecha, date):
+                return fecha.strftime('%d/%m/%Y')
+            if isinstance(fecha, str):
+                try:
+                    return datetime.fromisoformat(fecha).strftime('%d/%m/%Y')
+                except ValueError:
+                    try:
+                        return datetime.strptime(fecha, '%Y-%m-%d').strftime('%d/%m/%Y')
+                    except ValueError:
+                        return fecha
+            return str(fecha)
         
         # Obtener fecha actual formateada
         hoy = datetime.now()
@@ -1006,11 +1023,7 @@ def register_routes(app):
             data = [['Fecha', 'Descripción', 'Monto']]
             total = 0
             for reg in registros:
-                fecha = reg['fecha']
-                if isinstance(fecha, datetime):
-                    fecha = fecha.strftime('%d/%m/%Y')
-                elif not isinstance(fecha, str):
-                    fecha = str(fecha)
+                fecha = formatear_fecha_reporte(reg['fecha'])
                 data.append([fecha, reg['descripcion'], f"$ {reg['monto']:,.2f}"])
                 total += reg['monto']
             
@@ -1091,6 +1104,21 @@ def register_routes(app):
             top=Side(style='thin', color='cccccc'),
             bottom=Side(style='thin', color='cccccc')
         )
+
+        def formatear_fecha_reporte(fecha):
+            if isinstance(fecha, datetime):
+                return fecha.strftime('%d/%m/%Y')
+            if isinstance(fecha, date):
+                return fecha.strftime('%d/%m/%Y')
+            if isinstance(fecha, str):
+                try:
+                    return datetime.fromisoformat(fecha).strftime('%d/%m/%Y')
+                except ValueError:
+                    try:
+                        return datetime.strptime(fecha, '%Y-%m-%d').strftime('%d/%m/%Y')
+                    except ValueError:
+                        return fecha
+            return str(fecha)
         
         # Fecha formateada
         hoy = datetime.now()
@@ -1147,9 +1175,7 @@ def register_routes(app):
             # Datos
             total = 0
             for reg in registros:
-                fecha = reg['fecha']
-                if isinstance(fecha, datetime):
-                    fecha = fecha.strftime('%Y-%m-%d')
+                fecha = formatear_fecha_reporte(reg['fecha'])
                 
                 ws[f'A{row}'] = fecha
                 ws[f'B{row}'] = reg['descripcion']
@@ -1162,8 +1188,8 @@ def register_routes(app):
                 ws[f'A{row}'].alignment = alignment_center
                 ws[f'B{row}'].alignment = alignment_left
                 ws[f'C{row}'].alignment = alignment_right
-                
-                ws[f'C{row}'].number_format = '$ #,##0.00'
+
+                ws[f'C{row}'].number_format = '#,##0.00'
                 
                 for col in ['A', 'B', 'C']:
                     ws[f'{col}{row}'].border = thin_border
@@ -1181,7 +1207,7 @@ def register_routes(app):
             ws[f'B{row}'].alignment = alignment_right
             ws[f'C{row}'].alignment = alignment_right
             
-            ws[f'C{row}'].number_format = '$ #,##0.00'
+            ws[f'C{row}'].number_format = '#,##0.00'
             
             ws[f'B{row}'].fill = total_fill
             ws[f'C{row}'].fill = total_fill
@@ -1385,7 +1411,7 @@ def register_routes(app):
         filas = []
         for t in datos:
             filas.append({
-                'Fecha': t.get('fecha', ''),
+                'Fecha': _formatear_fecha_ddmmaa(t.get('fecha', '')),
                 'Descripción': t.get('descripcion', '') or '',
                 'Tipo': t.get('tipo', ''),
                 'Categoría': t.get('categoria_nombre') or 'Sin categoría',
@@ -1428,7 +1454,7 @@ def register_routes(app):
                         conn.close()
             
             subtitulo = (
-                f"Rango: {filtros.get('desde') or 'todos'} → {filtros.get('hasta') or 'todos'} | "
+                f"Rango: {_formatear_fecha_ddmmaa(filtros.get('desde')) if filtros.get('desde') else 'todos'} → {_formatear_fecha_ddmmaa(filtros.get('hasta')) if filtros.get('hasta') else 'todos'} | "
                 f"Tipo: {tipo_texto} | "
                 f"Categoría: {categoria_texto} | "
                 f"Movimientos: {total_resultados}"
@@ -2290,6 +2316,22 @@ def _redirect_buscar(return_query):
     if return_query:
         return redirect(f"{base}?{return_query}")
     return redirect(base)
+
+
+def _formatear_fecha_ddmmaa(fecha):
+    if isinstance(fecha, datetime):
+        return fecha.strftime('%d/%m/%Y')
+    if isinstance(fecha, date):
+        return fecha.strftime('%d/%m/%Y')
+    if isinstance(fecha, str):
+        try:
+            return datetime.fromisoformat(fecha).strftime('%d/%m/%Y')
+        except ValueError:
+            try:
+                return datetime.strptime(fecha, '%Y-%m-%d').strftime('%d/%m/%Y')
+            except ValueError:
+                return fecha
+    return str(fecha)
 
 
 def calcular_rango_periodo(periodo):
