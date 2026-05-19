@@ -102,7 +102,7 @@
                 <h3 class="text-xs md:text-sm font-extrabold uppercase opacity-80 text-white">Ingresos</h3>
             </div>
             <div class="flex-1">
-                <p class="text-sm md:text-lg font-extrabold text-white">$ {{ total_ingresos|format_money }}</p>
+                <p class="text-sm md:text-lg font-extrabold text-white">{% if usuario.moneda == 'COP' %}{{ total_ingresos|format_currency(usuario.moneda) }}{% else %}{{ usuario.moneda }} {{ total_ingresos|format_money }}{% endif %}</p>
             </div>
         </div>
 
@@ -115,7 +115,7 @@
                 <h3 class="text-xs md:text-sm font-extrabold uppercase opacity-80 text-white">Gastos</h3>
             </div>
             <div class="flex-1">
-                <p class="text-sm md:text-lg font-extrabold text-white">$ {{ total_gastos|format_money }}</p>
+                <p class="text-sm md:text-lg font-extrabold text-white">{% if usuario.moneda == 'COP' %}{{ total_gastos|format_currency(usuario.moneda) }}{% else %}{{ usuario.moneda }} {{ total_gastos|format_money }}{% endif %}</p>
             </div>
         </div>
 
@@ -128,7 +128,7 @@
                 <h3 class="text-xs md:text-sm font-extrabold uppercase opacity-80 text-white">Inversiones</h3>
             </div>
             <div class="flex-1">
-                <p class="text-sm md:text-lg font-extrabold text-white">$ {{ total_inversiones|format_money }}</p>
+                <p class="text-sm md:text-lg font-extrabold text-white">{% if usuario.moneda == 'COP' %}{{ total_inversiones|format_currency(usuario.moneda) }}{% else %}{{ usuario.moneda }} {{ total_inversiones|format_money }}{% endif %}</p>
             </div>
         </div>
 
@@ -142,7 +142,7 @@
             </div>
             <div class="flex-1">
                 {% set saldo_total = (total_ingresos - total_gastos - total_inversiones) %}
-                <p class="text-sm md:text-lg font-extrabold text-white">$ {{ saldo_total|format_money }}</p>
+                <p class="text-sm md:text-lg font-extrabold text-white">{% if usuario.moneda == 'COP' %}{{ saldo_total|format_currency(usuario.moneda) }}{% else %}{{ usuario.moneda }} {{ saldo_total|format_money }}{% endif %}</p>
             </div>
         </div>
     </div>
@@ -183,7 +183,7 @@
                 <div class="transaction-row">
                     <span class="transaction-date">{{ ingreso.fecha|format_date }}</span>
                     <span class="transaction-desc">{{ ingreso.descripcion }}</span>
-                    <span class="transaction-amount positive">+ $ {{ ingreso.monto|format_money }}</span>
+                    <span class="transaction-amount positive">+ {% if usuario.moneda == 'COP' %}{{ ingreso.monto|format_currency(usuario.moneda) }}{% else %}{{ usuario.moneda }} {{ ingreso.monto|format_money }}{% endif %}</span>
                 </div>
                 {% endfor %}
                 {% if not ingresos %}
@@ -202,7 +202,7 @@
                 <div class="transaction-row">
                     <span class="transaction-date">{{ gasto.fecha|format_date }}</span>
                     <span class="transaction-desc">{{ gasto.descripcion }}</span>
-                    <span class="transaction-amount negative">- $ {{ gasto.monto|format_money }}</span>
+                    <span class="transaction-amount negative">- {% if usuario.moneda == 'COP' %}{{ gasto.monto|format_currency(usuario.moneda) }}{% else %}{{ usuario.moneda }} {{ gasto.monto|format_money }}{% endif %}</span>
                 </div>
                 {% endfor %}
                 {% if not gastos %}
@@ -221,7 +221,7 @@
                 <div class="transaction-row">
                     <span class="transaction-date">{{ inv.fecha|format_date }}</span>
                     <span class="transaction-desc">{{ inv.descripcion }}</span>
-                    <span class="transaction-amount negative">- $ {{ inv.monto|format_money }}</span>
+                    <span class="transaction-amount negative">- {% if usuario.moneda == 'COP' %}{{ inv.monto|format_currency(usuario.moneda) }}{% else %}{{ usuario.moneda }} {{ inv.monto|format_money }}{% endif %}</span>
                 </div>
                 {% endfor %}
                 {% if not inversiones %}

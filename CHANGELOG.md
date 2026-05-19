@@ -2,6 +2,21 @@
 
 Todos los cambios relevantes de este proyecto se documentan en este archivo.
 
+## [1.3.0] - 2026-05-19
+### Agregado
+- Conservadas y ampliadas las monedas soportadas; añadidas las más usadas actualmente.
+- Nuevo módulo `application/currencies.py` con lista de monedas.
+- Nuevos filtros de plantillas en `application/filters.py` para formateo y visualización de moneda con código.
+- Helper optimizado para exportación desde el explorador de transacciones sin recalcular paginación completa.
+### Cambiado
+- Mejora importante de rendimiento: caché de usuario en sesión para evitar lecturas repetidas a la base de datos y pooling de conexiones MySQL en `infrastructure/db.py`.
+- Consultas optimizadas: reemplazo de `SELECT *` por proyecciones explícitas y uso de rangos de fecha en lugar de `YEAR()/MONTH()` para permitir el uso de índices.
+- Actualización de `infrastructure/init_db.sql` y `infrastructure/schema.py` para añadir índices recomendados en consultas críticas.
+### Corregido
+- Lentitud al cargar el consolidado y navegar a las diferentes secciones
+- Lentitud al iniciar sesión y al navegar grandes listados: reducida mediante menos consultas, transmisión de menor volumen de datos y consultas más selectivas.
+- Problemas de rendimiento y errores en las rutas de exportación (`exportar_buscar` y relacionadas) corregidos mediante rutas y consultas optimizadas.
+
 ## [1.2.0] - 2026-05-16
 ### Agregado
 - Exportación a Excel (.xlsx) desde el explorador de transacciones con formato profesional (titulo, subtitulo, encabezados, formateo de fechas y montos).

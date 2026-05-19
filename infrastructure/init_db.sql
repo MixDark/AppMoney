@@ -31,6 +31,9 @@ CREATE TABLE IF NOT EXISTS ingresos (
     FOREIGN KEY (usuario_id) REFERENCES usuarios(id) ON DELETE CASCADE
 );
 
+CREATE INDEX idx_ingresos_usuario_fecha ON ingresos (usuario_id, fecha, id);
+CREATE INDEX idx_ingresos_usuario_categoria ON ingresos (usuario_id, categoria_id, fecha);
+
 -- Tabla de gastos
 CREATE TABLE IF NOT EXISTS gastos (
     id INT AUTO_INCREMENT PRIMARY KEY,
@@ -42,6 +45,9 @@ CREATE TABLE IF NOT EXISTS gastos (
     creado_en TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (usuario_id) REFERENCES usuarios(id) ON DELETE CASCADE
 );
+
+CREATE INDEX idx_gastos_usuario_fecha ON gastos (usuario_id, fecha, id);
+CREATE INDEX idx_gastos_usuario_categoria ON gastos (usuario_id, categoria_id, fecha);
 
 -- Tabla de inversiones
 CREATE TABLE IF NOT EXISTS inversiones (
@@ -55,6 +61,9 @@ CREATE TABLE IF NOT EXISTS inversiones (
     creado_en TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (usuario_id) REFERENCES usuarios(id) ON DELETE CASCADE
 );
+
+CREATE INDEX idx_inversiones_usuario_fecha ON inversiones (usuario_id, fecha, id);
+CREATE INDEX idx_inversiones_usuario_categoria ON inversiones (usuario_id, categoria_id, fecha);
 
 -- Tabla de metas
 CREATE TABLE IF NOT EXISTS metas (
@@ -78,6 +87,8 @@ CREATE TABLE IF NOT EXISTS categorias (
     FOREIGN KEY (usuario_id) REFERENCES usuarios(id) ON DELETE CASCADE
 );
 
+CREATE INDEX idx_categorias_usuario_tipo ON categorias (usuario_id, tipo);
+
 -- Tabla de presupuestos
 CREATE TABLE IF NOT EXISTS presupuestos (
     id INT AUTO_INCREMENT PRIMARY KEY,
@@ -88,6 +99,8 @@ CREATE TABLE IF NOT EXISTS presupuestos (
     creado_en TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (usuario_id) REFERENCES usuarios(id) ON DELETE CASCADE
 );
+
+CREATE INDEX idx_presupuestos_usuario_categoria ON presupuestos (usuario_id, categoria_id);
 
 -- Tabla de transacciones recurrentes
 CREATE TABLE IF NOT EXISTS transacciones_recurrentes (
@@ -103,6 +116,8 @@ CREATE TABLE IF NOT EXISTS transacciones_recurrentes (
     FOREIGN KEY (usuario_id) REFERENCES usuarios(id) ON DELETE CASCADE
 );
 
+CREATE INDEX idx_recurrentes_usuario_activo_fecha ON transacciones_recurrentes (usuario_id, activo, proxima_fecha);
+
 -- Tabla de recuperación de contraseña
 CREATE TABLE IF NOT EXISTS password_reset_tokens (
     id INT AUTO_INCREMENT PRIMARY KEY,
@@ -114,3 +129,5 @@ CREATE TABLE IF NOT EXISTS password_reset_tokens (
     creado_en TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (usuario_id) REFERENCES usuarios(id) ON DELETE CASCADE
 );
+
+CREATE INDEX idx_reset_tokens_usuario ON password_reset_tokens (usuario_id, expires_at);

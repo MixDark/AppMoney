@@ -225,20 +225,20 @@
     <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-5 gap-4 mb-8">
         <div class="summary-card income">
             <p class="summary-label">Ingresos</p>
-            <p class="summary-value text-green-400">$ {{ resumen.total_ingresos|format_money }}</p>
+            <p class="summary-value text-green-400">{% if currency_code == 'COP' %}{{ resumen.total_ingresos|currency_with_code(currency_code) }}{% else %}{{ currency_code }} {{ resumen.total_ingresos|format_money }}{% endif %}</p>
         </div>
         <div class="summary-card expense">
             <p class="summary-label">Gastos</p>
-            <p class="summary-value text-red-400">$ {{ resumen.total_gastos|format_money }}</p>
+            <p class="summary-value text-red-400">{% if currency_code == 'COP' %}{{ resumen.total_gastos|currency_with_code(currency_code) }}{% else %}{{ currency_code }} {{ resumen.total_gastos|format_money }}{% endif %}</p>
         </div>
         <div class="summary-card investment">
             <p class="summary-label">Inversiones</p>
-            <p class="summary-value text-blue-400">$ {{ resumen.total_inversiones|format_money }}</p>
+            <p class="summary-value text-blue-400">{% if currency_code == 'COP' %}{{ resumen.total_inversiones|currency_with_code(currency_code) }}{% else %}{{ currency_code }} {{ resumen.total_inversiones|format_money }}{% endif %}</p>
         </div>
         <div class="summary-card balance">
             <p class="summary-label">Balance neto</p>
             <p class="summary-value {% if resumen.balance >= 0 %}text-green-400{% else %}text-red-400{% endif %}">
-                $ {{ resumen.balance|format_money }}
+                {% if currency_code == 'COP' %}{{ resumen.balance|currency_with_code(currency_code) }}{% else %}{{ currency_code }} {{ resumen.balance|format_money }}{% endif %}
             </p>
         </div>
         <div class="summary-card count">
@@ -359,7 +359,7 @@
                     </td>
                     <td class="px-4 py-4 text-right font-bold whitespace-nowrap {% if t.tipo == 'gasto' or t.tipo == 'inversion' %}text-red-400{% else %}text-green-400{% endif %}" data-label="Monto">
                         {% if t.tipo == 'ingreso' %}+{% else %}−{% endif %}
-                        $ {{ t.monto|format_money }}
+                        {% if currency_code == 'COP' %}{{ t.monto|currency_with_code(currency_code) }}{% else %}{{ currency_code }} {{ t.monto|format_money }}{% endif %}
                     </td>
                     <td class="px-4 py-4 text-center whitespace-nowrap actions-cell" data-label="Acciones">
                         <a href="{{ url_for('main.editar_registro', id=t.id, tipo=t.tipo, return_to='buscar', return_query=query_string) }}"

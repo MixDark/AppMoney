@@ -116,15 +116,15 @@
     <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-8 w-full mb-12 text-center">
         <div class="stat-card income p-6 rounded-2xl">
             <p class="text-xs font-black uppercase tracking-widest opacity-60 mb-2">Total Ingresos</p>
-            <p class="text-2xl font-black text-green-400">$ {{ total_ingresos|format_money }}</p>
+            <p class="text-2xl font-black text-green-400">{% if currency_code == 'COP' %}{{ total_ingresos|currency_with_code(currency_code) }}{% else %}{{ currency_code }} {{ total_ingresos|format_money }}{% endif %}</p>
         </div>
         <div class="stat-card expense p-6 rounded-2xl">
             <p class="text-xs font-black uppercase tracking-widest opacity-60 mb-2">Total Gastos</p>
-            <p class="text-2xl font-black text-red-400">$ {{ total_gastos|format_money }}</p>
+            <p class="text-2xl font-black text-red-400">{% if currency_code == 'COP' %}{{ total_gastos|currency_with_code(currency_code) }}{% else %}{{ currency_code }} {{ total_gastos|format_money }}{% endif %}</p>
         </div>
         <div class="stat-card investment p-6 rounded-2xl">
             <p class="text-xs font-black uppercase tracking-widest opacity-60 mb-2">Total Inversiones</p>
-            <p class="text-2xl font-black text-blue-400">$ {{ total_inversiones|format_money }}</p>
+            <p class="text-2xl font-black text-blue-400">{% if currency_code == 'COP' %}{{ total_inversiones|currency_with_code(currency_code) }}{% else %}{{ currency_code }} {{ total_inversiones|format_money }}{% endif %}</p>
         </div>
     </div>
 
@@ -145,7 +145,7 @@
                     <tr class="table-row">
                         <td class="px-6 py-4 opacity-70" data-label="Fecha">{{ ingreso.fecha|format_date }}</td>
                         <td class="px-6 py-4" data-label="Descripción">{{ ingreso.descripcion }}</td>
-                        <td class="px-6 py-4 text-right text-green-400 font-black" data-label="Monto">$ {{ ingreso.monto|format_money }}</td>
+                        <td class="px-6 py-4 text-right text-green-400 font-black" data-label="Monto">{% if currency_code == 'COP' %}{{ ingreso.monto|currency_with_code(currency_code) }}{% else %}{{ currency_code }} {{ ingreso.monto|format_money }}{% endif %}</td>
                     </tr>
                     {% else %}
                     <tr>
@@ -174,7 +174,7 @@
                     <tr class="table-row">
                         <td class="px-6 py-4 opacity-70" data-label="Fecha">{{ gasto.fecha|format_date }}</td>
                         <td class="px-6 py-4" data-label="Descripción">{{ gasto.descripcion }}</td>
-                        <td class="px-6 py-4 text-right text-red-400 font-black" data-label="Monto">$ {{ gasto.monto|format_money }}</td>
+                        <td class="px-6 py-4 text-right text-red-400 font-black" data-label="Monto">{% if currency_code == 'COP' %}{{ gasto.monto|currency_with_code(currency_code) }}{% else %}{{ currency_code }} {{ gasto.monto|format_money }}{% endif %}</td>
                     </tr>
                     {% else %}
                     <tr>
@@ -203,7 +203,7 @@
                     <tr class="table-row">
                         <td class="px-6 py-4 opacity-70" data-label="Fecha">{{ inv.fecha|format_date }}</td>
                         <td class="px-6 py-4" data-label="Descripción">{{ inv.descripcion }}</td>
-                        <td class="px-6 py-4 text-right text-blue-400 font-black" data-label="Monto">$ {{ inv.monto|format_money }}</td>
+                        <td class="px-6 py-4 text-right text-blue-400 font-black" data-label="Monto">{% if currency_code == 'COP' %}{{ inv.monto|currency_with_code(currency_code) }}{% else %}{{ currency_code }} {{ inv.monto|format_money }}{% endif %}</td>
                     </tr>
                     {% else %}
                     <tr>

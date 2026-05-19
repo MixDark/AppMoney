@@ -4,6 +4,7 @@ from functools import wraps
 import os
 from infrastructure.db import get_connection
 from infrastructure.validators import *
+from application.currencies import get_currency_list, get_default_value, get_currency_display, get_currency_info
 from werkzeug.security import generate_password_hash, check_password_hash
 from datetime import datetime, timedelta, date
 import calendar
@@ -76,6 +77,75 @@ def read_profile_image(file):
         return None, "Formato de imagen no permitido"
     return data, None
 
+def _serialize_usuario_cache(usuario):
+    if not usuario:
+        return None
+
+    cached_usuario = {
+        'id': usuario.get('id'),
+        'nombre_usuario': usuario.get('nombre_usuario'),
+        'nombre_completo': usuario.get('nombre_completo'),
+        'email': usuario.get('email'),
+        'telefono': usuario.get('telefono'),
+        'pais': usuario.get('pais'),
+        'ciudad': usuario.get('ciudad'),
+        'moneda': usuario.get('moneda', 'USD'),
+        'MFA': bool(usuario.get('MFA')),
+        'ultimo_login': usuario.get('ultimo_login'),
+        'foto_perfil': bool(usuario.get('foto_perfil')),
+        'creado_en': usuario.get('creado_en'),
+    }
+    return cached_usuario
+
+
+def _store_usuario_cache(usuario):
+    cached_usuario = _serialize_usuario_cache(usuario)
+    if cached_usuario is not None:
+        session['usuario_cache'] = cached_usuario
+    else:
+        session.pop('usuario_cache', None)
+
+
+def get_current_usuario(refresh=False):
+    if 'usuario_id' not in session:
+        return None
+
+    if not refresh:
+        cached_usuario = session.get('usuario_cache')
+        if cached_usuario and cached_usuario.get('id') == session.get('usuario_id'):
+            return cached_usuario
+
+    usuario = obtener_usuario_por_id(session['usuario_id'])
+    if usuario:
+        _store_usuario_cache(usuario)
+    return usuario
+
+
+def _agrupar_montos_por_mes(registros):
+    montos_por_mes = {}
+
+    for registro in registros or []:
+        fecha_registro = registro.get('fecha')
+        if isinstance(fecha_registro, datetime):
+            fecha_dt = fecha_registro
+        elif isinstance(fecha_registro, date):
+            fecha_dt = datetime.combine(fecha_registro, datetime.min.time())
+        elif isinstance(fecha_registro, str):
+            try:
+                fecha_dt = datetime.fromisoformat(fecha_registro)
+            except ValueError:
+                try:
+                    fecha_dt = datetime.strptime(fecha_registro, '%Y-%m-%d')
+                except ValueError:
+                    continue
+        else:
+            continue
+
+        clave_mes = (fecha_dt.year, fecha_dt.month)
+        montos_por_mes[clave_mes] = montos_por_mes.get(clave_mes, 0.0) + float(registro.get('monto') or 0)
+
+    return montos_por_mes
+
 def register_routes(app):
     bp = Blueprint('main', __name__)
 
@@ -90,13 +160,21 @@ def register_routes(app):
 
     @bp.app_context_processor
     def inject_csrf_token():
-        return {'csrf_token': get_csrf_token()}
+        context = {
+            'csrf_token': get_csrf_token(),
+            'currencies_list': get_currency_list()
+        }
+        usuario = get_current_usuario()
+        if usuario:
+            context['usuario'] = usuario
+            context['currency_code'] = usuario.get('moneda', 'USD')
+        return context
 
     @bp.route('/', methods=['GET'])
     def consolidado():
         if 'usuario_id' not in session:
             return redirect(url_for('main.login'))
-        usuario = obtener_usuario_por_id(session['usuario_id'])
+        usuario = get_current_usuario()
         if usuario is None:
             session.clear()
             return redirect(url_for('main.login'))
@@ -115,6 +193,9 @@ def register_routes(app):
         
         # Calcular tendencias de los últimos 6 meses
         hoy = datetime.now()
+        ingresos_por_mes = _agrupar_montos_por_mes(ingresos)
+        gastos_por_mes = _agrupar_montos_por_mes(gastos)
+        inversiones_por_mes = _agrupar_montos_por_mes(inversiones)
         meses_labels = []
         data_ingresos = []
         data_gastos = []
@@ -125,9 +206,9 @@ def register_routes(app):
             anio, mes = fecha_temp.year, fecha_temp.month
             meses_labels.append(fecha_temp.strftime('%b %Y'))
             
-            ing_mes = sum(x['monto'] for x in obtener_ingresos_por_mes(usuario['id'], anio, mes)) or 0
-            gas_mes = sum(x['monto'] for x in obtener_gastos_por_mes(usuario['id'], anio, mes)) or 0
-            inv_mes = sum(x['monto'] for x in obtener_inversiones_por_mes(usuario['id'], anio, mes)) or 0
+            ing_mes = ingresos_por_mes.get((anio, mes), 0.0)
+            gas_mes = gastos_por_mes.get((anio, mes), 0.0)
+            inv_mes = inversiones_por_mes.get((anio, mes), 0.0)
             
             data_ingresos.append(float(ing_mes))
             data_gastos.append(float(gas_mes))
@@ -199,6 +280,7 @@ def register_routes(app):
                     actualizar_ultimo_login(usuario['id'])
                     session.permanent = True
                     session['usuario_id'] = usuario['id']
+                    _store_usuario_cache(usuario)
                     session.pop('temp_usuario_id', None)
                     session.pop('username_temp', None)
                     return redirect(url_for('main.consolidado'))
@@ -270,6 +352,7 @@ def register_routes(app):
                 actualizar_ultimo_login(usuario_id)
                 session.permanent = True
                 session['usuario_id'] = usuario_id
+                _store_usuario_cache(usuario)
                 session.pop('temp_usuario_id', None)
                 session.pop('username_temp', None)
                 return jsonify({'exito': True, 'mensaje': 'OTP verificado correctamente', 'redirect': url_for('main.consolidado')})
@@ -511,12 +594,23 @@ def register_routes(app):
             return redirect(url_for('main.consolidado'))
         
         usuario_id = session.get('usuario_id')
+        usuario = obtener_usuario_por_id(usuario_id)
         
         ingresos = obtener_ingresos(usuario_id)
         gastos = obtener_gastos(usuario_id)
         inversiones = obtener_inversiones(usuario_id)
         categorias = obtener_categorias(usuario_id)
-        return render_template('forms/registrar.html', ingresos=ingresos, gastos=gastos, inversiones=inversiones, categorias=categorias)
+        
+        # Obtener el valor predeterminado para la moneda del usuario
+        default_value = get_default_value(usuario['moneda']) if usuario else 30
+        
+        return render_template('forms/registrar.html', 
+                             usuario=usuario,
+                             ingresos=ingresos, 
+                             gastos=gastos, 
+                             inversiones=inversiones, 
+                             categorias=categorias,
+                             default_value=default_value)
 
     @bp.route('/reportes', methods=['GET'])
     def reportes():
@@ -643,7 +737,7 @@ def register_routes(app):
         if 'usuario_id' not in session:
             return redirect(url_for('main.login'))
         
-        usuario = obtener_usuario_por_id(session['usuario_id'])
+        usuario = get_current_usuario(refresh=True)
         if usuario is None:
             session.clear()
             return redirect(url_for('main.login'))
@@ -675,7 +769,7 @@ def register_routes(app):
                 flash('Error al actualizar el perfil', 'error')
             
             # Recargar datos del usuario DESPUÉS de actualizar
-            usuario = obtener_usuario_por_id(session['usuario_id'])
+            usuario = get_current_usuario(refresh=True)
             return redirect(url_for('main.perfil'))
         
         return render_template('dashboard/perfil.html', usuario=usuario)
@@ -685,7 +779,7 @@ def register_routes(app):
         if 'usuario_id' not in session:
             return redirect(url_for('main.login'))
         
-        usuario = obtener_usuario_por_id(session['usuario_id'])
+        usuario = get_current_usuario(refresh=True)
         if usuario is None:
             session.clear()
             return redirect(url_for('main.login'))
@@ -732,7 +826,7 @@ def register_routes(app):
                     flash('Preferencias actualizadas correctamente', 'success')
                 
                 # Recargar datos del usuario
-                usuario = obtener_usuario_por_id(session['usuario_id'])
+                usuario = get_current_usuario(refresh=True)
                 return redirect(url_for('main.editar_perfil'))
         
         return render_template('dashboard/editar_perfil.html', usuario=usuario)
@@ -741,6 +835,7 @@ def register_routes(app):
     @login_required_custom
     def editar_registro():
         usuario_id = session['usuario_id']
+        usuario = get_current_usuario()
         
         if request.method == 'GET':
             registro_id = request.args.get('id')
@@ -764,6 +859,7 @@ def register_routes(app):
             categorias = obtener_categorias(usuario_id)
             return render_template(
                 'forms/editar_registro.html',
+                usuario=usuario,
                 registro=registro,
                 tipo=tipo,
                 categorias=categorias,
@@ -855,14 +951,13 @@ def register_routes(app):
     @login_required_custom
     def exportar_pdf():
         mes = request.args.get('mes', datetime.now().strftime('%Y-%m'))
-        usuario = obtener_usuario_por_id(session['usuario_id'])
+        usuario = get_current_usuario()
         if usuario is None:
             session.clear()
             return redirect(url_for('main.login'))
         
         # Obtener datos del mes
-        anio = int(mes[:4])
-        mes_num = int(mes[5:])
+        anio, mes_num = (int(mes[:4]), int(mes[5:]))
         
         ingresos_mes = obtener_ingresos_por_mes(usuario['id'], anio, mes_num)
         gastos_mes = obtener_gastos_por_mes(usuario['id'], anio, mes_num)
@@ -959,15 +1054,16 @@ def register_routes(app):
         from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
         
         mes = request.args.get('mes', datetime.now().strftime('%Y-%m'))
-        usuario = obtener_usuario_por_id(session['usuario_id'])
+        usuario = get_current_usuario()
         if usuario is None:
             session.clear()
             return redirect(url_for('main.login'))
         
         # Obtener datos
-        ingresos = obtener_ingresos_por_mes(usuario['id'], int(mes[:4]), int(mes[5:]))
-        gastos = obtener_gastos_por_mes(usuario['id'], int(mes[:4]), int(mes[5:]))
-        inversiones = obtener_inversiones_por_mes(usuario['id'], int(mes[:4]), int(mes[5:]))
+        anio, mes_num = (int(mes[:4]), int(mes[5:]))
+        ingresos = obtener_ingresos_por_mes(usuario['id'], anio, mes_num)
+        gastos = obtener_gastos_por_mes(usuario['id'], anio, mes_num)
+        inversiones = obtener_inversiones_por_mes(usuario['id'], anio, mes_num)
         
         # Crear workbook
         from openpyxl import Workbook
@@ -1204,7 +1300,7 @@ def register_routes(app):
     def seguridad():
         try:
             usuario_id = session['usuario_id']
-            usuario = obtener_usuario_por_id(usuario_id)
+            usuario = get_current_usuario(refresh=True)
             
             if request.method == 'POST':
                 # Checkbox state
@@ -1238,7 +1334,7 @@ def register_routes(app):
                     actualizar_seguridad_usuario(usuario_id, True)
                     
                     # Recargar usuario para verificar
-                    usuario_actualizado = obtener_usuario_por_id(usuario_id)
+                    usuario_actualizado = get_current_usuario(refresh=True)
                     
                     # Renderizar con el código QR
                     return render_template('auth/seguridad.html', usuario=usuario_actualizado, qr_code=qr_b64, secret=secret)
@@ -1285,9 +1381,9 @@ def register_routes(app):
     def exportar_buscar():
         usuario_id = session['usuario_id']
         filtros = _filtros_desde_request(request.args)
-        datos = explorar_transacciones(usuario_id, filtros, pagina=1, por_pagina=100000)
+        datos = obtener_transacciones_exportacion(usuario_id, filtros)
         filas = []
-        for t in datos['resultados']:
+        for t in datos:
             filas.append({
                 'Fecha': t.get('fecha', ''),
                 'Descripción': t.get('descripcion', '') or '',
@@ -1522,7 +1618,13 @@ def obtener_usuario_por_id(usuario_id):
         return None
     try:
         cursor = conn.cursor(dictionary=True)
-        cursor.execute('SELECT * FROM usuarios WHERE id = %s', (usuario_id,))
+        cursor.execute(
+            'SELECT id, nombre_usuario, password_hash, totp_secret, MFA, ultimo_login, nombre_completo, '
+            'email, telefono, pais, ciudad, moneda, '
+            'CASE WHEN foto_perfil IS NOT NULL THEN 1 ELSE 0 END AS foto_perfil, creado_en '
+            'FROM usuarios WHERE id = %s',
+            (usuario_id,)
+        )
         usuario = cursor.fetchone()
         cursor.close()
         return usuario
@@ -1535,7 +1637,13 @@ def obtener_usuario_por_nombre(nombre_usuario):
         return None
     try:
         cursor = conn.cursor(dictionary=True)
-        cursor.execute('SELECT * FROM usuarios WHERE nombre_usuario = %s', (nombre_usuario,))
+        cursor.execute(
+            'SELECT id, nombre_usuario, password_hash, totp_secret, MFA, ultimo_login, nombre_completo, '
+            'email, telefono, pais, ciudad, moneda, '
+            'CASE WHEN foto_perfil IS NOT NULL THEN 1 ELSE 0 END AS foto_perfil, creado_en '
+            'FROM usuarios WHERE nombre_usuario = %s',
+            (nombre_usuario,)
+        )
         usuario = cursor.fetchone()
         cursor.close()
         return usuario
@@ -1590,7 +1698,7 @@ def obtener_ingresos(usuario_id):
         return []
     try:
         cursor = conn.cursor(dictionary=True)
-        cursor.execute('SELECT * FROM ingresos WHERE usuario_id = %s ORDER BY fecha DESC', (usuario_id,))
+        cursor.execute('SELECT id, usuario_id, monto, descripcion, fecha, categoria_id, creado_en FROM ingresos WHERE usuario_id = %s ORDER BY fecha DESC, id DESC', (usuario_id,))
         ingresos = cursor.fetchall()
         cursor.close()
         return ingresos
@@ -1603,7 +1711,7 @@ def obtener_gastos(usuario_id):
         return []
     try:
         cursor = conn.cursor(dictionary=True)
-        cursor.execute('SELECT * FROM gastos WHERE usuario_id = %s ORDER BY fecha DESC', (usuario_id,))
+        cursor.execute('SELECT id, usuario_id, monto, descripcion, fecha, categoria_id, creado_en FROM gastos WHERE usuario_id = %s ORDER BY fecha DESC, id DESC', (usuario_id,))
         gastos = cursor.fetchall()
         cursor.close()
         return gastos
@@ -1670,7 +1778,7 @@ def obtener_inversiones(usuario_id):
         return []
     try:
         cursor = conn.cursor(dictionary=True)
-        cursor.execute('SELECT * FROM inversiones WHERE usuario_id = %s ORDER BY fecha DESC', (usuario_id,))
+        cursor.execute('SELECT id, usuario_id, tipo, monto, descripcion, fecha, categoria_id, creado_en FROM inversiones WHERE usuario_id = %s ORDER BY fecha DESC, id DESC', (usuario_id,))
         inversiones = cursor.fetchall()
         cursor.close()
         return inversiones
@@ -1683,7 +1791,8 @@ def obtener_inversiones_por_mes(usuario_id, anio, mes):
         return []
     try:
         cursor = conn.cursor(dictionary=True)
-        cursor.execute('SELECT * FROM inversiones WHERE usuario_id = %s AND YEAR(fecha) = %s AND MONTH(fecha) = %s ORDER BY fecha DESC', (usuario_id, anio, mes))
+        desde, hasta = calcular_rango_mes(anio, mes)
+        cursor.execute('SELECT id, usuario_id, tipo, monto, descripcion, fecha, categoria_id, creado_en FROM inversiones WHERE usuario_id = %s AND fecha BETWEEN %s AND %s ORDER BY fecha DESC, id DESC', (usuario_id, desde, hasta))
         inversiones = cursor.fetchall()
         cursor.close()
         return inversiones
@@ -1712,7 +1821,8 @@ def obtener_ingresos_por_mes(usuario_id, anio, mes):
         return []
     try:
         cursor = conn.cursor(dictionary=True)
-        cursor.execute('SELECT * FROM ingresos WHERE usuario_id = %s AND YEAR(fecha) = %s AND MONTH(fecha) = %s ORDER BY fecha DESC', (usuario_id, anio, mes))
+        desde, hasta = calcular_rango_mes(anio, mes)
+        cursor.execute('SELECT id, usuario_id, monto, descripcion, fecha, categoria_id, creado_en FROM ingresos WHERE usuario_id = %s AND fecha BETWEEN %s AND %s ORDER BY fecha DESC, id DESC', (usuario_id, desde, hasta))
         ingresos = cursor.fetchall()
         cursor.close()
         return ingresos
@@ -1725,7 +1835,8 @@ def obtener_gastos_por_mes(usuario_id, anio, mes):
         return []
     try:
         cursor = conn.cursor(dictionary=True)
-        cursor.execute('SELECT * FROM gastos WHERE usuario_id = %s AND YEAR(fecha) = %s AND MONTH(fecha) = %s ORDER BY fecha DESC', (usuario_id, anio, mes))
+        desde, hasta = calcular_rango_mes(anio, mes)
+        cursor.execute('SELECT id, usuario_id, monto, descripcion, fecha, categoria_id, creado_en FROM gastos WHERE usuario_id = %s AND fecha BETWEEN %s AND %s ORDER BY fecha DESC, id DESC', (usuario_id, desde, hasta))
         gastos = cursor.fetchall()
         cursor.close()
         return gastos
@@ -1797,7 +1908,7 @@ def obtener_ingreso_por_id(ingreso_id, usuario_id):
         return None
     try:
         cursor = conn.cursor(dictionary=True)
-        cursor.execute('SELECT * FROM ingresos WHERE id = %s AND usuario_id = %s', (ingreso_id, usuario_id))
+        cursor.execute('SELECT id, usuario_id, monto, descripcion, fecha, categoria_id, creado_en FROM ingresos WHERE id = %s AND usuario_id = %s', (ingreso_id, usuario_id))
         ingreso = cursor.fetchone()
         cursor.close()
         return ingreso
@@ -1810,7 +1921,7 @@ def obtener_gasto_por_id(gasto_id, usuario_id):
         return None
     try:
         cursor = conn.cursor(dictionary=True)
-        cursor.execute('SELECT * FROM gastos WHERE id = %s AND usuario_id = %s', (gasto_id, usuario_id))
+        cursor.execute('SELECT id, usuario_id, monto, descripcion, fecha, categoria_id, creado_en FROM gastos WHERE id = %s AND usuario_id = %s', (gasto_id, usuario_id))
         gasto = cursor.fetchone()
         cursor.close()
         return gasto
@@ -1823,7 +1934,7 @@ def obtener_inversion_por_id(inversion_id, usuario_id):
         return None
     try:
         cursor = conn.cursor(dictionary=True)
-        cursor.execute('SELECT * FROM inversiones WHERE id = %s AND usuario_id = %s', (inversion_id, usuario_id))
+        cursor.execute('SELECT id, usuario_id, tipo, monto, descripcion, fecha, categoria_id, creado_en FROM inversiones WHERE id = %s AND usuario_id = %s', (inversion_id, usuario_id))
         inversion = cursor.fetchone()
         cursor.close()
         return inversion
@@ -1912,7 +2023,7 @@ def obtener_token_recuperacion(token):
         return None
     try:
         cursor = conn.cursor(dictionary=True)
-        cursor.execute('SELECT * FROM password_reset_tokens WHERE token = %s', (token,))
+        cursor.execute('SELECT id, usuario_id, token, expires_at, captcha_attempt, verified, creado_en FROM password_reset_tokens WHERE token = %s', (token,))
         token_data = cursor.fetchone()
         cursor.close()
         return token_data
@@ -1972,7 +2083,7 @@ def obtener_metas(usuario_id):
         return []
     try:
         cursor = conn.cursor(dictionary=True)
-        cursor.execute('SELECT * FROM metas WHERE usuario_id = %s', (usuario_id,))
+        cursor.execute('SELECT id, usuario_id, nombre, monto_objetivo, monto_actual, creado_en FROM metas WHERE usuario_id = %s', (usuario_id,))
         return cursor.fetchall()
     finally:
         conn.close()
@@ -2019,7 +2130,7 @@ def obtener_recurrentes(usuario_id):
         return []
     try:
         cursor = conn.cursor(dictionary=True)
-        cursor.execute('SELECT * FROM transacciones_recurrentes WHERE usuario_id = %s AND activo = TRUE', (usuario_id,))
+        cursor.execute('SELECT id, usuario_id, tipo, descripcion, monto, frecuencia, proxima_fecha, activo, creado_en FROM transacciones_recurrentes WHERE usuario_id = %s AND activo = TRUE ORDER BY proxima_fecha ASC, id ASC', (usuario_id,))
         return cursor.fetchall()
     finally:
         conn.close()
@@ -2089,7 +2200,7 @@ def procesar_recurrentes_usuario(usuario_id):
     try:
         cursor = conn.cursor(dictionary=True)
         hoy = datetime.now().date()
-        cursor.execute('SELECT * FROM transacciones_recurrentes WHERE usuario_id = %s AND proxima_fecha <= %s AND activo = TRUE', (usuario_id, hoy))
+        cursor.execute('SELECT id, usuario_id, tipo, descripcion, monto, frecuencia, proxima_fecha, activo, creado_en FROM transacciones_recurrentes WHERE usuario_id = %s AND proxima_fecha <= %s AND activo = TRUE', (usuario_id, hoy))
         pendientes = cursor.fetchall()
         
         for p in pendientes:
@@ -2200,6 +2311,11 @@ def calcular_rango_mes_actual():
     hoy = date.today()
     ultimo_dia = calendar.monthrange(hoy.year, hoy.month)[1]
     return hoy.replace(day=1).isoformat(), hoy.replace(day=ultimo_dia).isoformat()
+
+
+def calcular_rango_mes(anio, mes):
+    ultimo_dia = calendar.monthrange(int(anio), int(mes))[1]
+    return date(int(anio), int(mes), 1).isoformat(), date(int(anio), int(mes), ultimo_dia).isoformat()
 
 
 def _filtros_desde_request(args):
@@ -2330,7 +2446,7 @@ def explorar_transacciones(usuario_id, filtros, pagina=1, por_pagina=25):
         for con_categorias in (True, False):
             try:
                 union_sql = _sql_union_transacciones(con_categorias)
-                subquery = f"SELECT * FROM ({union_sql}) AS t WHERE {where_sql}"
+                subquery = f"SELECT id, tipo, monto, descripcion, fecha, categoria_id, categoria_nombre, categoria_color FROM ({union_sql}) AS t WHERE {where_sql}"
 
                 cursor.execute(
                     f"""
@@ -2396,13 +2512,46 @@ def obtener_transacciones_filtradas(usuario_id, q, desde, hasta):
     filtros = {'q': q or '', 'desde': desde or '', 'hasta': hasta or '', 'orden': 'fecha_desc'}
     return explorar_transacciones(usuario_id, filtros, pagina=1, por_pagina=10000)['resultados']
 
+
+def obtener_transacciones_exportacion(usuario_id, filtros):
+    conn = get_connection()
+    if conn is None:
+        return []
+    try:
+        cursor = conn.cursor(dictionary=True)
+        where_params = []
+        where_sql = _where_transacciones(filtros, where_params)
+        orden = _orden_sql(filtros.get('orden', 'fecha_desc'))
+
+        for con_categorias in (True, False):
+            try:
+                union_sql = _sql_union_transacciones(con_categorias)
+                subquery = f"SELECT id, tipo, monto, descripcion, fecha, categoria_id, categoria_nombre, categoria_color FROM ({union_sql}) AS t WHERE {where_sql}"
+                cursor.execute(
+                    f"""
+                    SELECT id, tipo, monto, descripcion, fecha, categoria_id,
+                           categoria_nombre, categoria_color
+                    FROM ({subquery}) AS datos
+                    ORDER BY {orden}
+                    """,
+                    tuple([usuario_id, usuario_id, usuario_id] + where_params),
+                )
+                return cursor.fetchall()
+            except Exception:
+                if con_categorias:
+                    continue
+                return []
+        return []
+    finally:
+        conn.close()
+
 def obtener_categorias(usuario_id):
     conn = get_connection()
     if conn is None:
         return []
     try:
         cursor = conn.cursor(dictionary=True)
-        cursor.execute('SELECT * FROM categorias WHERE usuario_id = %s', (usuario_id,))
+        cursor.execute('SELECT id, usuario_id, nombre, tipo, color, creado_en FROM categorias WHERE usuario_id = %s ORDER BY tipo ASC, nombre ASC', (usuario_id,))
         return cursor.fetchall()
     finally:
         conn.close()
@@ -2437,7 +2586,7 @@ def validar_categoria_para_tipo(usuario_id, categoria_id, tipo_transaccion):
         
         # Obtener la categoría
         cursor.execute(
-            'SELECT * FROM categorias WHERE id = %s AND usuario_id = %s',
+            'SELECT id, usuario_id, nombre, tipo, color, creado_en FROM categorias WHERE id = %s AND usuario_id = %s',
             (categoria_id, usuario_id)
         )
         categoria = cursor.fetchone()
@@ -2493,18 +2642,17 @@ def obtener_presupuestos_detallados(usuario_id):
         cursor = conn.cursor(dictionary=True)
         # Obtener presupuestos con el nombre de la categoría y el gasto actual del mes
         hoy = datetime.now()
-        mes = hoy.month
-        anio = hoy.year
+        desde_mes, hasta_mes = calcular_rango_mes(hoy.year, hoy.month)
         
         cursor.execute('''
             SELECT p.*, c.nombre as categoria_nombre, 
             (SELECT COALESCE(SUM(monto), 0) FROM gastos 
              WHERE usuario_id = %s AND categoria_id = p.categoria_id 
-             AND MONTH(fecha) = %s AND YEAR(fecha) = %s) as gasto_actual
+             AND fecha BETWEEN %s AND %s) as gasto_actual
             FROM presupuestos p
             JOIN categorias c ON p.categoria_id = c.id
             WHERE p.usuario_id = %s
-        ''', (usuario_id, mes, anio, usuario_id))
+        ''', (usuario_id, desde_mes, hasta_mes, usuario_id))
         
         presupuestos = cursor.fetchall()
         for p in presupuestos:
@@ -2520,23 +2668,28 @@ def obtener_presupuestos_simples(usuario_id):
         return []
     try:
         cursor = conn.cursor(dictionary=True)
-        cursor.execute('SELECT id, usuario_id, categoria_id, monto, gastado FROM presupuestos WHERE usuario_id = %s', (usuario_id,))
-        presupuestos = cursor.fetchall()
-        
-        # Obtener gastos totales del mes actual
         cursor.execute(
-            '''SELECT SUM(monto) as total_gastos 
-               FROM gastos 
-               WHERE usuario_id = %s 
-               AND MONTH(fecha) = MONTH(NOW()) 
-               AND YEAR(fecha) = YEAR(NOW())''',
+            'SELECT p.id, p.usuario_id, p.categoria_id, p.monto, p.gastado, c.nombre AS categoria_nombre '
+            'FROM presupuestos p '
+            'LEFT JOIN categorias c ON c.id = p.categoria_id '
+            'WHERE p.usuario_id = %s',
             (usuario_id,)
         )
-        gasto_total_result = cursor.fetchone()
-        gasto_total = float(gasto_total_result['total_gastos'] or 0) if gasto_total_result else 0
+        presupuestos = cursor.fetchall()
+
+        # Obtener gastos totales del mes actual una sola vez
+        desde_mes, hasta_mes = calcular_rango_mes(datetime.now().year, datetime.now().month)
+        cursor.execute(
+            'SELECT COALESCE(SUM(monto), 0) AS total_gastos '
+            'FROM gastos '
+            'WHERE usuario_id = %s AND fecha BETWEEN %s AND %s',
+            (usuario_id, desde_mes, hasta_mes)
+        )
+        gasto_total_result = cursor.fetchone() or {}
+        gasto_total = float(gasto_total_result.get('total_gastos') or 0)
         
         for p in presupuestos:
-            p['categoria_nombre'] = p.get('categoria_id', 'Sin categoría')
+            p['categoria_nombre'] = p.get('categoria_nombre') or 'Sin categoría'
             p['monto'] = float(p.get('monto') or 0)
             p['gastado'] = float(p.get('gastado') or 0)
             

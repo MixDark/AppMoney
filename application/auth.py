@@ -19,11 +19,25 @@ class User(UserMixin):
         return str(self.id)
 
 
+def _user_from_cache(cached_usuario):
+    if not cached_usuario:
+        return None
+    return User(
+        cached_usuario.get('id'),
+        cached_usuario.get('nombre_usuario', ''),
+        cached_usuario.get('foto_perfil', False),
+        cached_usuario.get('moneda', 'USD')
+    )
+
+
 @login_manager.user_loader
 def load_user(user_id):
     """Carga un usuario desde la base de datos"""
     if user_id is None:
         return None
+    cached_usuario = session.get('usuario_cache')
+    if cached_usuario and str(cached_usuario.get('id')) == str(user_id):
+        return _user_from_cache(cached_usuario)
     try:
         connection = get_connection()
         if connection is None:
@@ -34,6 +48,13 @@ def load_user(user_id):
         cursor.close()
         connection.close()
         if usuario:
+            cached_usuario = {
+                'id': usuario['id'],
+                'nombre_usuario': usuario['nombre_usuario'],
+                'foto_perfil': bool(usuario['foto_perfil']),
+                'moneda': usuario['moneda'],
+            }
+            session['usuario_cache'] = cached_usuario
             return User(
                 usuario['id'], 
                 usuario['nombre_usuario'], 
@@ -52,4 +73,11 @@ def init_auth(app):
     # Inyectar current_user en todos los templates
     @app.context_processor
     def inject_user():
-        return {'current_user': load_user(session.get('usuario_id')) if 'usuario_id' in session else None}
+        if 'usuario_id' not in session:
+            return {'current_user': None}
+
+        cached_usuario = session.get('usuario_cache')
+        if cached_usuario and str(cached_usuario.get('id')) == str(session.get('usuario_id')):
+            return {'current_user': _user_from_cache(cached_usuario)}
+
+        return {'current_user': load_user(session.get('usuario_id'))}

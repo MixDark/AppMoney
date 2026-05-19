@@ -55,6 +55,13 @@ Una aplicación web para gestionar ingresos, gastos e inversiones de forma segur
 - Información personal editable
 - Selección de moneda predeterminada
 
+### 8. **Monedas y formato**
+- Selección de moneda por usuario en el perfil; la moneda configurada se aplica en toda la aplicación para mostrar y formatear montos.
+- Valores por defecto en formularios de registro: si la `moneda` del usuario es `COP` solo se muestra el valor (20.000); para las demás monedas se muestra con el codigo (USD 30).
+- Formateo de montos y visualización con filtros Jinja provistos en `application/filters.py` (`format_currency`, `currency_with_code`).
+- Las exportaciones y reportes respetan la moneda del usuario y muestran el código de moneda (p. ej. 30 USD, 30 EUR, 20.000 COP).
+- Monedas soportadas (ejemplos): USD, EUR, GBP, CAD, AUD, MXN, COP. Se pueden ampliar desde `application/currencies.py`.
+
 ## 🔐 Seguridad (OWASP Top 10)
 
 ### Implementadas:

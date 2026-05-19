@@ -31,7 +31,7 @@
         </div>
 
         <div class="w-full">
-            <label class="form-label">Monto</label>
+            <label class="form-label">Monto ({% if usuario and usuario.moneda == 'COP' %}{{ usuario.moneda }}{% else %}{{ usuario.moneda if usuario else 'USD' }}{% endif %})</label>
             <input type="number" step="0.01" name="monto" required value="{{ registro.monto }}" class="input-glass" placeholder="0.00">
         </div>
 

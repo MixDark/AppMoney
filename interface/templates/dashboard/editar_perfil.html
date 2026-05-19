@@ -67,16 +67,9 @@
                     <div>
                         <label class="form-label">Moneda predeterminada</label>
                         <select name="moneda" class="input-glass appearance-none cursor-pointer">
-                            <option value="USD" {% if usuario.moneda == 'USD' %}selected{% endif %}>USD - Dólar Estadounidense</option>
-                            <option value="EUR" {% if usuario.moneda == 'EUR' %}selected{% endif %}>EUR - Euro</option>
-                            <option value="MXN" {% if usuario.moneda == 'MXN' %}selected{% endif %}>MXN - Peso Mexicano</option>
-                            <option value="ARS" {% if usuario.moneda == 'ARS' %}selected{% endif %}>ARS - Peso Argentino</option>
-                            <option value="COP" {% if usuario.moneda == 'COP' %}selected{% endif %}>COP - Peso Colombiano</option>
-                            <option value="CLP" {% if usuario.moneda == 'CLP' %}selected{% endif %}>CLP - Peso Chileno</option>
-                            <option value="BRL" {% if usuario.moneda == 'BRL' %}selected{% endif %}>BRL - Real Brasileño</option>
-                            <option value="PEN" {% if usuario.moneda == 'PEN' %}selected{% endif %}>PEN - Sol Peruano</option>
-                            <option value="UYU" {% if usuario.moneda == 'UYU' %}selected{% endif %}>UYU - Peso Uruguayo</option>
-                            <option value="VES" {% if usuario.moneda == 'VES' %}selected{% endif %}>VES - Bolívar Venezolano</option>
+                            {% for code, name in currencies_list %}
+                                <option value="{{ code }}" {% if usuario.moneda == code %}selected{% endif %}>{{ name }}</option>
+                            {% endfor %}
                         </select>
                     </div>
                 </div>

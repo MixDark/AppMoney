@@ -84,11 +84,11 @@
             <div class="grid grid-cols-2 gap-4 mb-6">
                 <div class="bg-blue-500/10 p-4 rounded-2xl border border-blue-500/20">
                     <p class="text-xs font-black uppercase mb-2 opacity-70">Gastado</p>
-                    <p class="text-lg font-black text-blue-400"><span id="gastado-{{ p.id }}">{{ p.get('gastado', 0)|format_money }}</span></p>
+                    <p class="text-lg font-black text-blue-400"><span id="gastado-{{ p.id }}">{% if currency_code == 'COP' %}{{ p.get('gastado', 0)|currency_with_code(currency_code) }}{% else %}{{ currency_code }} {{ p.get('gastado', 0)|format_money }}{% endif %}</span></p>
                 </div>
                 <div class="bg-green-500/10 p-4 rounded-2xl border border-green-500/20">
                     <p class="text-xs font-black uppercase mb-2 opacity-70">Límite</p>
-                    <p class="text-lg font-black text-green-400"><span id="monto-{{ p.id }}">{{ p.get('monto', 0)|format_money }}</span></p>
+                    <p class="text-lg font-black text-green-400"><span id="monto-{{ p.id }}">{% if currency_code == 'COP' %}{{ p.get('monto', 0)|currency_with_code(currency_code) }}{% else %}{{ currency_code }} {{ p.get('monto', 0)|format_money }}{% endif %}</span></p>
                 </div>
             </div>
             <div class="progress-bar mb-3">

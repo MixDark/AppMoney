@@ -194,7 +194,7 @@
                     </td>
                     <td class="px-6 py-4" data-label="Descripción">{{ r.descripcion|capitalize }}</td>
                     <td class="px-6 py-4 font-black {% if r.tipo == 'gasto' %}text-red-400{% else %}text-green-400{% endif %}" data-label="Monto">
-                        $ {{ r.monto|format_money }}
+                        {% if currency_code == 'COP' %}{{ r.monto|currency_with_code(currency_code) }}{% else %}{{ currency_code }} {{ r.monto|format_money }}{% endif %}
                     </td>
                     <td class="px-6 py-4" data-label="Próxima fecha">{{ r.proxima_fecha|format_date }}</td>
                     <td class="px-6 py-4 text-center actions-cell" data-label="Acciones">

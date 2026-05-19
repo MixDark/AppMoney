@@ -56,16 +56,9 @@
         <div class="w-full">
             <label class="form-label">Moneda preferida</label>
             <select name="moneda" class="input-glass appearance-none cursor-pointer">
-                <option value="USD" selected>USD - Dólar Estadounidense</option>
-                <option value="EUR">EUR - Euro</option>
-                <option value="MXN">MXN - Peso Mexicano</option>
-                <option value="ARS">ARS - Peso Argentino</option>
-                <option value="COP">COP - Peso Colombiano</option>
-                <option value="CLP">CLP - Peso Chileno</option>
-                <option value="BRL">BRL - Real Brasileño</option>
-                <option value="PEN">PEN - Sol Peruano</option>
-                <option value="UYU">UYU - Peso Uruguayo</option>
-                <option value="VES">VES - Bolívar Venezolano</option>
+                {% for code, name in currencies_list %}
+                    <option value="{{ code }}" {% if code == 'USD' %}selected{% endif %}>{{ name }}</option>
+                {% endfor %}
             </select>
         </div>
 

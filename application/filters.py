@@ -1,5 +1,6 @@
 """Filtros personalizados para templates"""
 from datetime import date, datetime
+from application.currencies import get_currency_display, get_default_value, get_currency_info
 
 
 def register_template_filters(app):
@@ -42,3 +43,40 @@ def register_template_filters(app):
             return str(fecha)
         except Exception as e:
             return str(fecha)
+
+    @app.template_filter('format_currency')
+    def format_currency(valor, currency_code='USD'):
+        """Formatea un valor con su moneda (ej: $30, 20.000 para COP)"""
+        try:
+            valor_float = float(valor)
+            currency_info = get_currency_info(currency_code)
+            show_currency = currency_info.get('show_currency', True)
+            symbol = currency_info.get('symbol', currency_code)
+            
+            if show_currency:
+                return f"{symbol} {valor_float:,.2f}"
+            else:
+                return f"{valor_float:,.0f}"
+        except Exception as e:
+            return str(valor)
+
+    @app.template_filter('currency_with_code')
+    def currency_with_code(valor, currency_code='USD'):
+        """Formatea un valor mostrando el código de moneda (ej: USD 30, COP 20.000)"""
+        try:
+            valor_float = float(valor)
+            currency_info = get_currency_info(currency_code)
+            show_currency = currency_info.get('show_currency', True)
+            
+            if currency_code == 'COP':
+                # Para COP solo mostrar el valor sin símbolo
+                return f"{valor_float:,.0f}"
+            else:
+                return f"{currency_code} {valor_float:,.2f}"
+        except Exception as e:
+            return str(valor)
+
+    @app.template_filter('get_default_value')
+    def filter_get_default_value(currency_code):
+        """Obtiene el valor predeterminado de una moneda"""
+        return get_default_value(currency_code)

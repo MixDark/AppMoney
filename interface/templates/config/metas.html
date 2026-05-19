@@ -62,7 +62,7 @@
                 <i class="fas fa-bullseye text-3xl text-blue-400"></i>
             </div>
             <h4 class="font-black text-xl mb-2 text-center">{{ m.nombre }}</h4>
-            <p class="text-2xl font-black text-blue-400 mb-6">$ {{ m.monto_objetivo|format_money }}</p>
+            <p class="text-2xl font-black text-blue-400 mb-6">{% if currency_code == 'COP' %}{{ m.monto_objetivo|currency_with_code(currency_code) }}{% else %}{{ currency_code }} {{ m.monto_objetivo|format_money }}{% endif %}</p>
 
             <div class="w-full mb-4">
                 <div class="flex justify-between text-xs font-bold uppercase tracking-widest mb-3 opacity-70">
@@ -74,7 +74,7 @@
                 </div>
             </div>
 
-            <p class="text-sm font-semibold opacity-70 mb-6">Faltan: <span class="text-blue-400">$ {{ (m.monto_objetivo - m.monto_actual)|format_money }}</span></p>
+            <p class="text-sm font-semibold opacity-70 mb-6">Faltan: <span class="text-blue-400">{% if currency_code == 'COP' %}{{ (m.monto_objetivo - m.monto_actual)|currency_with_code(currency_code) }}{% else %}{{ currency_code }} {{ (m.monto_objetivo - m.monto_actual)|format_money }}{% endif %}</span></p>
 
             <div class="flex gap-3 w-full">
                 <button type="button" class="btn-fluent btn-green flex-1 py-2 px-3 text-xs justify-center flex items-center gap-1 whitespace-nowrap js-aportar" data-id="{{ m.id }}" data-nombre="{{ m.nombre|e }}"><i class="fas fa-plus"></i> Aportar</button>
