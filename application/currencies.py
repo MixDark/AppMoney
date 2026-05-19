@@ -26,7 +26,7 @@ CURRENCIES = {
         'name': 'Peso Colombiano',
         'default_value': 20000,
         'symbol': '$',
-        'show_currency': False  # No mostrar símbolo de moneda
+        'show_currency': True
     },
     'CLP': {
         'name': 'Peso Chileno',

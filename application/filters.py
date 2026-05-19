@@ -73,12 +73,14 @@ def register_template_filters(app):
 
     @app.template_filter('currency_with_code')
     def currency_with_code(valor, currency_code='USD'):
-        """Formatea un valor mostrando el código de moneda (ej: USD 30, COP 2.700.000,00)"""
+        """Formatea un valor mostrando el símbolo o el código según la moneda."""
         try:
+            currency_info = get_currency_info(currency_code)
+            symbol = currency_info.get('symbol', currency_code)
             valor_formateado = _format_spanish_money(valor)
             
             if currency_code == 'COP':
-                return valor_formateado
+                return f"{symbol} {valor_formateado}"
             else:
                 return f"{currency_code} {valor_formateado}"
         except Exception as e:

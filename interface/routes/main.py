@@ -957,6 +957,7 @@ def register_routes(app):
         if usuario is None:
             session.clear()
             return redirect(url_for('main.login'))
+        currency_code = usuario.get('moneda', 'USD')
         
         # Obtener datos del mes
         anio, mes_num = (int(mes[:4]), int(mes[5:]))
@@ -991,6 +992,21 @@ def register_routes(app):
                     except ValueError:
                         return fecha
             return str(fecha)
+
+        def formatear_moneda_reporte(valor):
+            try:
+                valor_float = float(valor)
+            except (TypeError, ValueError):
+                return str(valor)
+
+            valor_formateado = f"{valor_float:,.2f}"
+            parte_entera, parte_decimal = valor_formateado.rsplit('.', 1)
+            parte_entera = parte_entera.replace(',', '.')
+            valor_formateado = f"{parte_entera},{parte_decimal}"
+
+            if currency_code == 'COP':
+                return f"$ {valor_formateado}"
+            return f"{currency_code} {valor_formateado}"
         
         # Obtener fecha actual formateada
         hoy = datetime.now()
@@ -1024,11 +1040,11 @@ def register_routes(app):
             total = 0
             for reg in registros:
                 fecha = formatear_fecha_reporte(reg['fecha'])
-                data.append([fecha, reg['descripcion'], f"$ {reg['monto']:,.2f}"])
+                data.append([fecha, reg['descripcion'], formatear_moneda_reporte(reg['monto'])])
                 total += reg['monto']
             
             # Agregar fila de total sin HTML
-            data.append(['', 'Total', f"$ {total:,.2f}"])
+            data.append(['', 'Total', formatear_moneda_reporte(total)])
             
             table = Table(data, colWidths=[1.2*inch, 3*inch, 1.5*inch])
             table.setStyle(TableStyle([
@@ -1071,6 +1087,7 @@ def register_routes(app):
         if usuario is None:
             session.clear()
             return redirect(url_for('main.login'))
+        currency_code = usuario.get('moneda', 'USD')
         
         # Obtener datos
         anio, mes_num = (int(mes[:4]), int(mes[5:]))
@@ -1141,8 +1158,22 @@ def register_routes(app):
         row += 1
         ws[f'A{row}'] = f'Usuario: {usuario["nombre_usuario"]}'
         ws[f'A{row}'].font = subtitle_font
+
+        row += 1
+        ws[f'A{row}'] = f'Moneda: {currency_code}'
+        ws[f'A{row}'].font = subtitle_font
         
         row += 2
+
+        def formato_moneda_excel(valor):
+            try:
+                float(valor)
+            except (TypeError, ValueError):
+                return str(valor)
+
+            if currency_code == 'COP':
+                return '"$" #,##0.00'
+            return f'"{currency_code}" #,##0.00'
         
         # Función para agregar tabla
         def agregar_tabla(registros, titulo, inicio_row):
@@ -1189,7 +1220,7 @@ def register_routes(app):
                 ws[f'B{row}'].alignment = alignment_left
                 ws[f'C{row}'].alignment = alignment_right
 
-                ws[f'C{row}'].number_format = '#,##0.00'
+                ws[f'C{row}'].number_format = formato_moneda_excel(reg['monto'])
                 
                 for col in ['A', 'B', 'C']:
                     ws[f'{col}{row}'].border = thin_border
@@ -1207,7 +1238,7 @@ def register_routes(app):
             ws[f'B{row}'].alignment = alignment_right
             ws[f'C{row}'].alignment = alignment_right
             
-            ws[f'C{row}'].number_format = '#,##0.00'
+            ws[f'C{row}'].number_format = formato_moneda_excel(total)
             
             ws[f'B{row}'].fill = total_fill
             ws[f'C{row}'].fill = total_fill
@@ -1405,6 +1436,11 @@ def register_routes(app):
     @bp.route('/buscar/exportar')
     @login_required_custom
     def exportar_buscar():
+        usuario = get_current_usuario()
+        if usuario is None:
+            session.clear()
+            return redirect(url_for('main.login'))
+        currency_code = usuario.get('moneda', 'USD')
         usuario_id = session['usuario_id']
         filtros = _filtros_desde_request(request.args)
         datos = obtener_transacciones_exportacion(usuario_id, filtros)
@@ -1473,6 +1509,10 @@ def register_routes(app):
             worksheet['A2'].font = Font(size=10, italic=True, color='000000')
             worksheet['A2'].alignment = Alignment(horizontal='left', vertical='center')
             worksheet.row_dimensions[2].height = 20
+
+            worksheet['A3'] = f"Moneda: {currency_code}"
+            worksheet['A3'].font = Font(size=10, italic=True, color='000000')
+            worksheet['A3'].alignment = Alignment(horizontal='left', vertical='center')
             
             # Fila 3: Encabezados
             thin_black = Side(style='thin', color='000000')
@@ -1538,7 +1578,7 @@ def register_routes(app):
                         if isinstance(monto_val, str):
                             monto_val = float(str(monto_val).replace('.', '').replace(',', '.'))
                         row[4].value = float(monto_val)
-                        row[4].number_format = '#,##0.00'
+                        row[4].number_format = '"$" #,##0.00' if currency_code == 'COP' else f'"{currency_code}" #,##0.00'
                         row[4].alignment = Alignment(horizontal='right', vertical='center')
                 except Exception:
                     pass
