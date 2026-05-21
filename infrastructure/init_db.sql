@@ -126,8 +126,22 @@ CREATE TABLE IF NOT EXISTS password_reset_tokens (
     expires_at DATETIME NOT NULL,
     captcha_attempt INT DEFAULT 0,
     verified BOOLEAN DEFAULT FALSE,
+    otp_verified BOOLEAN DEFAULT FALSE,
     creado_en TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (usuario_id) REFERENCES usuarios(id) ON DELETE CASCADE
 );
 
 CREATE INDEX idx_reset_tokens_usuario ON password_reset_tokens (usuario_id, expires_at);
+
+-- Control genérico de límites por sujeto y flujo
+CREATE TABLE IF NOT EXISTS user_rate_limits (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    subject_key VARCHAR(191) NOT NULL,
+    scope VARCHAR(50) NOT NULL,
+    attempts INT DEFAULT 0,
+    window_started_at DATETIME DEFAULT NULL,
+    blocked_until DATETIME DEFAULT NULL,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    UNIQUE KEY uniq_user_rate_limit (subject_key, scope),
+    INDEX idx_user_rate_limit_lookup (subject_key, scope, blocked_until)
+);

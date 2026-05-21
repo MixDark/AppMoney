@@ -2,6 +2,21 @@
 
 Todos los cambios relevantes de este proyecto se documentan en este archivo.
 
+## [1.4.0] - 2026-05-21
+### Agregado
+- Captcha visual basado en librería para el flujo de recuperación, con imagen generada por servidor y reto de 6 caracteres.
+- Verificación OTP en recuperación para usuarios con autenticación de dos pasos habilitada.
+- Lógica de limitación de intentos por usuario en la base de datos con tabla `user_rate_limits`.
+### Cambiado
+- Flujo de recuperación reorganizado para usar tokens persistidos en base de datos y evitar exponer información sensible en la URL.
+- Recarga de captcha sin refrescar la página completa mediante llamada `fetch` al backend.
+- Mensajes de rate limit unificados en toda la aplicación con un texto breve y consistente.
+- Búsqueda de usuario en recuperación más tolerante ante espacios y diferencias de mayúsculas/minúsculas.
+### Corregido
+- Falsos negativos de "usuario no encontrado" durante la recuperación cuando el usuario sí existía en la base.
+- Formularios del flujo de recuperación apuntando a rutas incorrectas al enviar captcha, OTP o cambio de contraseña.
+- Exceso de detalle en mensajes de rate limit, reemplazado por un aviso genérico reutilizable.
+
 ## [1.3.0] - 2026-05-19
 ### Agregado
 - Conservadas y ampliadas las monedas soportadas; añadidas las más usadas actualmente.
@@ -35,7 +50,6 @@ Todos los cambios relevantes de este proyecto se documentan en este archivo.
 - Proteccion CSRF con tokens en formularios y validacion en headers para solicitudes fetch.
 - Limitacion de intentos en login, verificacion OTP, recuperacion, CAPTCHA y reseteo.
 - Foto de perfil almacenada en base de datos como BLOB con endpoint protegido.
-
 ### Cambiado
 - La foto de perfil ahora se guarda como binario en la base de datos en lugar de rutas de archivo.
 - Configuracion segura: FLASK_SECRET_KEY es obligatoria al iniciar.

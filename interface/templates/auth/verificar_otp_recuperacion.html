@@ -17,7 +17,7 @@
     <h2 class="text-2xl font-black mb-2 text-center text-white">Verificación OTP</h2>
     <p class="text-center text-xs font-bold uppercase tracking-widest opacity-60 mb-8">Ingresa el código de tu app autenticadora para continuar</p>
 
-    <form method="post" class="space-y-8 w-full flex flex-col">
+    <form method="post" action="{{ url_for('main.verificar_otp_recuperacion') }}" class="space-y-8 w-full flex flex-col">
         <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
         <input type="hidden" name="token" value="{{ token }}">
 
@@ -35,7 +35,7 @@
     </form>
 
     <div class="mt-6">
-        <a href="{{ url_for('main.verificar_captcha', token=token) }}" class="text-blue-400 hover:text-blue-300 text-xs font-bold">Volver al captcha</a>
+        <a href="{{ url_for('main.recuperar_contraseña') }}" class="text-blue-400 hover:text-blue-300 text-xs font-bold">Volver al inicio</a>
     </div>
 </div>
 {% endblock %}

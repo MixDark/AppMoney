@@ -27,6 +27,27 @@ def ensure_schema():
                 "ALTER TABLE inversiones ADD COLUMN tipo VARCHAR(50) NOT NULL DEFAULT 'otro'"
             )
 
+        if not _column_exists(cursor, 'password_reset_tokens', 'otp_verified'):
+            cursor.execute(
+                "ALTER TABLE password_reset_tokens ADD COLUMN otp_verified BOOLEAN DEFAULT FALSE"
+            )
+
+        cursor.execute(
+            """
+            CREATE TABLE IF NOT EXISTS user_rate_limits (
+                id BIGINT AUTO_INCREMENT PRIMARY KEY,
+                subject_key VARCHAR(191) NOT NULL,
+                scope VARCHAR(50) NOT NULL,
+                attempts INT DEFAULT 0,
+                window_started_at DATETIME DEFAULT NULL,
+                blocked_until DATETIME DEFAULT NULL,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                UNIQUE KEY uniq_user_rate_limit (subject_key, scope),
+                INDEX idx_user_rate_limit_lookup (subject_key, scope, blocked_until)
+            )
+            """
+        )
+
         # Índices compuestos para acelerar listados, filtros y reportes
         index_statements = [
             ("ingresos", "idx_ingresos_usuario_fecha", "(usuario_id, fecha, id)"),

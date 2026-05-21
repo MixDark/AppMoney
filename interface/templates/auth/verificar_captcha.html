@@ -30,7 +30,7 @@
     <h2 class="text-3xl font-black mb-2 text-center text-white">Verificación</h2>
     <p class="text-center text-xs font-bold opacity-50 uppercase tracking-widest mb-10">Resuelve el captcha para continuar</p>
 
-    <form method="post" class="space-y-8 w-full flex flex-col">
+    <form method="post" action="{{ url_for('main.verificar_captcha') }}" class="space-y-8 w-full flex flex-col">
         <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
         <input type="hidden" id="captcha-token" name="token" value="{{ token }}">
 
@@ -58,6 +58,7 @@
     const captchaImage = document.getElementById('captcha-image');
     const captchaInput = document.querySelector('input[name="captcha_answer"]');
     const tokenInput = document.getElementById('captcha-token');
+    const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
 
     if (!refreshButton || !captchaImage || !tokenInput) {
         return;
@@ -69,8 +70,14 @@
     const refreshCaptcha = async () => {
         refreshButton.disabled = true;
         try {
-            const response = await fetch(`${refreshUrl}?token=${encodeURIComponent(captchaToken)}`, {
-                headers: { 'X-Requested-With': 'XMLHttpRequest' }
+            const response = await fetch(refreshUrl, {
+                method: 'POST',
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'X-CSRF-Token': csrfToken,
+                    'Content-Type': 'application/x-www-form-urlencoded'
+                },
+                body: new URLSearchParams({ token: captchaToken })
             });
             const data = await response.json();
 

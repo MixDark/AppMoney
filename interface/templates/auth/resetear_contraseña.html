@@ -16,7 +16,7 @@
 <div class="fluent-card form-card p-8 max-w-md w-full flex flex-col items-center">
     <h2 class="text-2xl font-black mb-6 text-center text-white">Cambio de contraseña</h2>
 
-    <form method="post" class="space-y-8 w-full flex flex-col">
+    <form method="post" action="{{ url_for('main.resetear_contraseña') }}" class="space-y-8 w-full flex flex-col">
         <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
         <input type="hidden" name="token" value="{{ token }}">
 

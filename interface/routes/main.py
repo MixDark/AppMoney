@@ -11,8 +11,6 @@ from datetime import datetime, timedelta, date
 import calendar
 import secrets
 from io import BytesIO
-import time
-from threading import Lock
 import pandas as pd
 import traceback
 from captcha.image import ImageCaptcha
@@ -71,20 +69,82 @@ def crear_captcha_challenge(token):
         'captcha_image': generar_captcha_imagen(captcha_code),
     }
 
-_rate_limit_lock = Lock()
-_rate_limit_state = {}
+def rate_limited(subject_key, scope, limit, window_seconds, block_seconds=None):
+    if block_seconds is None:
+        block_seconds = window_seconds
 
-def rate_limited(key, limit, window_seconds):
-    now = time.time()
-    with _rate_limit_lock:
-        timestamps = _rate_limit_state.get(key, [])
-        timestamps = [ts for ts in timestamps if now - ts < window_seconds]
-        if len(timestamps) >= limit:
-            _rate_limit_state[key] = timestamps
+    conn = get_connection()
+    if conn is None:
+        return True
+    try:
+        cursor = conn.cursor(dictionary=True)
+        ahora = datetime.now()
+        cursor.execute(
+            'SELECT attempts, window_started_at, blocked_until FROM user_rate_limits WHERE subject_key = %s AND scope = %s FOR UPDATE',
+            (subject_key, scope)
+        )
+        estado = cursor.fetchone()
+
+        if estado and estado.get('blocked_until'):
+            blocked_until = estado['blocked_until']
+            if isinstance(blocked_until, str):
+                blocked_until = datetime.fromisoformat(blocked_until)
+            if blocked_until > ahora:
+                cursor.close()
+                conn.rollback()
+                return True
+
+        window_started_at = estado.get('window_started_at') if estado else None
+        if isinstance(window_started_at, str):
+            window_started_at = datetime.fromisoformat(window_started_at)
+
+        if not estado or not window_started_at or (ahora - window_started_at).total_seconds() >= window_seconds:
+            if estado:
+                cursor.execute(
+                    'UPDATE user_rate_limits SET attempts = 1, window_started_at = %s, blocked_until = NULL, updated_at = %s WHERE subject_key = %s AND scope = %s',
+                    (ahora, ahora, subject_key, scope)
+                )
+            else:
+                cursor.execute(
+                    'INSERT INTO user_rate_limits (subject_key, scope, attempts, window_started_at, blocked_until) VALUES (%s, %s, %s, %s, NULL)',
+                    (subject_key, scope, 1, ahora)
+                )
+            conn.commit()
+            cursor.close()
+            return False
+
+        attempts = int(estado['attempts']) + 1
+        if attempts > limit:
+            blocked_until = ahora + timedelta(seconds=block_seconds)
+            if estado:
+                cursor.execute(
+                    'UPDATE user_rate_limits SET attempts = 0, window_started_at = NULL, blocked_until = %s, updated_at = %s WHERE subject_key = %s AND scope = %s',
+                    (blocked_until, ahora, subject_key, scope)
+                )
+            else:
+                cursor.execute(
+                    'INSERT INTO user_rate_limits (subject_key, scope, attempts, window_started_at, blocked_until) VALUES (%s, %s, %s, NULL, %s)',
+                    (subject_key, scope, 0, blocked_until)
+                )
+            conn.commit()
+            cursor.close()
             return True
-        timestamps.append(now)
-        _rate_limit_state[key] = timestamps
+
+        cursor.execute(
+            'UPDATE user_rate_limits SET attempts = %s, window_started_at = %s, blocked_until = NULL, updated_at = %s WHERE subject_key = %s AND scope = %s',
+            (attempts, window_started_at, ahora, subject_key, scope)
+        )
+        conn.commit()
+        cursor.close()
         return False
+    except Exception:
+        try:
+            conn.rollback()
+        except Exception:
+            pass
+        return True
+    finally:
+        conn.close()
 
 def read_profile_image(file):
     if not file or not file.filename:
@@ -262,15 +322,13 @@ def register_routes(app):
                              saldo=saldo,
                              analysis=analysis)
 
+    RATE_LIMIT_MESSAGE = 'Ha excedido el limite permitido, reintentalo más tarde'
+
     @bp.route('/login', methods=['GET', 'POST'])
     def login():
         mostrar_otp_modal = False
         
         if request.method == 'POST':
-            ip = request.remote_addr or 'unknown'
-            if rate_limited(f'login:{ip}', limit=5, window_seconds=60):
-                flash('Demasiados intentos. Intenta de nuevo más tarde', 'error')
-                return render_template('auth/login.html', mostrar_otp_modal=False)
             nombre_usuario = request.form.get('nombre_usuario', '').strip()
             password = request.form.get('password', '')
             
@@ -278,6 +336,10 @@ def register_routes(app):
             if not valid:
                 flash(msg, 'error')
                 return render_template('auth/login.html', mostrar_otp_modal=False)
+
+            if rate_limited(f'username:{nombre_usuario.lower()}', 'login', limit=5, window_seconds=60):
+                flash(RATE_LIMIT_MESSAGE, 'error')
+                return render_template('auth/login.html', mostrar_otp_modal=False, nombre_usuario=nombre_usuario)
             
             usuario = obtener_usuario_por_nombre(nombre_usuario)
             
@@ -348,12 +410,11 @@ def register_routes(app):
         if 'temp_usuario_id' not in session:
             return jsonify({'exito': False, 'mensaje': 'Sesión inválida'}), 400
 
-        ip = request.remote_addr or 'unknown'
-        if rate_limited(f'otp:{ip}', limit=5, window_seconds=60):
-            return jsonify({'exito': False, 'mensaje': 'Demasiados intentos. Intenta de nuevo más tarde'}), 429
+        usuario_id = session['temp_usuario_id']
+        if rate_limited(f'user:{usuario_id}', 'otp', limit=5, window_seconds=60):
+            return jsonify({'exito': False, 'mensaje': RATE_LIMIT_MESSAGE}), 429
         
         codigo_otp = request.form.get('codigo_otp', '').strip()
-        usuario_id = session['temp_usuario_id']
         
         valid, msg = validate_totp(codigo_otp)
         if not valid:
@@ -387,30 +448,27 @@ def register_routes(app):
     def recuperar_contraseña():
         exito = None
         if request.method == 'POST':
-            ip = request.remote_addr or 'unknown'
-            if rate_limited(f'recovery:{ip}', limit=3, window_seconds=300):
-                flash('Demasiados intentos. Intenta de nuevo más tarde', 'error')
-                return render_template('auth/recuperar_contraseña.html')
             nombre_usuario = request.form.get('nombre_usuario', '').strip()
-            
-            valid, msg = validate_username(nombre_usuario)
-            if not valid:
-                flash(msg, 'error')
-                return render_template('auth/recuperar_contraseña.html')
             
             usuario = obtener_usuario_por_nombre(nombre_usuario)
             
             if not usuario:
                 flash('Usuario no encontrado', 'error')
             else:
+                if rate_limited(f'user:{usuario["id"]}', 'recovery', limit=3, window_seconds=300, block_seconds=300):
+                    flash(RATE_LIMIT_MESSAGE, 'error')
+                    return render_template('auth/recuperar_contraseña.html')
+
                 # Generar token único
                 token = secrets.token_urlsafe(32)
                 expires_at = datetime.now() + timedelta(hours=1)
                 
                 # Guardar token en BD
                 if crear_token_recuperacion(usuario['id'], token, expires_at):
-                    # Redirigir al CAPTCHA
-                    return redirect(url_for('main.verificar_captcha', token=token))
+                    captcha = crear_captcha_challenge(token)
+                    return render_template('auth/verificar_captcha.html',
+                                         token=token,
+                                         captcha_image=captcha['captcha_image'])
                 else:
                     flash('Error al procesar tu solicitud', 'error')
         
@@ -418,7 +476,7 @@ def register_routes(app):
 
     @bp.route('/verificar_captcha', methods=['GET', 'POST'])
     def verificar_captcha():
-        token = request.args.get('token') or request.form.get('token')
+        token = request.form.get('token') or request.args.get('token')
         
         if not token:
             flash('Token inválido', 'error')
@@ -443,19 +501,14 @@ def register_routes(app):
         
         # Si el token ya fue verificado, redirigir al reseteo
         if token_data['verified']:
-            return redirect(url_for('main.resetear_contraseña', token=token))
+            return redirect(url_for('main.resetear_contraseña'))
         
-        if request.method == 'GET':
-            captcha = crear_captcha_challenge(token)
+        if request.method != 'POST':
+            return redirect(url_for('main.recuperar_contraseña'))
 
-            return render_template('auth/verificar_captcha.html',
-                                 token=token,
-                                 captcha_image=captcha['captcha_image'])
-        
-        elif request.method == 'POST':
-            ip = request.remote_addr or 'unknown'
-            if rate_limited(f'captcha:{ip}', limit=5, window_seconds=300):
-                flash('Demasiados intentos. Intenta de nuevo más tarde', 'error')
+        else:
+            if rate_limited(f'user:{token_data["usuario_id"]}', 'captcha', limit=5, window_seconds=300):
+                flash(RATE_LIMIT_MESSAGE, 'error')
                 captcha = crear_captcha_challenge(token)
                 return render_template('auth/verificar_captcha.html',
                                      token=token,
@@ -468,11 +521,10 @@ def register_routes(app):
                 actualizar_token_verificado(token)
                 session.pop(f'captcha_{token}', None)
                 if usuario_tiene_mfa_activado(token_data['usuario_id']):
-                    session.pop(f'recovery_otp_{token}', None)
-                    return redirect(url_for('main.verificar_otp_recuperacion', token=token))
+                    return render_template('auth/verificar_otp_recuperacion.html', token=token)
 
-                session.pop(f'recovery_otp_{token}', None)
-                return redirect(url_for('main.resetear_contraseña', token=token))
+                actualizar_token_otp_verificado(token)
+                return render_template('auth/resetear_contraseña.html', token=token)
             else:
                 flash('Respuesta incorrecta. Intenta de nuevo', 'error')
                 
@@ -483,9 +535,9 @@ def register_routes(app):
                                      token=token,
                                      captcha_image=captcha['captcha_image'])
 
-    @bp.route('/verificar_captcha/nuevo', methods=['GET'])
+    @bp.route('/verificar_captcha/nuevo', methods=['POST'])
     def nuevo_captcha():
-        token = request.args.get('token')
+        token = request.form.get('token')
 
         if not token:
             return jsonify({'ok': False, 'error': 'Token inválido'}), 400
@@ -499,7 +551,7 @@ def register_routes(app):
 
     @bp.route('/verificar_otp_recuperacion', methods=['GET', 'POST'])
     def verificar_otp_recuperacion():
-        token = request.args.get('token') or request.form.get('token')
+        token = request.form.get('token') or request.args.get('token')
 
         if not token:
             flash('Token inválido', 'error')
@@ -520,16 +572,16 @@ def register_routes(app):
             return redirect(url_for('main.recuperar_contraseña'))
 
         if not token_data['verified']:
-            return redirect(url_for('main.verificar_captcha', token=token))
+            captcha = crear_captcha_challenge(token)
+            return render_template('auth/verificar_captcha.html', token=token, captcha_image=captcha['captcha_image'])
 
         if not usuario_tiene_mfa_activado(token_data['usuario_id']):
-            session.pop(f'recovery_otp_{token}', None)
-            return redirect(url_for('main.resetear_contraseña', token=token))
+            actualizar_token_otp_verificado(token)
+            return render_template('auth/resetear_contraseña.html', token=token)
 
         if request.method == 'POST':
-            ip = request.remote_addr or 'unknown'
-            if rate_limited(f'recovery_otp:{ip}', limit=5, window_seconds=300):
-                flash('Demasiados intentos. Intenta de nuevo más tarde', 'error')
+            if rate_limited(f'user:{token_data["usuario_id"]}', 'recovery_otp', limit=5, window_seconds=300):
+                flash(RATE_LIMIT_MESSAGE, 'error')
                 return render_template('auth/verificar_otp_recuperacion.html', token=token)
 
             codigo_otp = request.form.get('codigo_otp', '').strip()
@@ -544,8 +596,8 @@ def register_routes(app):
                 return render_template('auth/verificar_otp_recuperacion.html', token=token)
 
             if validar_totp(totp_secret, codigo_otp):
-                session[f'recovery_otp_{token}'] = True
-                return redirect(url_for('main.resetear_contraseña', token=token))
+                actualizar_token_otp_verificado(token)
+                return render_template('auth/resetear_contraseña.html', token=token)
 
             flash('Código OTP inválido', 'error')
             return render_template('auth/verificar_otp_recuperacion.html', token=token)
@@ -554,7 +606,7 @@ def register_routes(app):
 
     @bp.route('/resetear_contraseña', methods=['GET', 'POST'])
     def resetear_contraseña():
-        token = request.args.get('token') or request.form.get('token')
+        token = request.form.get('token') or request.args.get('token')
         
         if not token:
             flash('Token inválido', 'error')
@@ -579,15 +631,15 @@ def register_routes(app):
         
         # Verificar que el CAPTCHA fue verificado
         if not token_data['verified']:
-            return redirect(url_for('main.verificar_captcha', token=token))
+            captcha = crear_captcha_challenge(token)
+            return render_template('auth/verificar_captcha.html', token=token, captcha_image=captcha['captcha_image'])
 
-        if usuario_tiene_mfa_activado(token_data['usuario_id']) and not session.get(f'recovery_otp_{token}'):
-            return redirect(url_for('main.verificar_otp_recuperacion', token=token))
+        if usuario_tiene_mfa_activado(token_data['usuario_id']) and not token_data.get('otp_verified'):
+            return render_template('auth/verificar_otp_recuperacion.html', token=token)
         
         if request.method == 'POST':
-            ip = request.remote_addr or 'unknown'
-            if rate_limited(f'reset:{ip}', limit=5, window_seconds=300):
-                flash('Demasiados intentos. Intenta de nuevo más tarde', 'error')
+            if rate_limited(f'user:{token_data["usuario_id"]}', 'reset', limit=5, window_seconds=300):
+                flash(RATE_LIMIT_MESSAGE, 'error')
                 return render_template('auth/resetear_contraseña.html', token=token)
             password_nueva = request.form.get('password_nueva', '')
             password_confirmar = request.form.get('password_confirmar', '')
@@ -606,7 +658,6 @@ def register_routes(app):
             if actualizar_password_usuario(token_data['usuario_id'], nueva_password_hash):
                 # Eliminar token usado
                 eliminar_token_recuperacion(token)
-                session.pop(f'recovery_otp_{token}', None)
                 flash('Contraseña actualizada exitosamente. Inicia sesión con tu nueva contraseña.', 'success')
                 return redirect(url_for('main.login'))
             else:
@@ -674,12 +725,11 @@ def register_routes(app):
         default_value = get_default_value(usuario['moneda']) if usuario else 30
         
         return render_template('forms/registrar.html', 
-                             usuario=usuario,
-                             ingresos=ingresos, 
-                             gastos=gastos, 
-                             inversiones=inversiones, 
-                             categorias=categorias,
-                             default_value=default_value)
+                     usuario=usuario,
+                     gastos=gastos, 
+                     inversiones=inversiones, 
+                     categorias=categorias,
+                     default_value=default_value)
 
     @bp.route('/reportes', methods=['GET'])
     def reportes():
@@ -1776,7 +1826,7 @@ def obtener_usuario_por_nombre(nombre_usuario):
             'SELECT id, nombre_usuario, password_hash, totp_secret, MFA, ultimo_login, nombre_completo, '
             'email, telefono, pais, ciudad, moneda, '
             'CASE WHEN foto_perfil IS NOT NULL THEN 1 ELSE 0 END AS foto_perfil, creado_en '
-            'FROM usuarios WHERE nombre_usuario = %s',
+            'FROM usuarios WHERE LOWER(TRIM(nombre_usuario)) = LOWER(TRIM(%s)) LIMIT 1',
             (nombre_usuario,)
         )
         usuario = cursor.fetchone()
@@ -2158,7 +2208,7 @@ def obtener_token_recuperacion(token):
         return None
     try:
         cursor = conn.cursor(dictionary=True)
-        cursor.execute('SELECT id, usuario_id, token, expires_at, captcha_attempt, verified, creado_en FROM password_reset_tokens WHERE token = %s', (token,))
+        cursor.execute('SELECT id, usuario_id, token, expires_at, captcha_attempt, verified, otp_verified, creado_en FROM password_reset_tokens WHERE token = %s', (token,))
         token_data = cursor.fetchone()
         cursor.close()
         return token_data
@@ -2187,6 +2237,21 @@ def actualizar_token_verificado(token):
     try:
         cursor = conn.cursor()
         cursor.execute('UPDATE password_reset_tokens SET verified = TRUE WHERE token = %s', (token,))
+        conn.commit()
+        cursor.close()
+        return True
+    except Exception as e:
+        return False
+    finally:
+        conn.close()
+
+def actualizar_token_otp_verificado(token):
+    conn = get_connection()
+    if conn is None:
+        return False
+    try:
+        cursor = conn.cursor()
+        cursor.execute('UPDATE password_reset_tokens SET otp_verified = TRUE WHERE token = %s', (token,))
         conn.commit()
         cursor.close()
         return True
