@@ -9,3 +9,4 @@ Werkzeug==2.3.0
 python-dotenv==1.0.0
 reportlab==4.4.9
 qrcode==8.2
+captcha==0.7.1

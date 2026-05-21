@@ -15,6 +15,15 @@
         background: var(--surface);
         border: 1px solid rgba(59, 130, 246, 0.2);
     }
+    .captcha-image {
+        width: 100%;
+        max-width: 320px;
+        border-radius: 18px;
+        border: 1px solid rgba(148, 163, 184, 0.35);
+        box-shadow: 0 18px 35px rgba(15, 23, 42, 0.18);
+        user-select: none;
+        -webkit-user-drag: none;
+    }
 </style>
 
 <div class="fluent-card p-6 sm:p-10 max-w-sm w-full flex flex-col items-center">
@@ -23,24 +32,65 @@
 
     <form method="post" class="space-y-8 w-full flex flex-col">
         <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
-        <input type="hidden" name="token" value="{{ token }}">
+        <input type="hidden" id="captcha-token" name="token" value="{{ token }}">
 
-        <div class="w-full flex flex-col items-center captcha-box p-8 rounded-3xl">
-            <p class="text-3xl font-black mb-6 tracking-tighter">{{ captcha_num1 }} + {{ captcha_num2 }} = ?</p>
-            <input type="number" name="captcha_answer" required autofocus
-                class="input-glass text-center text-2xl font-black py-4 w-full">
+        <div class="w-full flex flex-col items-center captcha-box p-8 rounded-3xl gap-5">
+            <img id="captcha-image" src="{{ captcha_image }}" alt="Captcha visual" class="captcha-image" draggable="false">
+            <input type="text" name="captcha_answer" required autofocus maxlength="6" minlength="6" autocomplete="off" autocapitalize="characters" spellcheck="false"
+                class="input-glass text-center text-2xl font-black py-4 w-full uppercase tracking-[0.35em]">
         </div>
-
-        <p class="text-center w-full text-xs font-black uppercase opacity-50 tracking-widest">
-            Intentos: <span class="opacity-100">{{ captcha_attempt }}/3</span>
-        </p>
 
         <div class="w-full flex justify-center">
             <button type="submit" class="btn-fluent justify-center py-4 flex items-center gap-2 whitespace-nowrap w-full sm:w-auto"><i class="fas fa-check"></i> Verificar</button>
         </div>
     </form>
     <div class="mt-8">
-        <a href="/recuperar_contraseña" class="text-blue-400 hover:text-blue-300 text-sm font-bold">Volver atrás</a>
+        <div class="flex items-center justify-center gap-4 text-sm font-bold">
+            <button type="button" id="refresh-captcha" data-refresh-url="{{ url_for('main.nuevo_captcha') }}" class="text-blue-400 hover:text-blue-300 bg-transparent p-0 border-0 font-bold">Cambiar captcha</button>
+            <span class="opacity-30">|</span>
+            <a href="/recuperar_contraseña" class="text-blue-400 hover:text-blue-300">Volver atrás</a>
+        </div>
     </div>
 </div>
+<script>
+(() => {
+    const refreshButton = document.getElementById('refresh-captcha');
+    const captchaImage = document.getElementById('captcha-image');
+    const captchaInput = document.querySelector('input[name="captcha_answer"]');
+    const tokenInput = document.getElementById('captcha-token');
+
+    if (!refreshButton || !captchaImage || !tokenInput) {
+        return;
+    }
+
+    const refreshUrl = refreshButton.dataset.refreshUrl;
+    const captchaToken = tokenInput.value;
+
+    const refreshCaptcha = async () => {
+        refreshButton.disabled = true;
+        try {
+            const response = await fetch(`${refreshUrl}?token=${encodeURIComponent(captchaToken)}`, {
+                headers: { 'X-Requested-With': 'XMLHttpRequest' }
+            });
+            const data = await response.json();
+
+            if (!response.ok || !data.ok) {
+                throw new Error(data.error || 'No se pudo recargar el captcha');
+            }
+
+            captchaImage.src = data.captcha_image;
+            if (captchaInput) {
+                captchaInput.value = '';
+                captchaInput.focus();
+            }
+        } catch (error) {
+            console.error(error);
+        } finally {
+            refreshButton.disabled = false;
+        }
+    };
+
+    refreshButton.addEventListener('click', refreshCaptcha);
+})();
+</script>
 {% endblock %}

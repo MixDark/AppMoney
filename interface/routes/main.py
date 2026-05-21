@@ -1,6 +1,7 @@
 from flask import render_template, request, redirect, url_for, session, flash, send_file, jsonify, current_app
 from flask import Blueprint
 from functools import wraps
+import base64
 import os
 from infrastructure.db import get_connection
 from infrastructure.validators import *
@@ -14,6 +15,7 @@ import time
 from threading import Lock
 import pandas as pd
 import traceback
+from captcha.image import ImageCaptcha
 from reportlab.lib.pagesizes import letter, A4
 from reportlab.lib import colors
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
@@ -49,6 +51,25 @@ def get_csrf_token():
         token = secrets.token_urlsafe(32)
         session['csrf_token'] = token
     return token
+
+def generar_codigo_captcha(length=5):
+    caracteres = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'
+    return ''.join(secrets.choice(caracteres) for _ in range(length))
+
+def generar_captcha_imagen(codigo):
+    captcha = ImageCaptcha(width=320, height=120)
+    buffer = BytesIO()
+    captcha.write(codigo, buffer)
+    imagen = buffer.getvalue()
+    return 'data:image/png;base64,' + base64.b64encode(imagen).decode('ascii')
+
+def crear_captcha_challenge(token):
+    captcha_code = generar_codigo_captcha(6)
+    session[f'captcha_{token}'] = captcha_code
+    return {
+        'captcha_code': captcha_code,
+        'captcha_image': generar_captcha_imagen(captcha_code),
+    }
 
 _rate_limit_lock = Lock()
 _rate_limit_state = {}
@@ -424,68 +445,112 @@ def register_routes(app):
         if token_data['verified']:
             return redirect(url_for('main.resetear_contraseña', token=token))
         
-        # Si ya alcanzó 3 intentos, bloquear
-        if token_data['captcha_attempt'] >= 3:
-            flash('Demasiados intentos. Solicita una nueva recuperación', 'error')
-            eliminar_token_recuperacion(token)
-            return redirect(url_for('main.recuperar_contraseña'))
-        
         if request.method == 'GET':
-            # Generar CAPTCHA (suma simple)
-            captcha_num1 = secrets.randbelow(50) + 1
-            captcha_num2 = secrets.randbelow(50) + 1
-            respuesta_correcta = captcha_num1 + captcha_num2
-            
-            # Guardar respuesta en sesión
-            session[f'captcha_{token}'] = respuesta_correcta
-            
-            return render_template('auth/verificar_captcha.html', 
-                                 token=token, 
-                                 captcha_num1=captcha_num1, 
-                                 captcha_num2=captcha_num2,
-                                 captcha_attempt=token_data['captcha_attempt'])
+            captcha = crear_captcha_challenge(token)
+
+            return render_template('auth/verificar_captcha.html',
+                                 token=token,
+                                 captcha_image=captcha['captcha_image'])
         
         elif request.method == 'POST':
             ip = request.remote_addr or 'unknown'
             if rate_limited(f'captcha:{ip}', limit=5, window_seconds=300):
                 flash('Demasiados intentos. Intenta de nuevo más tarde', 'error')
-                return render_template('auth/verificar_captcha.html', token=token)
-            respuesta_usuario = request.form.get('captcha_answer', '')
+                captcha = crear_captcha_challenge(token)
+                return render_template('auth/verificar_captcha.html',
+                                     token=token,
+                                     captcha_image=captcha['captcha_image'])
+            respuesta_usuario = request.form.get('captcha_answer', '').strip().upper()
             respuesta_correcta = session.get(f'captcha_{token}')
-            
-            try:
-                respuesta_usuario = int(respuesta_usuario)
-            except ValueError:
-                respuesta_usuario = None
             
             if respuesta_usuario == respuesta_correcta:
                 # CAPTCHA correcto, marcar token como verificado
                 actualizar_token_verificado(token)
                 session.pop(f'captcha_{token}', None)
+                if usuario_tiene_mfa_activado(token_data['usuario_id']):
+                    session.pop(f'recovery_otp_{token}', None)
+                    return redirect(url_for('main.verificar_otp_recuperacion', token=token))
+
+                session.pop(f'recovery_otp_{token}', None)
                 return redirect(url_for('main.resetear_contraseña', token=token))
             else:
-                # Incrementar intentos fallidos
-                nuevos_intentos = token_data['captcha_attempt'] + 1
-                incrementar_intentos_captcha(token, nuevos_intentos)
-                
-                if nuevos_intentos >= 3:
-                    flash('Demasiados intentos incorrectos. Solicita una nueva recuperación', 'error')
-                    eliminar_token_recuperacion(token)
-                    return redirect(url_for('main.recuperar_contraseña'))
-                
                 flash('Respuesta incorrecta. Intenta de nuevo', 'error')
                 
                 # Generar nuevo CAPTCHA
-                captcha_num1 = secrets.randbelow(50) + 1
-                captcha_num2 = secrets.randbelow(50) + 1
-                respuesta_correcta_nueva = captcha_num1 + captcha_num2
-                session[f'captcha_{token}'] = respuesta_correcta_nueva
-                
-                return render_template('auth/verificar_captcha.html', 
-                                     token=token, 
-                                     captcha_num1=captcha_num1, 
-                                     captcha_num2=captcha_num2,
-                                     captcha_attempt=nuevos_intentos)
+                captcha = crear_captcha_challenge(token)
+
+                return render_template('auth/verificar_captcha.html',
+                                     token=token,
+                                     captcha_image=captcha['captcha_image'])
+
+    @bp.route('/verificar_captcha/nuevo', methods=['GET'])
+    def nuevo_captcha():
+        token = request.args.get('token')
+
+        if not token:
+            return jsonify({'ok': False, 'error': 'Token inválido'}), 400
+
+        token_data = obtener_token_recuperacion(token)
+        if not token_data:
+            return jsonify({'ok': False, 'error': 'Token inválido o expirado'}), 400
+
+        captcha = crear_captcha_challenge(token)
+        return jsonify({'ok': True, 'captcha_image': captcha['captcha_image']})
+
+    @bp.route('/verificar_otp_recuperacion', methods=['GET', 'POST'])
+    def verificar_otp_recuperacion():
+        token = request.args.get('token') or request.form.get('token')
+
+        if not token:
+            flash('Token inválido', 'error')
+            return redirect(url_for('main.recuperar_contraseña'))
+
+        token_data = obtener_token_recuperacion(token)
+        if not token_data:
+            flash('Token inválido o expirado', 'error')
+            return redirect(url_for('main.recuperar_contraseña'))
+
+        expires_at = token_data['expires_at']
+        if isinstance(expires_at, str):
+            expires_at = datetime.fromisoformat(expires_at)
+
+        if expires_at < datetime.now():
+            flash('El enlace de recuperación ha expirado', 'error')
+            eliminar_token_recuperacion(token)
+            return redirect(url_for('main.recuperar_contraseña'))
+
+        if not token_data['verified']:
+            return redirect(url_for('main.verificar_captcha', token=token))
+
+        if not usuario_tiene_mfa_activado(token_data['usuario_id']):
+            session.pop(f'recovery_otp_{token}', None)
+            return redirect(url_for('main.resetear_contraseña', token=token))
+
+        if request.method == 'POST':
+            ip = request.remote_addr or 'unknown'
+            if rate_limited(f'recovery_otp:{ip}', limit=5, window_seconds=300):
+                flash('Demasiados intentos. Intenta de nuevo más tarde', 'error')
+                return render_template('auth/verificar_otp_recuperacion.html', token=token)
+
+            codigo_otp = request.form.get('codigo_otp', '').strip()
+            valid, msg = validate_totp(codigo_otp)
+            if not valid:
+                flash(msg, 'error')
+                return render_template('auth/verificar_otp_recuperacion.html', token=token)
+
+            totp_secret = obtener_totp_secret_usuario(token_data['usuario_id'])
+            if not totp_secret:
+                flash('Error: MFA no configurado correctamente', 'error')
+                return render_template('auth/verificar_otp_recuperacion.html', token=token)
+
+            if validar_totp(totp_secret, codigo_otp):
+                session[f'recovery_otp_{token}'] = True
+                return redirect(url_for('main.resetear_contraseña', token=token))
+
+            flash('Código OTP inválido', 'error')
+            return render_template('auth/verificar_otp_recuperacion.html', token=token)
+
+        return render_template('auth/verificar_otp_recuperacion.html', token=token)
 
     @bp.route('/resetear_contraseña', methods=['GET', 'POST'])
     def resetear_contraseña():
@@ -515,6 +580,9 @@ def register_routes(app):
         # Verificar que el CAPTCHA fue verificado
         if not token_data['verified']:
             return redirect(url_for('main.verificar_captcha', token=token))
+
+        if usuario_tiene_mfa_activado(token_data['usuario_id']) and not session.get(f'recovery_otp_{token}'):
+            return redirect(url_for('main.verificar_otp_recuperacion', token=token))
         
         if request.method == 'POST':
             ip = request.remote_addr or 'unknown'
@@ -538,6 +606,7 @@ def register_routes(app):
             if actualizar_password_usuario(token_data['usuario_id'], nueva_password_hash):
                 # Eliminar token usado
                 eliminar_token_recuperacion(token)
+                session.pop(f'recovery_otp_{token}', None)
                 flash('Contraseña actualizada exitosamente. Inicia sesión con tu nueva contraseña.', 'success')
                 return redirect(url_for('main.login'))
             else:

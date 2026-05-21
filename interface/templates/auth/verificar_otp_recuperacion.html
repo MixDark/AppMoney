@@ -1,0 +1,41 @@
+{% extends 'layout/base.html' %}
+{% block title %}OTP de recuperación - App Money{% endblock %}
+{% block content %}
+<style>
+    .form-label {
+        display: block;
+        font-size: 0.75rem;
+        font-weight: 700;
+        letter-spacing: 0.1em;
+        text-transform: uppercase;
+        color: var(--text-secondary);
+        margin-bottom: 8px;
+    }
+</style>
+
+<div class="fluent-card form-card p-8 max-w-md w-full flex flex-col items-center">
+    <h2 class="text-2xl font-black mb-2 text-center text-white">Verificación OTP</h2>
+    <p class="text-center text-xs font-bold uppercase tracking-widest opacity-60 mb-8">Ingresa el código de tu app autenticadora para continuar</p>
+
+    <form method="post" class="space-y-8 w-full flex flex-col">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+        <input type="hidden" name="token" value="{{ token }}">
+
+        <div class="w-full">
+            <label class="form-label">Código OTP</label>
+            <input type="text" name="codigo_otp" required maxlength="6" minlength="6" inputmode="numeric" autocomplete="off" spellcheck="false"
+                class="input-glass text-center text-2xl font-black tracking-[0.4em]">
+        </div>
+
+        <div class="w-full flex justify-center">
+            <button type="submit" class="btn-fluent px-10 py-2 justify-center flex items-center gap-2 whitespace-nowrap text-sm">
+                <i class="fas fa-shield-alt"></i> Verificar
+            </button>
+        </div>
+    </form>
+
+    <div class="mt-6">
+        <a href="{{ url_for('main.verificar_captcha', token=token) }}" class="text-blue-400 hover:text-blue-300 text-xs font-bold">Volver al captcha</a>
+    </div>
+</div>
+{% endblock %}
