@@ -26,7 +26,7 @@ def _user_from_cache(cached_usuario):
         cached_usuario.get('id'),
         cached_usuario.get('nombre_usuario', ''),
         cached_usuario.get('foto_perfil', False),
-        cached_usuario.get('moneda', 'USD')
+        (cached_usuario.get('moneda') or 'USD').upper()
     )
 
 
@@ -52,14 +52,14 @@ def load_user(user_id):
                 'id': usuario['id'],
                 'nombre_usuario': usuario['nombre_usuario'],
                 'foto_perfil': bool(usuario['foto_perfil']),
-                'moneda': usuario['moneda'],
+                'moneda': (usuario['moneda'] or 'USD').upper(),
             }
             session['usuario_cache'] = cached_usuario
             return User(
                 usuario['id'], 
                 usuario['nombre_usuario'], 
                 usuario['foto_perfil'], 
-                usuario['moneda']
+                (usuario['moneda'] or 'USD').upper()
             )
     except Exception as e:
         pass

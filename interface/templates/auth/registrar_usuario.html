@@ -56,8 +56,9 @@
         <div class="w-full">
             <label class="form-label">Moneda preferida</label>
             <select name="moneda" class="input-glass appearance-none cursor-pointer">
+                {% set moneda_seleccionada = request.form.get('moneda', 'USD') %}
                 {% for code, name in currencies_list %}
-                    <option value="{{ code }}" {% if code == 'USD' %}selected{% endif %}>{{ name }}</option>
+                    <option value="{{ code }}" {% if code == moneda_seleccionada %}selected{% endif %}>{{ name }}</option>
                 {% endfor %}
             </select>
         </div>

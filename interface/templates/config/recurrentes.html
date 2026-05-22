@@ -27,6 +27,15 @@
     .table-row:hover {
         background: var(--surface-contrast);
     }
+    /* Forzar color blanco en el icono del selector de fecha */
+    input[type="date"]::-webkit-calendar-picker-indicator {
+        filter: invert(1) brightness(1) saturate(0);
+    }
+    input[type="date"]::-webkit-datetime-edit-year-field,
+    input[type="date"]::-webkit-datetime-edit-month-field,
+    input[type="date"]::-webkit-datetime-edit-day-field {
+        color: #fff;
+    }
     .action-btn {
         padding: 4px 6px;
         border-radius: 8px;
@@ -168,7 +177,6 @@
         <div class="flex flex-col justify-end w-fit recurrente-actions">
             <div class="flex gap-2 recurrente-actions-inner">
                 <button type="submit" id="submitRecurrente" class="btn-fluent h-12 px-6 justify-center flex items-center gap-2 whitespace-nowrap"><i class="fas fa-clock"></i> Programar</button>
-                <button type="button" id="cancelRecurrente" class="btn-fluent h-12 px-6 btn-red opacity-80 hidden"><i class="fas fa-times"></i> Cancelar</button>
             </div>
         </div>
     </form>

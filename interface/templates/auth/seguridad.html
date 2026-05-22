@@ -17,6 +17,10 @@
         cursor: pointer;
         scale: 1.25;
     }
+    .activity-item {
+        background: rgba(15, 23, 42, 0.28);
+        border: 1px solid rgba(59, 130, 246, 0.12);
+    }
 </style>
 
 <div class="fluent-card p-10 max-w-4xl w-full mx-auto">
@@ -51,14 +55,51 @@
 
         <!-- Último Login -->
         <div class="security-card p-8 rounded-3xl">
-            <div class="flex items-center gap-4 mb-4">
+            <div class="flex items-center gap-4 mb-5">
                 <i class="fas fa-history opacity-60 text-xl"></i>
                 <h4 class="font-black uppercase tracking-widest text-xs opacity-70">Actividad de la cuenta</h4>
             </div>
-            <p class="text-lg font-semibold">
-                Último inicio de sesión:
-                <span class="font-black text-blue-400 ml-2">{{ usuario.ultimo_login|format_date if usuario.ultimo_login else 'Primer ingreso' }}</span>
-            </p>
+            <div class="mb-6">
+                <p class="text-lg font-semibold">
+                    Último inicio de sesión:
+                    <span class="font-black text-blue-400 ml-2">{{ usuario.ultimo_login|format_date if usuario.ultimo_login else 'Primer ingreso' }}</span>
+                </p>
+            </div>
+
+            <div class="space-y-3">
+                {% if actividad_seguridad %}
+                    {% for actividad in actividad_seguridad %}
+                    <div class="activity-item rounded-2xl p-4 flex items-center gap-4">
+                        <div class="w-11 h-11 rounded-xl flex items-center justify-center shrink-0
+                            {% if actividad.nivel == 'warning' %}bg-amber-500/15 text-amber-300{% elif actividad.nivel == 'success' %}bg-emerald-500/15 text-emerald-300{% else %}bg-blue-500/15 text-blue-300{% endif %}">
+                            {% if '2FA' in actividad.evento %}
+                            <i class="fas fa-shield-alt"></i>
+                            {% elif 'OTP' in actividad.evento %}
+                            <i class="fas fa-key"></i>
+                            {% elif 'Captcha' in actividad.evento or 'captcha' in actividad.evento|lower %}
+                            <i class="fas fa-circle-check"></i>
+                            {% elif 'Contraseña' in actividad.evento %}
+                            <i class="fas fa-lock"></i>
+                            {% else %}
+                            <i class="fas fa-user-clock"></i>
+                            {% endif %}
+                        </div>
+                        <div class="flex-1 min-w-0">
+                            <div class="flex items-center justify-between gap-4">
+                                <p class="font-black text-sm tracking-tight">{{ actividad.evento }}</p>
+                                <span class="text-[11px] uppercase tracking-[0.2em] opacity-50 shrink-0 text-right">{{ actividad.creado_en }}</span>
+                            </div>
+                            <p class="text-sm opacity-70 mt-1">{{ actividad.detalle }}</p>
+                        </div>
+                    </div>
+                    {% endfor %}
+                {% else %}
+                    <div class="text-center py-8 opacity-50">
+                        <i class="fas fa-shield-halved text-2xl mb-3"></i>
+                        <p class="font-semibold">Aún no hay actividad de seguridad registrada.</p>
+                    </div>
+                {% endif %}
+            </div>
         </div>
     </div>
 

@@ -32,6 +32,10 @@
         border-radius: 10px;
         transition: width 0.3s ease;
     }
+    .history-item {
+        background: rgba(15, 23, 42, 0.35);
+        border: 1px solid rgba(59, 130, 246, 0.15);
+    }
 </style>
 <div class="fluent-card p-10 max-w-6xl w-full">
     <h2 class="page-title mb-2 text-center">Mis metas de ahorro</h2>
@@ -74,13 +78,17 @@
                 </div>
             </div>
 
-            <p class="text-sm font-semibold opacity-70 mb-6">Faltan: <span class="text-blue-400">{% if currency_code == 'COP' %}{{ (m.monto_objetivo - m.monto_actual)|currency_with_code(currency_code) }}{% else %}{{ currency_code }} {{ (m.monto_objetivo - m.monto_actual)|format_money }}{% endif %}</span></p>
+            <p class="text-sm font-semibold opacity-70 mb-6">Faltan: <span class="text-blue-400">{% if m.porcentaje >= 100 %}{% if currency_code == 'COP' %}{{ 0|currency_with_code(currency_code) }}{% else %}{{ currency_code }} {{ 0|format_money }}{% endif %}{% else %}{% if currency_code == 'COP' %}{{ (m.monto_objetivo - m.monto_actual)|currency_with_code(currency_code) }}{% else %}{{ currency_code }} {{ (m.monto_objetivo - m.monto_actual)|format_money }}{% endif %}{% endif %}</span></p>
 
             <div class="flex gap-3 w-full">
+                {% if m.porcentaje >= 100 %}
+                <button type="button" class="btn-fluent btn-green flex-1 py-2 px-3 text-xs justify-center flex items-center gap-1 whitespace-nowrap js-ver-historial-meta" data-id="{{ m.id }}" data-nombre="{{ m.nombre|e }}"><i class="fas fa-eye"></i> Ver</button>
+                {% else %}
                 <button type="button" class="btn-fluent btn-green flex-1 py-2 px-3 text-xs justify-center flex items-center gap-1 whitespace-nowrap js-aportar" data-id="{{ m.id }}" data-nombre="{{ m.nombre|e }}"><i class="fas fa-plus"></i> Aportar</button>
                 <button type="button" class="btn-fluent btn-red flex-1 py-2 px-3 text-xs flex items-center justify-center gap-2 whitespace-nowrap js-eliminar" data-id="{{ m.id }}" data-nombre="{{ m.nombre|e }}">
                     <i class="fas fa-trash"></i> Eliminar
                 </button>
+                {% endif %}
             </div>
         </div>
         {% endfor %}
@@ -118,8 +126,40 @@
     </div>
 </div>
 
+<!-- Modal Histórico -->
+<div id="modalHistorial" class="fixed inset-0 bg-black/60 hidden items-center justify-center z-50">
+    <div class="fluent-card p-10 max-w-lg w-full mx-4 max-h-[85vh] overflow-hidden flex flex-col">
+        <div class="flex items-start justify-between gap-4 mb-6">
+            <div>
+                <h3 class="text-2xl font-black uppercase tracking-tight">Histórico de Meta</h3>
+                <p id="nombreMetaHistorial" class="text-xs font-black uppercase opacity-60 mt-1"></p>
+            </div>
+            <button onclick="cerrarModalHistorial()" class="btn-fluent px-4 py-2"><i class="fas fa-times"></i></button>
+        </div>
+        <div id="contenidoHistorial" class="space-y-3 overflow-y-auto pr-2"></div>
+    </div>
+</div>
+
 <script>
     let metaActualId = null;
+    const currencyCode = "{{ currency_code|default('USD') }}";
+
+    function formatoMoneda(valor) {
+        const numero = Number(valor) || 0;
+        const formateador = new Intl.NumberFormat('es-CO', {
+            minimumFractionDigits: 2,
+            maximumFractionDigits: 2,
+        });
+        if (currencyCode === 'COP') {
+            return new Intl.NumberFormat('es-CO', {
+                style: 'currency',
+                currency: 'COP',
+                minimumFractionDigits: 2,
+                maximumFractionDigits: 2,
+            }).format(numero);
+        }
+        return `${currencyCode} ${formateador.format(numero)}`;
+    }
     
     function abrirModalAportar(metaId, nombreMeta) {
         metaActualId = metaId;
@@ -156,7 +196,6 @@
         .then(data => {
             if (data.success) {
                 cerrarModalAportar();
-                // Recargar la página para actualizar los datos
                 location.reload();
             } else {
                 window.showToast('Error: ' + data.message, 'error');
@@ -184,6 +223,54 @@
     function confirmarEliminar() {
         window.location.href = '/eliminar_meta/' + metaActualId;
     }
+
+    function abrirModalHistorial(metaId, nombreMeta) {
+        metaActualId = metaId;
+        document.getElementById('nombreMetaHistorial').textContent = nombreMeta;
+        const contenido = document.getElementById('contenidoHistorial');
+        contenido.innerHTML = '<div class="text-center py-8 opacity-60">Cargando histórico...</div>';
+
+        const modal = document.getElementById('modalHistorial');
+        modal.classList.remove('hidden');
+        modal.classList.add('flex');
+
+        fetch('/historial_meta/' + metaId)
+            .then(response => response.json())
+            .then(data => {
+                if (!data.success) {
+                    contenido.innerHTML = '<div class="text-center py-8 text-red-400">No se pudo cargar el histórico.</div>';
+                    return;
+                }
+
+                if (!data.historial || !data.historial.length) {
+                    contenido.innerHTML = '<div class="text-center py-8 opacity-60">No hay registros históricos.</div>';
+                    return;
+                }
+
+                contenido.innerHTML = data.historial.map((item, index) => `
+                    <div class="history-item rounded-2xl p-4 flex items-center justify-between gap-4">
+                        <div>
+                            <p class="text-sm font-black uppercase tracking-wide">Paso ${index + 1}</p>
+                            <p class="text-xs opacity-60 mt-1">${item.creado_en}</p>
+                        </div>
+                        <div class="text-right">
+                            <p class="text-sm font-black">${formatoMoneda(item.monto_actual)} / ${formatoMoneda(item.monto_objetivo)}</p>
+                            <p class="text-xs opacity-70">${Number(item.porcentaje).toFixed(1)}% completado</p>
+                        </div>
+                    </div>
+                `).join('');
+            })
+            .catch(() => {
+                contenido.innerHTML = '<div class="text-center py-8 text-red-400">Error al cargar el histórico.</div>';
+            });
+    }
+
+    function cerrarModalHistorial() {
+        const modal = document.getElementById('modalHistorial');
+        modal.classList.add('hidden');
+        modal.classList.remove('flex');
+        metaActualId = null;
+    }
     
     // Cerrar modales al hacer clic afuera
     document.getElementById('modalAportar')?.addEventListener('click', function(e) {
@@ -209,6 +296,16 @@
         button.addEventListener('click', () => {
             abrirModalEliminar(button.dataset.id, button.dataset.nombre || '');
         });
+    });
+
+    document.querySelectorAll('.js-ver-historial-meta').forEach((button) => {
+        button.addEventListener('click', () => {
+            abrirModalHistorial(button.dataset.id, button.dataset.nombre || '');
+        });
+    });
+
+    document.getElementById('modalHistorial')?.addEventListener('click', function(e) {
+        if (e.target === this) cerrarModalHistorial();
     });
 </script>
 {% endblock %}

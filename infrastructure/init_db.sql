@@ -19,6 +19,19 @@ CREATE TABLE IF NOT EXISTS usuarios (
     creado_en TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
+-- Tabla de actividad de seguridad
+CREATE TABLE IF NOT EXISTS seguridad_actividad (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    usuario_id INT NOT NULL,
+    evento VARCHAR(80) NOT NULL,
+    detalle VARCHAR(255) NOT NULL,
+    nivel VARCHAR(20) NOT NULL DEFAULT 'info',
+    creado_en TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (usuario_id) REFERENCES usuarios(id) ON DELETE CASCADE
+);
+
+CREATE INDEX idx_seguridad_actividad_usuario_fecha ON seguridad_actividad (usuario_id, creado_en);
+
 -- Tabla de ingresos
 CREATE TABLE IF NOT EXISTS ingresos (
     id INT AUTO_INCREMENT PRIMARY KEY,
@@ -76,6 +89,20 @@ CREATE TABLE IF NOT EXISTS metas (
     FOREIGN KEY (usuario_id) REFERENCES usuarios(id) ON DELETE CASCADE
 );
 
+CREATE TABLE IF NOT EXISTS meta_historial (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    meta_id INT NOT NULL,
+    usuario_id INT NOT NULL,
+    monto_objetivo DECIMAL(10,2) NOT NULL,
+    monto_actual DECIMAL(10,2) NOT NULL,
+    porcentaje DECIMAL(5,2) NOT NULL,
+    creado_en TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (usuario_id) REFERENCES usuarios(id) ON DELETE CASCADE,
+    FOREIGN KEY (meta_id) REFERENCES metas(id) ON DELETE CASCADE
+);
+
+CREATE INDEX idx_meta_historial_meta_fecha ON meta_historial (meta_id, creado_en);
+
 -- Tabla de categorías
 CREATE TABLE IF NOT EXISTS categorias (
     id INT AUTO_INCREMENT PRIMARY KEY,
@@ -101,6 +128,20 @@ CREATE TABLE IF NOT EXISTS presupuestos (
 );
 
 CREATE INDEX idx_presupuestos_usuario_categoria ON presupuestos (usuario_id, categoria_id);
+
+CREATE TABLE IF NOT EXISTS presupuesto_historial (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    presupuesto_id INT NOT NULL,
+    usuario_id INT NOT NULL,
+    monto_limite DECIMAL(10,2) NOT NULL,
+    gastado DECIMAL(10,2) NOT NULL,
+    porcentaje DECIMAL(5,2) NOT NULL,
+    creado_en TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (usuario_id) REFERENCES usuarios(id) ON DELETE CASCADE,
+    FOREIGN KEY (presupuesto_id) REFERENCES presupuestos(id) ON DELETE CASCADE
+);
+
+CREATE INDEX idx_presupuesto_historial_presupuesto_fecha ON presupuesto_historial (presupuesto_id, creado_en);
 
 -- Tabla de transacciones recurrentes
 CREATE TABLE IF NOT EXISTS transacciones_recurrentes (

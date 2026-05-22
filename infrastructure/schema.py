@@ -48,6 +48,52 @@ def ensure_schema():
             """
         )
 
+        cursor.execute(
+            """
+            CREATE TABLE IF NOT EXISTS seguridad_actividad (
+                id BIGINT AUTO_INCREMENT PRIMARY KEY,
+                usuario_id INT NOT NULL,
+                evento VARCHAR(80) NOT NULL,
+                detalle VARCHAR(255) NOT NULL,
+                nivel VARCHAR(20) NOT NULL DEFAULT 'info',
+                creado_en TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (usuario_id) REFERENCES usuarios(id) ON DELETE CASCADE
+            )
+            """
+        )
+
+        cursor.execute(
+            """
+            CREATE TABLE IF NOT EXISTS meta_historial (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                meta_id INT NOT NULL,
+                usuario_id INT NOT NULL,
+                monto_objetivo DECIMAL(10,2) NOT NULL,
+                monto_actual DECIMAL(10,2) NOT NULL,
+                porcentaje DECIMAL(5,2) NOT NULL,
+                creado_en TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (usuario_id) REFERENCES usuarios(id) ON DELETE CASCADE,
+                FOREIGN KEY (meta_id) REFERENCES metas(id) ON DELETE CASCADE
+            )
+            """
+        )
+
+        cursor.execute(
+            """
+            CREATE TABLE IF NOT EXISTS presupuesto_historial (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                presupuesto_id INT NOT NULL,
+                usuario_id INT NOT NULL,
+                monto_limite DECIMAL(10,2) NOT NULL,
+                gastado DECIMAL(10,2) NOT NULL,
+                porcentaje DECIMAL(5,2) NOT NULL,
+                creado_en TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (usuario_id) REFERENCES usuarios(id) ON DELETE CASCADE,
+                FOREIGN KEY (presupuesto_id) REFERENCES presupuestos(id) ON DELETE CASCADE
+            )
+            """
+        )
+
         # Índices compuestos para acelerar listados, filtros y reportes
         index_statements = [
             ("ingresos", "idx_ingresos_usuario_fecha", "(usuario_id, fecha, id)"),
@@ -58,6 +104,9 @@ def ensure_schema():
             ("inversiones", "idx_inversiones_usuario_categoria", "(usuario_id, categoria_id, fecha)"),
             ("categorias", "idx_categorias_usuario_tipo", "(usuario_id, tipo)"),
             ("presupuestos", "idx_presupuestos_usuario_categoria", "(usuario_id, categoria_id)"),
+            ("seguridad_actividad", "idx_seguridad_actividad_usuario_fecha", "(usuario_id, creado_en)"),
+            ("meta_historial", "idx_meta_historial_meta_fecha", "(meta_id, creado_en)"),
+            ("presupuesto_historial", "idx_presupuesto_historial_presupuesto_fecha", "(presupuesto_id, creado_en)"),
             ("transacciones_recurrentes", "idx_recurrentes_usuario_activo_fecha", "(usuario_id, activo, proxima_fecha)"),
             ("password_reset_tokens", "idx_reset_tokens_token", "(token)"),
             ("password_reset_tokens", "idx_reset_tokens_usuario", "(usuario_id, expires_at)"),

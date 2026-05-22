@@ -52,19 +52,16 @@
                 <input type="text" name="nombre_completo" value="{{ usuario.nombre_completo or '' }}" class="input-glass">
             </div>
 
-            <!-- Email -->
             <div>
                 <label class="form-label">Email</label>
-                <input type="email" name="email" value="{{ usuario.email or '' }}" class="input-glass">
+                <input type="email" name="email" value="{{ usuario.email or '' }}" class="input-glass" >
             </div>
 
-            <!-- Teléfono -->
             <div>
                 <label class="form-label">Teléfono</label>
                 <input type="tel" name="telefono" value="{{ usuario.telefono or '' }}" class="input-glass">
             </div>
 
-            <!-- País -->
             <div>
                 <label class="form-label">País</label>
                 <input type="text" name="pais" value="{{ usuario.pais or '' }}" class="input-glass">
@@ -73,12 +70,12 @@
             <!-- Ciudad -->
             <div>
                 <label class="form-label">Ciudad</label>
-                <input type="text" name="ciudad" value="{{ usuario.ciudad or '' }}" class="input-glass">
+                <input type="text" name="ciudad" value="{{ usuario.ciudad or '' }}" class="input-glass" >
             </div>
         </div>
         </div>
         <!-- Botones -->
-        <div class="flex flex-col sm:flex-row gap-4 justify-end pt-8 border-t border-slate-700">
+        <div class="flex flex-col sm:flex-row gap-4 justify-end pt-8">
             <a href="/" class="btn-fluent btn-red px-6 flex items-center gap-2 whitespace-nowrap w-full sm:w-auto"><i class="fas fa-arrow-left"></i> Volver</a>
             <button type="submit" class="btn-fluent px-6 flex items-center gap-2 whitespace-nowrap w-full sm:w-auto">
                 <i class="fas fa-save"></i> Guardar

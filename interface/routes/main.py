@@ -170,7 +170,7 @@ def _serialize_usuario_cache(usuario):
         'telefono': usuario.get('telefono'),
         'pais': usuario.get('pais'),
         'ciudad': usuario.get('ciudad'),
-        'moneda': usuario.get('moneda', 'USD'),
+        'moneda': (usuario.get('moneda') or 'USD').upper(),
         'MFA': bool(usuario.get('MFA')),
         'ultimo_login': usuario.get('ultimo_login'),
         'foto_perfil': bool(usuario.get('foto_perfil')),
@@ -198,6 +198,7 @@ def get_current_usuario(refresh=False):
 
     usuario = obtener_usuario_por_id(session['usuario_id'])
     if usuario:
+        usuario['moneda'] = (usuario.get('moneda') or 'USD').upper()
         _store_usuario_cache(usuario)
     return usuario
 
@@ -346,6 +347,7 @@ def register_routes(app):
             if not usuario:
                 flash('Usuario no encontrado', 'error')
             elif not check_password_hash(usuario['password_hash'], password):
+                registrar_actividad_seguridad(usuario['id'], 'Inicio de sesión fallido', 'Contraseña incorrecta', 'warning')
                 flash('Contraseña incorrecta', 'error')
             else:
                 # Usuario y contraseña son correctos
@@ -361,6 +363,7 @@ def register_routes(app):
                 else:
                     # Sin MFA, hacer login directo
                     actualizar_ultimo_login(usuario['id'])
+                    registrar_actividad_seguridad(usuario['id'], 'Inicio de sesión exitoso', 'Acceso sin verificación 2FA', 'info')
                     session.permanent = True
                     session['usuario_id'] = usuario['id']
                     _store_usuario_cache(usuario)
@@ -432,6 +435,7 @@ def register_routes(app):
             usuario = obtener_usuario_por_id(usuario_id)
             if usuario:
                 actualizar_ultimo_login(usuario_id)
+                registrar_actividad_seguridad(usuario_id, 'OTP verificado', 'Ingreso completado con autenticación de dos factores', 'info')
                 session.permanent = True
                 session['usuario_id'] = usuario_id
                 _store_usuario_cache(usuario)
@@ -441,6 +445,7 @@ def register_routes(app):
             else:
                 return jsonify({'exito': False, 'mensaje': 'Error: Usuario no encontrado'}), 400
         else:
+            registrar_actividad_seguridad(usuario_id, 'OTP fallido', 'Código OTP inválido', 'warning')
             # OTP incorrecto
             return jsonify({'exito': False, 'mensaje': 'Código OTP inválido'}), 401
 
@@ -519,6 +524,7 @@ def register_routes(app):
             if respuesta_usuario == respuesta_correcta:
                 # CAPTCHA correcto, marcar token como verificado
                 actualizar_token_verificado(token)
+                registrar_actividad_seguridad(token_data['usuario_id'], 'Captcha verificado', 'Se completó correctamente la validación CAPTCHA', 'info')
                 session.pop(f'captcha_{token}', None)
                 if usuario_tiene_mfa_activado(token_data['usuario_id']):
                     return render_template('auth/verificar_otp_recuperacion.html', token=token)
@@ -526,6 +532,7 @@ def register_routes(app):
                 actualizar_token_otp_verificado(token)
                 return render_template('auth/resetear_contraseña.html', token=token)
             else:
+                registrar_actividad_seguridad(token_data['usuario_id'], 'Captcha fallido', 'Respuesta incorrecta en la validación CAPTCHA', 'warning')
                 flash('Respuesta incorrecta. Intenta de nuevo', 'error')
                 
                 # Generar nuevo CAPTCHA
@@ -597,8 +604,10 @@ def register_routes(app):
 
             if validar_totp(totp_secret, codigo_otp):
                 actualizar_token_otp_verificado(token)
+                registrar_actividad_seguridad(token_data['usuario_id'], 'OTP de recuperación verificado', 'Se validó correctamente el código OTP para recuperación', 'info')
                 return render_template('auth/resetear_contraseña.html', token=token)
 
+            registrar_actividad_seguridad(token_data['usuario_id'], 'OTP de recuperación fallido', 'Código OTP inválido durante recuperación', 'warning')
             flash('Código OTP inválido', 'error')
             return render_template('auth/verificar_otp_recuperacion.html', token=token)
 
@@ -646,21 +655,25 @@ def register_routes(app):
             
             valid, msg = validate_password(password_nueva)
             if not valid:
+                registrar_actividad_seguridad(token_data['usuario_id'], 'Cambio de contraseña fallido', msg, 'warning')
                 flash(msg, 'error')
                 return render_template('auth/resetear_contraseña.html', token=token)
             
             if password_nueva != password_confirmar:
+                registrar_actividad_seguridad(token_data['usuario_id'], 'Cambio de contraseña fallido', 'Las contraseñas no coinciden', 'warning')
                 flash('Las contraseñas no coinciden', 'error')
                 return render_template('auth/resetear_contraseña.html', token=token)
             
             # Actualizar contraseña
             nueva_password_hash = generate_password_hash(password_nueva)
             if actualizar_password_usuario(token_data['usuario_id'], nueva_password_hash):
+                registrar_actividad_seguridad(token_data['usuario_id'], 'Contraseña restablecida', 'Cambio de contraseña desde recuperación', 'info')
                 # Eliminar token usado
                 eliminar_token_recuperacion(token)
                 flash('Contraseña actualizada exitosamente. Inicia sesión con tu nueva contraseña.', 'success')
                 return redirect(url_for('main.login'))
             else:
+                registrar_actividad_seguridad(token_data['usuario_id'], 'Cambio de contraseña fallido', 'No se pudo guardar la nueva contraseña', 'warning')
                 flash('Error al actualizar la contraseña', 'error')
         
         return render_template('auth/resetear_contraseña.html', token=token)
@@ -807,7 +820,7 @@ def register_routes(app):
                 telefono = request.form.get('telefono', '').strip()
                 pais = request.form.get('pais', '').strip()
                 ciudad = request.form.get('ciudad', '').strip()
-                moneda = request.form.get('moneda', 'USD')
+                moneda = (request.form.get('moneda') or 'USD').strip().upper()
 
                 valid, msg = validate_username(nombre_usuario)
                 if not valid:
@@ -874,15 +887,17 @@ def register_routes(app):
                         return render_template('dashboard/perfil.html', usuario=usuario)
                     actualizar_foto_perfil_db(usuario['id'], foto_bytes)
             
-            # Actualizar datos personales
-            nombre_completo = request.form.get('nombre_completo', '').strip()
-            email = request.form.get('email', '').strip()
-            telefono = request.form.get('telefono', '').strip()
-            pais = request.form.get('pais', '').strip()
-            ciudad = request.form.get('ciudad', '').strip()
-            moneda = request.form.get('moneda', 'USD')
+            moneda = (request.form.get('moneda') or usuario.get('moneda') or 'USD').strip().upper()
             
-            resultado = actualizar_perfil_usuario_db(usuario['id'], nombre_completo, email, telefono, pais, ciudad, moneda)
+            resultado = actualizar_perfil_usuario_db(
+                usuario['id'],
+                usuario.get('nombre_completo', ''),
+                usuario.get('email', ''),
+                usuario.get('telefono', ''),
+                usuario.get('pais', ''),
+                usuario.get('ciudad', ''),
+                moneda,
+            )
             
             if resultado:
                 flash('Perfil actualizado exitosamente', 'success')
@@ -895,8 +910,8 @@ def register_routes(app):
         
         return render_template('dashboard/perfil.html', usuario=usuario)
 
-    @bp.route('/editar_perfil', methods=['GET', 'POST'])
-    def editar_perfil():
+    @bp.route('/preferencias', methods=['GET', 'POST'])
+    def preferencias():
         if 'usuario_id' not in session:
             return redirect(url_for('main.login'))
         
@@ -906,51 +921,77 @@ def register_routes(app):
             return redirect(url_for('main.login'))
         
         if request.method == 'POST':
-            # Verificar si es solo actualización de foto (sin contraseña)
-            if 'foto_perfil' in request.files and request.files['foto_perfil'].filename:
-                file = request.files['foto_perfil']
-                if file:
-                    foto_bytes, error = read_profile_image(file)
-                    if error:
-                        flash(error, 'error')
-                        return render_template('dashboard/editar_perfil.html', usuario=usuario)
-                    actualizar_foto_perfil_db(usuario['id'], foto_bytes)
+            # Leer campos de contraseña primero para detectar intención de cambio
+            password_actual = (request.form.get('password_actual') or '').strip()
+            password_nueva = (request.form.get('password_nueva') or '').strip()
+            password_confirmar = (request.form.get('password_confirmar') or '').strip()
 
-            password_actual = request.form.get('password_actual', '')
-            password_nueva = request.form.get('password_nueva', '')
-            password_confirmar = request.form.get('password_confirmar', '')
-            moneda = request.form.get('moneda', 'USD')
-            nombre_completo = request.form.get('nombre_completo', '')
-            email = request.form.get('email', '')
-            telefono = request.form.get('telefono', '')
-            pais = request.form.get('pais', '')
-            ciudad = request.form.get('ciudad', '')
-            
-            if not check_password_hash(usuario['password_hash'], password_actual):
-                flash('La contraseña actual es incorrecta para aplicar cambios', 'error')
-            else:
-                # Actualizar datos personales y moneda
-                actualizar_perfil_usuario_db(usuario['id'], nombre_completo, email, telefono, pais, ciudad, moneda)
-                
-                # Actualizar contraseña si se proporcionó
-                if password_nueva:
-                    valid, msg = validate_password(password_nueva)
-                    if not valid:
-                        flash(msg, 'error')
-                    elif password_nueva != password_confirmar:
-                        flash('Las nuevas contraseñas no coinciden', 'error')
-                    else:
-                        nueva_password_hash = generate_password_hash(password_nueva)
-                        actualizar_password_usuario(usuario['id'], nueva_password_hash)
-                        flash('Perfil y contraseña actualizados exitosamente', 'success')
+            cambiar_password = bool(password_actual or password_nueva or password_confirmar)
+
+            # Actualizar moneda siempre (independiente)
+            moneda = (request.form.get('moneda') or usuario.get('moneda') or 'USD').strip().upper()
+            perfil_actualizado = actualizar_perfil_usuario_db(
+                usuario['id'],
+                usuario.get('nombre_completo', ''),
+                usuario.get('email', ''),
+                usuario.get('telefono', ''),
+                usuario.get('pais', ''),
+                usuario.get('ciudad', ''),
+                moneda,
+            )
+
+            # Solo mostrar confirmación de moneda si no se intenta cambiar contraseña
+            if not cambiar_password:
+                if perfil_actualizado:
+                    flash('Moneda predeterminada actualizada correctamente', 'success')
                 else:
-                    flash('Preferencias actualizadas correctamente', 'success')
-                
-                # Recargar datos del usuario
+                    flash('Error al actualizar preferencias', 'error')
+
+            # Si no hay intención de cambiar contraseña, terminar aquí
+            if not cambiar_password:
                 usuario = get_current_usuario(refresh=True)
-                return redirect(url_for('main.editar_perfil'))
-        
-        return render_template('dashboard/editar_perfil.html', usuario=usuario)
+                return redirect(url_for('main.preferencias'))
+
+            # Si se intentó cambiar contraseña, requerir los 3 campos
+            if not password_actual or not password_nueva or not password_confirmar:
+                flash('Completa la contraseña actual, la nueva y su confirmación', 'error')
+                registrar_actividad_seguridad(usuario['id'], 'Cambio de contraseña fallido', 'Faltan campos requeridos para cambiar la contraseña', 'warning')
+                usuario = get_current_usuario(refresh=True)
+                return redirect(url_for('main.preferencias'))
+
+            # Verificar contraseña actual
+            if not check_password_hash(usuario['password_hash'], password_actual):
+                flash('La contraseña actual es incorrecta', 'error')
+                registrar_actividad_seguridad(usuario['id'], 'Cambio de contraseña fallido', 'La contraseña actual no coincide', 'warning')
+                usuario = get_current_usuario(refresh=True)
+                return redirect(url_for('main.preferencias'))
+
+            # Validar nueva contraseña
+            valid, msg = validate_password(password_nueva)
+            if not valid:
+                flash(msg, 'error')
+                registrar_actividad_seguridad(usuario['id'], 'Cambio de contraseña fallido', msg, 'warning')
+                usuario = get_current_usuario(refresh=True)
+                return redirect(url_for('main.preferencias'))
+
+            if password_nueva != password_confirmar:
+                flash('Las nuevas contraseñas no coinciden', 'error')
+                registrar_actividad_seguridad(usuario['id'], 'Cambio de contraseña fallido', 'Las contraseñas nuevas no coinciden', 'warning')
+                usuario = get_current_usuario(refresh=True)
+                return redirect(url_for('main.preferencias'))
+
+            # Actualizar contraseña
+            nueva_password_hash = generate_password_hash(password_nueva)
+            if actualizar_password_usuario(usuario['id'], nueva_password_hash):
+                flash('Contraseña actualizada correctamente', 'success')
+                registrar_actividad_seguridad(usuario['id'], 'Contraseña actualizada', 'Cambio de contraseña desde Preferencias', 'info')
+            else:
+                flash('No se pudo actualizar la contraseña', 'error')
+
+            usuario = get_current_usuario(refresh=True)
+            return redirect(url_for('main.preferencias'))
+
+        return render_template('dashboard/preferencias.html', usuario=usuario)
 
     @bp.route('/editar_registro', methods=['GET', 'POST'])
     @login_required_custom
@@ -1431,6 +1472,21 @@ def register_routes(app):
         else:
             return jsonify({'success': False, 'message': 'Error al registrar aporte'})
 
+    @bp.route('/historial_meta/<int:id>')
+    @login_required_custom
+    def historial_meta(id):
+        historial = obtener_historial_meta(id, session['usuario_id'])
+        datos = []
+        for registro in historial:
+            creado_en = registro.get('creado_en')
+            datos.append({
+                'monto_objetivo': float(registro.get('monto_objetivo') or 0),
+                'monto_actual': float(registro.get('monto_actual') or 0),
+                'porcentaje': float(registro.get('porcentaje') or 0),
+                'creado_en': creado_en.strftime('%d/%m/%Y %H:%M') if hasattr(creado_en, 'strftime') else str(creado_en),
+            })
+        return jsonify({'success': True, 'historial': datos})
+
 
     @bp.route('/recurrentes', methods=['GET', 'POST'])
     @login_required_custom
@@ -1477,6 +1533,7 @@ def register_routes(app):
         try:
             usuario_id = session['usuario_id']
             usuario = get_current_usuario(refresh=True)
+            actividad_seguridad = obtener_actividad_seguridad(usuario_id, limite=8)
             
             if request.method == 'POST':
                 # Checkbox state
@@ -1508,22 +1565,25 @@ def register_routes(app):
                     
                     # Activar en BD
                     actualizar_seguridad_usuario(usuario_id, True)
+                    registrar_actividad_seguridad(usuario_id, '2FA activada', 'Autenticación de dos factores habilitada', 'info')
                     
                     # Recargar usuario para verificar
                     usuario_actualizado = get_current_usuario(refresh=True)
                     
                     # Renderizar con el código QR
-                    return render_template('auth/seguridad.html', usuario=usuario_actualizado, qr_code=qr_b64, secret=secret)
+                    actividad_seguridad = obtener_actividad_seguridad(usuario_id, limite=8)
+                    return render_template('auth/seguridad.html', usuario=usuario_actualizado, qr_code=qr_b64, secret=secret, actividad_seguridad=actividad_seguridad)
                 
                 elif not MFA and usuario.get('MFA'):
                     # Desactivar
                     actualizar_seguridad_usuario(usuario_id, False)
+                    registrar_actividad_seguridad(usuario_id, '2FA desactivada', 'Autenticación de dos factores deshabilitada', 'warning')
                     return redirect(url_for('main.seguridad'))
                 
                 # Si no hubo cambio de estado pero se hizo post
                 return redirect(url_for('main.seguridad'))
                 
-            return render_template('auth/seguridad.html', usuario=usuario)
+            return render_template('auth/seguridad.html', usuario=usuario, actividad_seguridad=actividad_seguridad)
         except Exception as e:
             import traceback
             traceback.print_exc()
@@ -1759,7 +1819,8 @@ def register_routes(app):
             return redirect(url_for('main.presupuestos'))
             
         mis_presupuestos = obtener_presupuestos_simples(usuario_id)
-        return render_template('config/presupuestos.html', presupuestos=mis_presupuestos)
+        categorias = obtener_categorias(usuario_id)
+        return render_template('config/presupuestos.html', presupuestos=mis_presupuestos, categorias=categorias)
 
     @bp.route('/editar_presupuesto/<int:id>', methods=['POST'])
     @login_required_custom
@@ -1769,11 +1830,12 @@ def register_routes(app):
             gastado = float(request.form.get('gastado', 0))
         except (ValueError, TypeError):
             gastado = 0
+        categoria_id = request.form.get('categoria_id') or None
         
-        if actualizar_presupuesto_gastado(usuario_id, id, gastado):
+        if actualizar_presupuesto_gastado(usuario_id, id, gastado, categoria_id):
             # Si es una petición AJAX, devolver JSON
             if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
-                return jsonify({'success': True, 'gastado': gastado})
+                return jsonify({'success': True, 'gastado': gastado, 'categoria_id': categoria_id})
             flash('Presupuesto actualizado', 'success')
         else:
             if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
@@ -1793,6 +1855,21 @@ def register_routes(app):
             flash('Error al eliminar presupuesto', 'error')
         
         return redirect(url_for('main.presupuestos'))
+
+    @bp.route('/historial_presupuesto/<int:id>')
+    @login_required_custom
+    def historial_presupuesto(id):
+        historial = obtener_historial_presupuesto(id, session['usuario_id'])
+        datos = []
+        for registro in historial:
+            creado_en = registro.get('creado_en')
+            datos.append({
+                'monto_limite': float(registro.get('monto_limite') or 0),
+                'gastado': float(registro.get('gastado') or 0),
+                'porcentaje': float(registro.get('porcentaje') or 0),
+                'creado_en': creado_en.strftime('%d/%m/%Y %H:%M') if hasattr(creado_en, 'strftime') else str(creado_en),
+            })
+        return jsonify({'success': True, 'historial': datos})
 
     app.register_blueprint(bp)
 
@@ -2260,6 +2337,60 @@ def actualizar_token_otp_verificado(token):
     finally:
         conn.close()
 
+def registrar_actividad_seguridad(usuario_id, evento, detalle, nivel='info'):
+    # No registrar si no hay usuario asociado (asegura actividad por usuario)
+    if not usuario_id:
+        return False
+
+    conn = get_connection()
+    if conn is None:
+        return False
+    try:
+        cursor = conn.cursor()
+        cursor.execute(
+            'INSERT INTO seguridad_actividad (usuario_id, evento, detalle, nivel) VALUES (%s, %s, %s, %s)',
+            (usuario_id, evento[:80], detalle[:255], nivel[:20]),
+        )
+        conn.commit()
+        cursor.close()
+        return True
+    except Exception:
+        return False
+    finally:
+        conn.close()
+
+def obtener_actividad_seguridad(usuario_id, limite=8):
+    conn = get_connection()
+    if conn is None:
+        return []
+    try:
+        cursor = conn.cursor(dictionary=True)
+        cursor.execute(
+            '''
+                SELECT evento, detalle, nivel, creado_en
+                FROM seguridad_actividad
+                WHERE usuario_id = %s
+                ORDER BY creado_en DESC, id DESC
+                LIMIT %s
+            ''',
+            (usuario_id, limite),
+        )
+        registros = cursor.fetchall()
+        actividad = []
+        for registro in registros:
+            creado_en = registro.get('creado_en')
+            actividad.append({
+                'evento': registro.get('evento') or '',
+                'detalle': registro.get('detalle') or '',
+                'nivel': registro.get('nivel') or 'info',
+                'creado_en': creado_en.strftime('%d/%m/%Y %H:%M') if hasattr(creado_en, 'strftime') else str(creado_en),
+            })
+        return actividad
+    except Exception:
+        return []
+    finally:
+        conn.close()
+
 def incrementar_intentos_captcha(token, intentos):
     conn = get_connection()
     if conn is None:
@@ -2284,17 +2415,49 @@ def obtener_metas(usuario_id):
     try:
         cursor = conn.cursor(dictionary=True)
         cursor.execute('SELECT id, usuario_id, nombre, monto_objetivo, monto_actual, creado_en FROM metas WHERE usuario_id = %s', (usuario_id,))
-        return cursor.fetchall()
+        metas = cursor.fetchall()
+        for meta in metas:
+            meta['monto_objetivo'] = float(meta.get('monto_objetivo') or 0)
+            meta['monto_actual'] = min(float(meta.get('monto_actual') or 0), meta['monto_objetivo'])
+            meta['porcentaje'] = min(round((meta['monto_actual'] / meta['monto_objetivo'] * 100), 1), 100) if meta['monto_objetivo'] > 0 else 0
+        return metas
     finally:
         conn.close()
+
+def _registrar_historial_meta(cursor, meta_id, usuario_id):
+    cursor.execute(
+        'SELECT monto_objetivo, monto_actual FROM metas WHERE id = %s AND usuario_id = %s',
+        (meta_id, usuario_id),
+    )
+    meta = cursor.fetchone()
+    if not meta:
+        return False
+
+    monto_objetivo = float(meta.get('monto_objetivo') or 0)
+    monto_actual = float(meta.get('monto_actual') or 0)
+    if monto_objetivo > 0:
+        monto_actual = min(monto_actual, monto_objetivo)
+        porcentaje = round((monto_actual / monto_objetivo) * 100, 1)
+    else:
+        porcentaje = 0
+
+    cursor.execute(
+        '''
+            INSERT INTO meta_historial (meta_id, usuario_id, monto_objetivo, monto_actual, porcentaje)
+            VALUES (%s, %s, %s, %s, %s)
+        ''',
+        (meta_id, usuario_id, monto_objetivo, monto_actual, porcentaje),
+    )
+    return True
 
 def agregar_meta(usuario_id, nombre, monto_objetivo):
     conn = get_connection()
     if conn is None:
         return False
     try:
-        cursor = conn.cursor()
+        cursor = conn.cursor(dictionary=True)
         cursor.execute('INSERT INTO metas (usuario_id, nombre, monto_objetivo) VALUES (%s, %s, %s)', (usuario_id, nombre, monto_objetivo))
+        _registrar_historial_meta(cursor, cursor.lastrowid, usuario_id)
         conn.commit()
         return True
     finally:
@@ -2317,10 +2480,47 @@ def actualizar_aporte_meta(meta_id, usuario_id, monto):
     if conn is None:
         return False
     try:
-        cursor = conn.cursor()
-        cursor.execute('UPDATE metas SET monto_actual = monto_actual + %s WHERE id = %s AND usuario_id = %s', (monto, meta_id, usuario_id))
+        cursor = conn.cursor(dictionary=True)
+        cursor.execute(
+            'SELECT monto_objetivo, monto_actual FROM metas WHERE id = %s AND usuario_id = %s',
+            (meta_id, usuario_id),
+        )
+        meta = cursor.fetchone()
+        if not meta:
+            return False
+
+        monto_objetivo = float(meta.get('monto_objetivo') or 0)
+        monto_actual = float(meta.get('monto_actual') or 0)
+        if monto_objetivo <= 0:
+            return False
+
+        nuevo_monto = min(monto_actual + float(monto), monto_objetivo)
+        if nuevo_monto <= monto_actual:
+            return False
+
+        cursor.execute('UPDATE metas SET monto_actual = %s WHERE id = %s AND usuario_id = %s', (nuevo_monto, meta_id, usuario_id))
+        _registrar_historial_meta(cursor, meta_id, usuario_id)
         conn.commit()
         return True
+    finally:
+        conn.close()
+
+def obtener_historial_meta(meta_id, usuario_id):
+    conn = get_connection()
+    if conn is None:
+        return []
+    try:
+        cursor = conn.cursor(dictionary=True)
+        cursor.execute(
+            '''
+                SELECT monto_objetivo, monto_actual, porcentaje, creado_en
+                FROM meta_historial
+                WHERE meta_id = %s AND usuario_id = %s
+                ORDER BY creado_en ASC, id ASC
+            ''',
+            (meta_id, usuario_id),
+        )
+        return cursor.fetchall()
     finally:
         conn.close()
 
@@ -2878,7 +3078,7 @@ def obtener_presupuestos_detallados(usuario_id):
         conn.close()
 
 def obtener_presupuestos_simples(usuario_id):
-    """Obtiene presupuestos con gastos reales del mes actual"""
+    """Obtiene presupuestos usando el gasto persistido de cada presupuesto."""
     conn = get_connection()
     if conn is None:
         return []
@@ -2892,39 +3092,47 @@ def obtener_presupuestos_simples(usuario_id):
             (usuario_id,)
         )
         presupuestos = cursor.fetchall()
-
-        # Obtener gastos totales del mes actual una sola vez
-        desde_mes, hasta_mes = calcular_rango_mes(datetime.now().year, datetime.now().month)
-        cursor.execute(
-            'SELECT COALESCE(SUM(monto), 0) AS total_gastos '
-            'FROM gastos '
-            'WHERE usuario_id = %s AND fecha BETWEEN %s AND %s',
-            (usuario_id, desde_mes, hasta_mes)
-        )
-        gasto_total_result = cursor.fetchone() or {}
-        gasto_total = float(gasto_total_result.get('total_gastos') or 0)
         
         for p in presupuestos:
             p['categoria_nombre'] = p.get('categoria_nombre') or 'Sin categoría'
             p['monto'] = float(p.get('monto') or 0)
             p['gastado'] = float(p.get('gastado') or 0)
+            if p['monto'] > 0:
+                p['gastado'] = min(p['gastado'], p['monto'])
             
-            # Por simplicidad, distribuir los gastos totales entre los presupuestos
-            # En un futuro, esto debería conectarse con categorías reales
-            if len(presupuestos) > 0:
-                p['gasto_actual'] = gasto_total / len(presupuestos)
-            else:
-                p['gasto_actual'] = 0
-            
-            # Calcular porcentaje usando gastado si está disponible, sino usar gasto_actual
-            gasto_para_calculo = p['gastado'] if p['gastado'] > 0 else p['gasto_actual']
-            p['porcentaje'] = round((gasto_para_calculo / p['monto'] * 100), 1) if p['monto'] > 0 else 0
-            # Para la progress bar, limitar a 100 visualmente pero guardar el valor real
+            p['gasto_actual'] = p['gastado']
+            p['porcentaje'] = min(round((p['gastado'] / p['monto'] * 100), 1), 100) if p['monto'] > 0 else 0
             p['porcentaje_visual'] = min(p['porcentaje'], 100)
         
         return presupuestos
     finally:
         conn.close()
+
+def _registrar_historial_presupuesto(cursor, presupuesto_id, usuario_id):
+    cursor.execute(
+        'SELECT monto, gastado FROM presupuestos WHERE id = %s AND usuario_id = %s',
+        (presupuesto_id, usuario_id),
+    )
+    presupuesto = cursor.fetchone()
+    if not presupuesto:
+        return False
+
+    monto_limite = float(presupuesto.get('monto') or 0)
+    gastado = float(presupuesto.get('gastado') or 0)
+    if monto_limite > 0:
+        gastado = min(gastado, monto_limite)
+        porcentaje = round((gastado / monto_limite) * 100, 1)
+    else:
+        porcentaje = 0
+
+    cursor.execute(
+        '''
+            INSERT INTO presupuesto_historial (presupuesto_id, usuario_id, monto_limite, gastado, porcentaje)
+            VALUES (%s, %s, %s, %s, %s)
+        ''',
+        (presupuesto_id, usuario_id, monto_limite, gastado, porcentaje),
+    )
+    return True
 
 def agregar_o_actualizar_presupuesto(usuario_id, categoria_id, monto):
     conn = get_connection()
@@ -2936,10 +3144,13 @@ def agregar_o_actualizar_presupuesto(usuario_id, categoria_id, monto):
         existente = cursor.fetchone()
         
         if existente:
-            cursor.execute('UPDATE presupuestos SET monto = %s WHERE id = %s', (monto, existente['id']))
+            cursor.execute('UPDATE presupuestos SET monto = %s, gastado = LEAST(gastado, %s) WHERE id = %s AND usuario_id = %s', (monto, monto, existente['id'], usuario_id))
+            presupuesto_id = existente['id']
         else:
             cursor.execute('INSERT INTO presupuestos (usuario_id, categoria_id, monto) VALUES (%s, %s, %s)', 
                           (usuario_id, categoria_id, monto))
+            presupuesto_id = cursor.lastrowid
+        _registrar_historial_presupuesto(cursor, presupuesto_id, usuario_id)
         conn.commit()
         return True
     finally:
@@ -2987,19 +3198,49 @@ def actualizar_presupuesto(usuario_id, presupuesto_id, monto):
     finally:
         conn.close()
 
-def actualizar_presupuesto_gastado(usuario_id, presupuesto_id, gastado):
-    """Actualiza el gastado de un presupuesto"""
+def actualizar_presupuesto_gastado(usuario_id, presupuesto_id, gastado, categoria_id=None):
+    """Actualiza el gastado y, opcionalmente, la categoría de un presupuesto"""
     conn = get_connection()
     if conn is None:
         return False
     try:
-        cursor = conn.cursor()
-        cursor.execute('UPDATE presupuestos SET gastado = %s WHERE id = %s AND usuario_id = %s', 
-                      (gastado, presupuesto_id, usuario_id))
+        cursor = conn.cursor(dictionary=True)
+        cursor.execute('SELECT monto FROM presupuestos WHERE id = %s AND usuario_id = %s', (presupuesto_id, usuario_id))
+        presupuesto_actual = cursor.fetchone()
+        if not presupuesto_actual:
+            return False
+        monto_limite = float(presupuesto_actual.get('monto') or 0)
+        nuevo_gastado = min(float(gastado), monto_limite) if monto_limite > 0 else max(float(gastado), 0)
+        if categoria_id is not None:
+            cursor.execute('UPDATE presupuestos SET gastado = %s, categoria_id = %s WHERE id = %s AND usuario_id = %s', 
+                          (nuevo_gastado, categoria_id, presupuesto_id, usuario_id))
+        else:
+            cursor.execute('UPDATE presupuestos SET gastado = %s WHERE id = %s AND usuario_id = %s', 
+                          (nuevo_gastado, presupuesto_id, usuario_id))
+        _registrar_historial_presupuesto(cursor, presupuesto_id, usuario_id)
         conn.commit()
         return True
     except Exception as e:
         return False
+    finally:
+        conn.close()
+
+def obtener_historial_presupuesto(presupuesto_id, usuario_id):
+    conn = get_connection()
+    if conn is None:
+        return []
+    try:
+        cursor = conn.cursor(dictionary=True)
+        cursor.execute(
+            '''
+                SELECT monto_limite, gastado, porcentaje, creado_en
+                FROM presupuesto_historial
+                WHERE presupuesto_id = %s AND usuario_id = %s
+                ORDER BY creado_en ASC, id ASC
+            ''',
+            (presupuesto_id, usuario_id),
+        )
+        return cursor.fetchall()
     finally:
         conn.close()
 

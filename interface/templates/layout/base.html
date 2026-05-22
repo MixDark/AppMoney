@@ -136,6 +136,19 @@
             -moz-appearance: textfield;
         }
 
+        /* Forzar ícono del selector de fecha/mes a blanco en navegadores WebKit */
+        input[type="date"]::-webkit-calendar-picker-indicator,
+        input[type="month"]::-webkit-calendar-picker-indicator {
+            filter: invert(1) brightness(1) saturate(0);
+        }
+        input[type="date"]::-webkit-datetime-edit-year-field,
+        input[type="date"]::-webkit-datetime-edit-month-field,
+        input[type="date"]::-webkit-datetime-edit-day-field,
+        input[type="month"]::-webkit-datetime-edit-year-field,
+        input[type="month"]::-webkit-datetime-edit-month-field {
+            color: #fff;
+        }
+
         /* SELECT/DROPDOWN */
         select.input-glass {
             height: 44px;
@@ -576,7 +589,7 @@
                     <a href="/perfil" class="dropdown-item">
                         <i class="fas fa-user-edit"></i> Editar perfil
                     </a>
-                    <a href="/editar_perfil" class="dropdown-item">
+                    <a href="/preferencias" class="dropdown-item">
                         <i class="fas fa-cog"></i> Preferencias
                     </a>
                     <a href="/seguridad" class="dropdown-item">
