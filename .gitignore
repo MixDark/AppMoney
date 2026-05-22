@@ -34,3 +34,5 @@ instance/
 .coverage
 htmlcov/
 node_modules/
+interface/static/images/profiles/*
+!interface/static/images/profiles/.gitkeep

@@ -4,6 +4,13 @@ from functools import wraps
 import base64
 import os
 from infrastructure.db import get_connection
+from infrastructure.profile_images import (
+    delete_profile_image_file,
+    has_profile_photo,
+    profile_mimetype,
+    resolve_profile_file,
+    save_profile_image_from_upload,
+)
 from infrastructure.validators import *
 from application.currencies import get_currency_list, get_default_value, get_currency_display, get_currency_info
 from werkzeug.security import generate_password_hash, check_password_hash
@@ -146,17 +153,22 @@ def rate_limited(subject_key, scope, limit, window_seconds, block_seconds=None):
     finally:
         conn.close()
 
-def read_profile_image(file):
-    if not file or not file.filename:
-        return None, None
-    max_bytes = current_app.config.get('PHOTO_MAX_BYTES', 2 * 1024 * 1024)
-    data = file.read(max_bytes + 1)
-    if len(data) > max_bytes:
-        return None, "La imagen supera el tamaño permitido"
-    kind = detect_image_type(data)
-    if kind not in {'jpeg', 'png', 'gif', 'webp'}:
-        return None, "Formato de imagen no permitido"
-    return data, None
+def normalize_usuario_record(usuario):
+    if not usuario:
+        return usuario
+
+    raw = usuario.get('foto_perfil')
+    if isinstance(raw, str) and raw.strip():
+        usuario['foto_perfil_ruta'] = raw.strip()
+        usuario['foto_perfil'] = True
+    elif isinstance(raw, (bytes, bytearray)) and len(raw) > 0:
+        usuario['foto_perfil_ruta'] = None
+        usuario['foto_perfil'] = True
+    else:
+        usuario['foto_perfil_ruta'] = None
+        usuario['foto_perfil'] = False
+    return usuario
+
 
 def _serialize_usuario_cache(usuario):
     if not usuario:
@@ -173,7 +185,8 @@ def _serialize_usuario_cache(usuario):
         'moneda': (usuario.get('moneda') or 'USD').upper(),
         'MFA': bool(usuario.get('MFA')),
         'ultimo_login': usuario.get('ultimo_login'),
-        'foto_perfil': bool(usuario.get('foto_perfil')),
+        'foto_perfil': bool(usuario.get('foto_perfil_ruta') or usuario.get('foto_perfil')),
+        'foto_perfil_ruta': usuario.get('foto_perfil_ruta') or '',
         'creado_en': usuario.get('creado_en'),
     }
     return cached_usuario
@@ -393,17 +406,23 @@ def register_routes(app):
             cursor.close()
             if not result or not result[0]:
                 return '', 404
-            foto_bytes = result[0]
-            kind = detect_image_type(foto_bytes)
-            if kind == 'jpeg':
-                mime = 'image/jpeg'
-            elif kind:
-                mime = f"image/{kind}"
-            else:
-                mime = 'application/octet-stream'
-            response = send_file(BytesIO(foto_bytes), mimetype=mime)
-            response.headers['Cache-Control'] = 'no-store'
-            return response
+
+            raw = result[0]
+            if isinstance(raw, str):
+                absolute_path = resolve_profile_file(raw)
+                if absolute_path:
+                    response = send_file(absolute_path, mimetype=profile_mimetype(raw))
+                    response.headers['Cache-Control'] = 'public, max-age=86400'
+                    return response
+                return '', 404
+
+            if isinstance(raw, (bytes, bytearray)):
+                kind = detect_image_type(raw)
+                mime = 'image/jpeg' if kind == 'jpeg' else (f'image/{kind}' if kind else 'application/octet-stream')
+                response = send_file(BytesIO(raw), mimetype=mime)
+                response.headers['Cache-Control'] = 'no-store'
+                return response
+            return '', 404
         finally:
             conn.close()
 
@@ -835,15 +854,9 @@ def register_routes(app):
                 if obtener_usuario_por_nombre(nombre_usuario):
                     flash('El usuario ya existe', 'error')
                 else:
-                    foto_perfil = None
-                    file = request.files.get('foto_perfil')
-                    if file and file.filename:
-                        foto_perfil, error = read_profile_image(file)
-                        if error:
-                            flash(error, 'error')
-                            return render_template('auth/registrar_usuario.html')
+                    foto_file = request.files.get('foto_perfil')
                     password_hash = generate_password_hash(password)
-                    created = crear_usuario(
+                    created, new_user_id = crear_usuario(
                         nombre_usuario,
                         password_hash,
                         nombre_completo,
@@ -852,11 +865,17 @@ def register_routes(app):
                         pais,
                         ciudad,
                         moneda,
-                        foto_perfil
                     )
                     if not created:
                         flash('Error al crear el usuario. Revisa la configuración del servidor.', 'error')
                         return render_template('auth/registrar_usuario.html')
+                    if foto_file and foto_file.filename:
+                        ruta, error = save_profile_image_from_upload(foto_file, new_user_id)
+                        if error:
+                            flash(error, 'error')
+                            return render_template('auth/registrar_usuario.html')
+                        if ruta:
+                            actualizar_foto_perfil_db(new_user_id, ruta)
                     flash('Usuario registrado correctamente', 'success')
                     return redirect(url_for('main.login'))
             except Exception:
@@ -881,11 +900,13 @@ def register_routes(app):
             if 'foto_perfil' in request.files and request.files['foto_perfil'].filename:
                 file = request.files['foto_perfil']
                 if file:
-                    foto_bytes, error = read_profile_image(file)
+                    ruta, error = save_profile_image_from_upload(file, usuario['id'])
                     if error:
                         flash(error, 'error')
                         return render_template('dashboard/perfil.html', usuario=usuario)
-                    actualizar_foto_perfil_db(usuario['id'], foto_bytes)
+                    if ruta:
+                        delete_profile_image_file(usuario.get('foto_perfil_ruta'), usuario['id'])
+                        actualizar_foto_perfil_db(usuario['id'], ruta)
             
             moneda = (request.form.get('moneda') or usuario.get('moneda') or 'USD').strip().upper()
             
@@ -1883,13 +1904,13 @@ def obtener_usuario_por_id(usuario_id):
         cursor.execute(
             'SELECT id, nombre_usuario, password_hash, totp_secret, MFA, ultimo_login, nombre_completo, '
             'email, telefono, pais, ciudad, moneda, '
-            'CASE WHEN foto_perfil IS NOT NULL THEN 1 ELSE 0 END AS foto_perfil, creado_en '
+            'foto_perfil, creado_en '
             'FROM usuarios WHERE id = %s',
             (usuario_id,)
         )
         usuario = cursor.fetchone()
         cursor.close()
-        return usuario
+        return normalize_usuario_record(usuario)
     finally:
         conn.close()
 
@@ -1902,13 +1923,13 @@ def obtener_usuario_por_nombre(nombre_usuario):
         cursor.execute(
             'SELECT id, nombre_usuario, password_hash, totp_secret, MFA, ultimo_login, nombre_completo, '
             'email, telefono, pais, ciudad, moneda, '
-            'CASE WHEN foto_perfil IS NOT NULL THEN 1 ELSE 0 END AS foto_perfil, creado_en '
+            'foto_perfil, creado_en '
             'FROM usuarios WHERE LOWER(TRIM(nombre_usuario)) = LOWER(TRIM(%s)) LIMIT 1',
             (nombre_usuario,)
         )
         usuario = cursor.fetchone()
         cursor.close()
-        return usuario
+        return normalize_usuario_record(usuario)
     finally:
         conn.close()
 
@@ -1921,17 +1942,16 @@ def crear_usuario(
     pais='',
     ciudad='',
     moneda='USD',
-    foto_perfil=None
 ):
     conn = get_connection()
     if conn is None:
-        return False
+        return False, None
     try:
         cursor = conn.cursor()
         cursor.execute(
-            'INSERT INTO usuarios (nombre_usuario, password_hash, nombre_completo, email, telefono, pais, ciudad, moneda, foto_perfil) '
-            'VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)',
-            (nombre_usuario, password_hash, nombre_completo, email, telefono, pais, ciudad, moneda, foto_perfil)
+            'INSERT INTO usuarios (nombre_usuario, password_hash, nombre_completo, email, telefono, pais, ciudad, moneda) '
+            'VALUES (%s, %s, %s, %s, %s, %s, %s, %s)',
+            (nombre_usuario, password_hash, nombre_completo, email, telefono, pais, ciudad, moneda)
         )
         usuario_id = cursor.lastrowid
         
@@ -1948,9 +1968,10 @@ def crear_usuario(
         
         conn.commit()
         cursor.close()
-        return True
+        return True, usuario_id
     except Exception as e:
-        return False
+        print(f"crear_usuario: {e}")
+        return False, None
     finally:
         conn.close()
 
@@ -2654,15 +2675,21 @@ def actualizar_perfil_usuario_db(usuario_id, nombre_completo='', email='', telef
     finally:
         conn.close()
 
-def actualizar_foto_perfil_db(usuario_id, foto_bytes):
+def actualizar_foto_perfil_db(usuario_id, foto_ruta):
     conn = get_connection()
     if conn is None:
         return False
     try:
         cursor = conn.cursor()
-        cursor.execute('UPDATE usuarios SET foto_perfil = %s WHERE id = %s', (foto_bytes, usuario_id))
+        cursor.execute(
+            'UPDATE usuarios SET foto_perfil = %s WHERE id = %s',
+            (foto_ruta, usuario_id),
+        )
         conn.commit()
         return True
+    except Exception as e:
+        print(f"actualizar_foto_perfil_db: {e}")
+        return False
     finally:
         conn.close()
 

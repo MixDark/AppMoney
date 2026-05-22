@@ -1,5 +1,13 @@
 """Migraciones ligeras para alinear el esquema con el código de la app."""
+import os
+
+from flask import current_app
 from infrastructure.db import get_connection
+from infrastructure.profile_images import (
+    PROFILE_RELATIVE_DIR,
+    profile_relative_path,
+    save_profile_image_from_bytes,
+)
 
 
 def _column_exists(cursor, table, column):
@@ -13,12 +21,61 @@ def _column_exists(cursor, table, column):
     return cursor.fetchone()[0] > 0
 
 
+def _column_type(cursor, table, column):
+    cursor.execute(
+        """
+        SELECT DATA_TYPE FROM information_schema.COLUMNS
+        WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = %s AND COLUMN_NAME = %s
+        """,
+        (table, column),
+    )
+    row = cursor.fetchone()
+    return (row[0] or '').lower() if row else ''
+
+
+def _migrate_foto_perfil_to_files(cursor):
+    foto_type = _column_type(cursor, 'usuarios', 'foto_perfil')
+    if foto_type not in ('mediumblob', 'blob', 'longblob', 'varbinary'):
+        return
+
+    has_path_column = _column_exists(cursor, 'usuarios', 'foto_perfil_path')
+    if not has_path_column:
+        cursor.execute('ALTER TABLE usuarios ADD COLUMN foto_perfil_path VARCHAR(255) NULL')
+
+    cursor.execute(
+        'SELECT id, foto_perfil FROM usuarios WHERE foto_perfil IS NOT NULL'
+    )
+    rows = cursor.fetchall()
+    profiles_dir = os.path.join(current_app.static_folder, PROFILE_RELATIVE_DIR)
+    os.makedirs(profiles_dir, exist_ok=True)
+
+    for usuario_id, blob in rows:
+        if not isinstance(blob, (bytes, bytearray)) or len(blob) == 0:
+            continue
+        relative_path = save_profile_image_from_bytes(blob, usuario_id)
+        if relative_path:
+            cursor.execute(
+                'UPDATE usuarios SET foto_perfil_path = %s WHERE id = %s',
+                (relative_path, usuario_id),
+            )
+
+    cursor.execute('ALTER TABLE usuarios DROP COLUMN foto_perfil')
+    cursor.execute(
+        'ALTER TABLE usuarios CHANGE foto_perfil_path foto_perfil VARCHAR(255) NULL'
+    )
+
+
 def ensure_schema():
     conn = get_connection()
     if conn is None:
         return
     try:
         cursor = conn.cursor()
+        try:
+            _migrate_foto_perfil_to_files(cursor)
+        except Exception as migration_error:
+            print(f"migrate foto_perfil: {migration_error}")
+
         for table in ('ingresos', 'gastos', 'inversiones'):
             if not _column_exists(cursor, table, 'categoria_id'):
                 cursor.execute(f'ALTER TABLE {table} ADD COLUMN categoria_id INT NULL')

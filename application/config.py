@@ -16,6 +16,8 @@ def configure_app(app):
     app.config['PERMANENT_SESSION_LIFETIME'] = int(os.getenv('SESSION_TIMEOUT', 1800))
     app.config['PHOTO_MAX_BYTES'] = int(os.getenv('PHOTO_MAX_BYTES', 8 * 1024 * 1024))
     app.config['MAX_CONTENT_LENGTH'] = app.config['PHOTO_MAX_BYTES']
+    app.config['PROFILE_MAX_DIMENSION'] = int(os.getenv('PROFILE_MAX_DIMENSION', 512))
+    app.config['PROFILE_WEBP_QUALITY'] = int(os.getenv('PROFILE_WEBP_QUALITY', 82))
 
 
 def configure_security_headers(app):

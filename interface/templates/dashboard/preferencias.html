@@ -31,7 +31,7 @@
                 <div class="relative mb-6">
                     <div class="profile-avatar w-32 h-32 rounded-full flex items-center justify-center text-white text-5xl font-black shadow-xl overflow-hidden backdrop-blur-xl">
                         {% if usuario.foto_perfil %}
-                        <img src="{{ url_for('main.foto_perfil', usuario_id=usuario.id) }}" class="w-full h-full object-cover" alt="Foto de perfil">
+                        <img src="{{ usuario_foto_url(usuario, usuario.id) }}" class="w-full h-full object-cover" alt="Foto de perfil">
                         {% else %}
                         {{ usuario.nombre_usuario[0].upper() }}
                         {% endif %}

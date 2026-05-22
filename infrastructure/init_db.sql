@@ -15,7 +15,7 @@ CREATE TABLE IF NOT EXISTS usuarios (
     pais VARCHAR(100),
     ciudad VARCHAR(100),
     moneda VARCHAR(10) DEFAULT 'USD',
-    foto_perfil MEDIUMBLOB,
+    foto_perfil VARCHAR(255) NULL,
     creado_en TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 

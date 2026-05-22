@@ -28,7 +28,9 @@ def create_app():
     init_auth(app)
     register_template_filters(app)
     register_routes(app)
-    ensure_schema()
+
+    with app.app_context():
+        ensure_schema()
 
     return app
 

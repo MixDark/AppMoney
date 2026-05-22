@@ -577,7 +577,7 @@
                 <button onclick="toggleDropdown()"
                     class="flex items-center gap-3 font-semibold text-sm hover:opacity-70 transition-opacity whitespace-nowrap">
                     {% if current_user.foto_perfil %}
-                    <img src="{{ url_for('main.foto_perfil', usuario_id=current_user.id) }}" alt="Perfil"
+                    <img src="{{ current_user.foto_perfil_url }}" alt="Perfil"
                         class="w-7 h-7 rounded-full object-cover border border-white/10">
                     {% else %}
                     <i class="fas fa-user-circle text-xl"></i>
