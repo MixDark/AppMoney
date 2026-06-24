@@ -1,22 +1,25 @@
 {% extends 'layout/base.html' %}
 {% block title %}Recuperar - App Money{% endblock %}
+{% block body_class %}auth-page{% endblock %}
 {% block content %}
-<div class="fluent-card form-card p-6 sm:p-10 max-w-md w-full flex flex-col items-center mx-auto shadow-soft">
-    <h2 class="text-2xl font-black mb-1 text-center text-white">Recuperación de cuenta</h2>
-    <p class="text-center text-xs opacity-60 mb-8 text-slate-300">Ingresa tu usuario para recibir instrucciones</p>
+<main class="w-full min-h-screen flex items-center justify-center overflow-hidden" tabindex="-1">
+    <div class="fluent-card form-card p-6 sm:p-10 max-w-md w-full flex flex-col items-center shadow-soft">
+        <h2 class="text-2xl font-black mb-1 text-center text-white">Recuperación de cuenta</h2>
+        <p class="text-center text-xs opacity-60 mb-8 text-slate-300">Ingresa tu usuario para recibir instrucciones</p>
 
-    <form method="post" class="space-y-6 flex flex-col items-center w-full">
-        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
-        <div class="form-group">
-            <label class="form-label">Usuario</label>
-            <input type="text" name="nombre_usuario" required class="input-glass">
+        <form method="post" class="space-y-6 flex flex-col items-center w-full">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+            <div class="form-group">
+                <label class="form-label">Usuario</label>
+                <input type="text" name="nombre_usuario" required class="input-glass" autocomplete="username">
+            </div>
+             <button type="submit" class="btn-fluent w-auto flex items-center justify-center gap-2 mt-6">
+                 <i class="fas fa-key"></i> Restablecer
+             </button>
+        </form>
+        <div class="mt-6 text-center">
+            <a href="/login" class="text-blue-400 hover:text-blue-300 text-xs font-bold transition-colors">Volver al login</a>
         </div>
-        <button type="submit" class="btn-fluent w-full flex items-center justify-center gap-2 mt-6">
-            <i class="fas fa-key"></i> Restablecer
-        </button>
-    </form>
-    <div class="mt-6 text-center">
-        <a href="/login" class="text-blue-400 hover:text-blue-300 text-xs font-bold transition-colors">Volver al login</a>
     </div>
-</div>
+</main>
 {% endblock %}

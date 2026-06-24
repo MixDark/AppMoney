@@ -2,6 +2,22 @@
 
 Todos los cambios relevantes de este proyecto se documentan en este archivo.
 
+## [1.5.0] - 2026-06-24
+### Agregado
+- Sección de Presupuestos mensuales con gestión de categorías, montos límite y visualización de progreso.
+- Dropdown personalizado para selección de moneda con scroll en vista móvil.
+- Vista de Reportes rediseñada con selector de mes y botones de exportación (Ver, PDF, Excel) en una sola fila en desktop.
+### Cambiado
+- Vistas de autenticación (login, registro, recuperar contraseña, resetear contraseña, verificar captcha, verificar OTP) con cards centradas verticalmente y sin scroll global.
+- Botones de formulario con ancho ajustado al contenido y centrados en todas las vistas.
+- Selector de mes en reportes centrado con los botones de acción en desktop.
+- Botones de editar inversión en una misma fila con ancho ajustado al contenido.
+### Corregido
+- Advertencias de accesibilidad en formularios de contraseña (autocomplete username).
+- Estilos responsive para clases `lg:` en Tailwind (lg:flex, lg:flex-row, lg:hidden, etc.).
+- Centrado vertical de cards en todas las páginas de autenticación.
+- Scroll global desactivado solo en páginas de auth, activo para el resto de la aplicación.
+
 ## [1.4.0] - 2026-05-21
 ### Agregado
 - Captcha visual basado en librería para el flujo de recuperación, con imagen generada por servidor y reto de 6 caracteres.

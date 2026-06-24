@@ -78,6 +78,11 @@
     -webkit-text-size-adjust: 100%;
   }
   
+  html {
+    height: 100%;
+    overflow-y: auto;
+  }
+
   body {
     font-family: 'Plus Jakarta Sans', 'Segoe UI', system-ui, -apple-system, sans-serif;
     font-size: var(--font-size-base);
@@ -85,11 +90,21 @@
     color: var(--text-main);
     background-color: var(--bg-primary);
     overflow-x: hidden;
-    margin: 0;
-    padding: 0;
-    scrollbar-gutter: stable;
-    -webkit-font-smoothing: antialiased;
-    -moz-osx-font-smoothing: grayscale;
+    overflow-y: auto;
+    min-height: 100%;
+  }
+
+  body.auth-page {
+    overflow: hidden;
+    height: 100%;
+  }
+
+  body {
+    font-family: 'Plus Jakarta Sans', 'Segoe UI', system-ui, -apple-system, sans-serif;
+    font-size: var(--font-size-base);
+    line-height: 1.6;
+    color: var(--text-main);
+    background-color: var(--bg-primary);
   }
 
   /* === TIPOGRAFÍA === */
@@ -413,19 +428,85 @@
   }
 
   /* === SELECT === */
-  select.input-glass {
-    height: clamp(40px, 10vw, 48px);
-    min-height: clamp(40px, 10vw, 48px);
-    padding: clamp(8px, 1.5vw, 12px) clamp(36px, 5vw, 44px) clamp(8px, 1.5vw, 12px) clamp(12px, 2vw, 16px);
-    line-height: 1.3;
-    cursor: pointer;
-    background-color: var(--surface-muted);
-    background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23e8eef7' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
-    background-repeat: no-repeat;
-    background-position: right clamp(8px, 1.5vw, 12px) center;
-    background-size: 18px;
-    font-size: var(--font-size-base);
-  }
+   select.input-glass {
+     height: clamp(40px, 10vw, 48px);
+     min-height: clamp(40px, 10vw, 48px);
+     padding: clamp(8px, 1.5vw, 12px) clamp(36px, 5vw, 44px) clamp(8px, 1.5vw, 12px) clamp(12px, 2vw, 16px);
+     line-height: 1.3;
+     cursor: pointer;
+     background-color: var(--surface-muted);
+     background-image: url("data:image/svg+xml;charset=utf-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23e8eef7' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
+     background-repeat: no-repeat;
+     background-position: right clamp(8px, 1.5vw, 12px) center;
+     background-size: 18px;
+     font-size: var(--font-size-base);
+     appearance: none;
+     -webkit-appearance: none;
+   }
+
+   select.input-glass[size] {
+     height: auto;
+     max-height: 200px;
+     overflow-y: auto;
+     appearance: none;
+   }
+
+   .select-wrapper {
+     position: relative;
+     width: 100%;
+   }
+
+   .select-wrapper select {
+     width: 100%;
+     appearance: none;
+     -webkit-appearance: none;
+     background-image: url("data:image/svg+xml;charset=utf-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23e8eef7' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
+     background-repeat: no-repeat;
+     background-position: right clamp(8px, 1.5vw, 12px) center;
+     background-size: 18px;
+     padding-right: clamp(36px, 5vw, 44px);
+   }
+
+   .select-dropdown {
+     position: absolute;
+     top: 100%;
+     left: 0;
+     right: 0;
+     z-index: var(--z-dropdown);
+     background: var(--surface);
+     border: 1px solid var(--border-subtle);
+     border-radius: var(--radius-md);
+     box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+     max-height: 200px;
+     overflow-y: auto;
+     display: none;
+   }
+
+   .select-dropdown.open {
+     display: block;
+   }
+
+   .select-dropdown-option {
+     padding: clamp(8px, 1.5vw, 12px) clamp(12px, 2vw, 16px);
+     font-size: var(--font-size-base);
+     color: var(--text-main);
+     cursor: pointer;
+     transition: background var(--transition-fast);
+     min-height: 44px;
+     display: flex;
+     align-items: center;
+   }
+
+   .select-dropdown-option:hover,
+   .select-dropdown-option:focus {
+     background: rgba(59, 130, 246, 0.1);
+     color: var(--accent);
+   }
+
+   .select-dropdown-option.selected {
+     background: rgba(59, 130, 246, 0.15);
+     color: var(--accent);
+   }
   
   select.input-glass option {
     background-color: var(--surface);
@@ -444,30 +525,29 @@
     box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2);
   }
 
-  /* === BUTTONS === */
-  .btn-fluent,
-  .btn-action {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    gap: clamp(6px, 1vw, 10px);
-    padding: clamp(8px, 2vw, 12px) clamp(16px, 3vw, 24px);
-    font-size: var(--font-size-sm);
-    font-weight: 700;
-    font-family: inherit;
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-    white-space: nowrap;
-    border-radius: var(--radius-md);
-    border: 1px solid transparent;
-    cursor: pointer;
-    transition: all var(--transition-normal);
-    text-decoration: none;
-    min-height: 44px;
-    min-width: 44px;
-    /* Se adapta al contenido — no forzar ancho completo */
-    width: auto;
-  }
+   /* === BUTTONS === */
+   .btn-fluent,
+   .btn-action {
+     display: inline-flex;
+     align-items: center;
+     justify-content: center;
+     gap: clamp(4px, 0.5vw, 6px);
+     padding: clamp(8px, 1vw, 10px) clamp(12px, 1.5vw, 16px);
+     font-size: var(--font-size-sm);
+     font-weight: 700;
+     font-family: inherit;
+     text-transform: uppercase;
+     letter-spacing: 0.05em;
+     white-space: nowrap;
+     border-radius: var(--radius-md);
+     border: 1px solid transparent;
+     cursor: pointer;
+     transition: all var(--transition-normal);
+     text-decoration: none;
+     min-height: 40px;
+     width: fit-content;
+     flex-shrink: 0;
+   }
   
   .btn-fluent {
     background: var(--accent);
@@ -982,16 +1062,16 @@
     gap: var(--spacing-xs);
   }
 
-  .form-actions {
-    display: flex;
-    flex-direction: row;
-    flex-wrap: wrap;
-    gap: var(--spacing-sm);
-    width: 100%;
-    margin-top: var(--spacing-lg);
-    justify-content: flex-end;
-    align-items: center;
-  }
+   .form-actions {
+     display: flex;
+     flex-direction: row;
+     flex-wrap: wrap;
+     gap: var(--spacing-sm);
+     width: 100%;
+     margin-top: var(--spacing-lg);
+     justify-content: center;
+     align-items: center;
+   }
 
   /* Botones dentro de form-actions: adaptativos por defecto */
   .form-actions .btn-fluent,
@@ -1001,14 +1081,21 @@
     flex-shrink: 0;
   }
 
-  /* En pantallas muy pequeñas: apilar en columna y botones full-width */
+  /* En pantallas muy pequeñas: apilar en columna y botones centrados con ancho ajustado */
   @media (max-width: 479px) {
     .form-actions {
       flex-direction: column;
+      align-items: center;
     }
     .form-actions .btn-fluent,
     .form-actions .btn-action {
-      width: 100%;
+      width: auto;
+      max-width: 100%;
+    }
+    .form-actions.flex-nowrap {
+      flex-direction: row;
+      flex-wrap: nowrap;
+      justify-content: center;
     }
   }
 
@@ -1375,7 +1462,41 @@
     margin: inherit;
     overflow: visible;
     clip: auto;
-    white-space: normal;
+     white-space: normal;
+   }
+}
+
+/* LG breakpoint responsive utilities */
+@media (min-width: 1024px) {
+  .lg\:flex {
+    display: flex;
+  }
+  .lg\:flex-row {
+    flex-direction: row;
+  }
+  .lg\:flex-col {
+    flex-direction: column;
+  }
+  .lg\:hidden {
+    display: none;
+  }
+  .lg\:justify-center {
+    justify-content: center;
+  }
+  .lg\:items-end {
+    align-items: flex-end;
+  }
+  .lg\:items-center {
+    align-items: center;
+  }
+  .lg\:gap-3 {
+    gap: 0.75rem;
+  }
+  .lg\:gap-4 {
+    gap: 1rem;
+  }
+  .lg\:mb-0 {
+    margin-bottom: 0;
   }
 }
 

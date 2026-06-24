@@ -16,12 +16,12 @@
         <div class="form-group">
             <label class="form-label">Monto Objetivo</label>
             <input type="number" step="0.01" name="monto_objetivo" required class="input-glass">
-        </div>
-        <div class="w-full">
-            <button type="submit" class="btn-fluent btn-green flex items-center justify-center gap-2">
-                <i class="fas fa-bullseye"></i> Crear
-            </button>
-        </div>
+         </div>
+         <div>
+             <button type="submit" class="btn-fluent btn-green flex items-center justify-center gap-2">
+                 <i class="fas fa-bullseye"></i> Crear
+             </button>
+         </div>
     </form>
 
     <!-- Grid de Metas -->
@@ -46,16 +46,16 @@
 
             <p class="text-sm font-semibold opacity-70 mb-6 text-slate-300">Faltan: <span class="text-blue-400">{% if m.porcentaje >= 100 %}{% if currency_code == 'COP' %}{{ 0|currency_with_code(currency_code) }}{% else %}{{ currency_code }} {{ 0|format_money }}{% endif %}{% else %}{% if currency_code == 'COP' %}{{ (m.monto_objetivo - m.monto_actual)|currency_with_code(currency_code) }}{% else %}{{ currency_code }} {{ (m.monto_objetivo - m.monto_actual)|format_money }}{% endif %}{% endif %}</span></p>
 
-            <div class="flex gap-3 w-full mt-auto">
-                {% if m.porcentaje >= 100 %}
-                <button type="button" class="btn-fluent btn-green py-2 px-4 text-xs flex items-center justify-center gap-2 js-ver-historial-meta" data-id="{{ m.id }}" data-nombre="{{ m.nombre|e }}"><i class="fas fa-eye"></i> Ver</button>
-                {% else %}
-                <button type="button" class="btn-fluent btn-green py-2 px-4 text-xs flex items-center justify-center gap-2 js-aportar" data-id="{{ m.id }}" data-nombre="{{ m.nombre|e }}"><i class="fas fa-plus"></i> Aportar</button>
-                <button type="button" class="btn-fluent btn-red py-2 px-4 text-xs flex items-center justify-center gap-2 js-eliminar" data-id="{{ m.id }}" data-nombre="{{ m.nombre|e }}">
-                    <i class="fas fa-trash"></i> Eliminar
-                </button>
-                {% endif %}
-            </div>
+              <div class="flex gap-3 mt-auto">
+                  {% if m.porcentaje >= 100 %}
+                  <button type="button" class="btn-fluent btn-green w-auto py-2 px-3 text-xs flex items-center justify-center gap-2 js-ver-historial-meta" data-id="{{ m.id }}" data-nombre="{{ m.nombre|e }}"><i class="fas fa-eye"></i> Ver</button>
+                  {% else %}
+                  <button type="button" class="btn-fluent btn-green w-auto py-2 px-3 text-xs flex items-center justify-center gap-2 js-aportar" data-id="{{ m.id }}" data-nombre="{{ m.nombre|e }}"><i class="fas fa-plus"></i> Aportar</button>
+                  <button type="button" class="btn-fluent btn-red w-auto py-2 px-3 text-xs flex items-center justify-center gap-2 js-eliminar" data-id="{{ m.id }}" data-nombre="{{ m.nombre|e }}">
+                      <i class="fas fa-trash"></i> Eliminar
+                  </button>
+                  {% endif %}
+              </div>
         </div>
         {% endfor %}
     </div>
@@ -72,10 +72,10 @@
             <input type="number" id="montoAportar" step="0.01" class="input-glass">
         </div>
         
-        <div class="flex flex-col sm:flex-row gap-3 justify-center w-full modal-buttons">
-            <button onclick="cerrarModalAportar()" class="btn-action flex items-center justify-center gap-2"><i class="fa-solid fa-xmark"></i> Cancelar</button>
-            <button onclick="confirmarAportar()" class="btn-fluent btn-green flex items-center justify-center gap-2"><i class="fas fa-check"></i> Confirmar</button>
-        </div>
+         <div class="flex flex-row gap-3 justify-center">
+              <button onclick="cerrarModalAportar()" class="btn-fluent btn-blue flex items-center justify-center gap-2"><i class="fa-solid fa-xmark"></i> Cancelar</button>
+             <button onclick="confirmarAportar()" class="btn-fluent btn-green flex items-center justify-center gap-2"><i class="fas fa-check"></i> Confirmar</button>
+         </div>
     </div>
 </div>
 
@@ -85,10 +85,10 @@
         <h3 class="text-2xl font-black mb-6 text-center uppercase tracking-tight text-white">Eliminar Meta</h3>
         <p class="text-center mb-8 opacity-70 text-sm text-slate-200">¿Está seguro de que desea eliminar la meta <strong id="nombreMetaEliminar"></strong>?</p>
         
-        <div class="flex flex-col sm:flex-row gap-3 justify-center w-full modal-buttons">
-            <button onclick="cerrarModalEliminar()" class="btn-action flex items-center justify-center gap-2"><i class="fas fa-times"></i> Cancelar</button>
-            <button onclick="confirmarEliminar()" class="btn-fluent btn-red flex items-center justify-center gap-2"><i class="fas fa-trash"></i> Eliminar</button>
-        </div>
+         <div class="flex flex-row gap-3 justify-center">
+             <button onclick="cerrarModalEliminar()" class="btn-fluent btn-blue flex-1 flex items-center justify-center gap-2"><i class="fas fa-times"></i> Cancelar</button>
+             <button onclick="confirmarEliminar()" class="btn-fluent btn-red flex-1 flex items-center justify-center gap-2"><i class="fas fa-trash"></i> Eliminar</button>
+         </div>
     </div>
 </div>
 

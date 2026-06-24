@@ -36,12 +36,12 @@
         <div class="form-group">
             <label class="form-label">Próxima fecha</label>
             <input type="date" name="proxima_fecha" required class="input-glass">
-        </div>
-        <div class="w-full">
-            <button type="submit" id="submitRecurrente" class="btn-fluent flex items-center justify-center gap-2">
-                <i class="fas fa-clock"></i> Programar
-            </button>
-        </div>
+         </div>
+         <div>
+             <button type="submit" id="submitRecurrente" class="btn-fluent flex items-center justify-center gap-2">
+                 <i class="fas fa-clock"></i> Programar
+             </button>
+         </div>
     </form>
 
     <!-- Lista de Recurrentes -->
@@ -99,20 +99,20 @@
     <div class="fluent-card p-6 sm:p-10 max-w-sm w-full mx-auto flex flex-col">
         <h3 class="text-2xl font-black mb-6 text-center uppercase tracking-tight text-white">Confirmar eliminación</h3>
         <p class="text-center mb-8 opacity-70 text-sm text-slate-200">¿Está seguro de que desea eliminar la programación <strong id="modalDescripcion"></strong>?</p>
-        <div class="flex flex-col sm:flex-row gap-3 justify-center w-full modal-buttons">
-            <button onclick="cancelarEliminacion()" class="btn-action flex items-center justify-center gap-2">
-                <i class="fas fa-times"></i> Cancelar
-            </button>
-            <button id="btnEliminar" onclick="confirmarEliminacion()" class="btn-fluent btn-red flex items-center justify-center gap-2">
-                <i class="fa-solid fa-trash"></i> Eliminar
-            </button>
-        </div>
+          <div class="flex flex-row gap-3 justify-center">
+              <button onclick="cancelarEliminacion()" class="btn-fluent btn-blue flex-1 flex items-center justify-center gap-2">
+                  <i class="fas fa-times"></i> Cancelar
+              </button>
+              <button id="btnEliminar" onclick="confirmarEliminacion()" class="btn-fluent btn-red flex-1 flex items-center justify-center gap-2">
+                  <i class="fa-solid fa-trash"></i> Eliminar
+              </button>
+          </div>
     </div>
 </div>
 
 <!-- Modal de Edición -->
-<div id="editModal" class="fixed inset-0 bg-black/60 hidden items-center justify-center z-[1040] p-4 backdrop-blur-sm">
-    <div class="fluent-card p-6 sm:p-10 max-w-md w-full mx-auto flex flex-col max-h-[90vh] overflow-y-auto">
+<div id="editModal" class="fixed inset-0 bg-black/60 hidden items-center justify-center z-[1040] p-4 backdrop-blur-sm overflow-y-auto">
+    <div class="fluent-card p-6 sm:p-10 max-w-md w-full mx-auto flex flex-col my-4">
         <h2 class="text-2xl font-black mb-6 text-center text-white uppercase tracking-tight">Editar programación</h2>
         <form method="POST" action="{{ url_for('main.recurrentes') }}" id="formEditarModal" class="space-y-4">
             <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
@@ -145,10 +145,10 @@
                     <option value="anual">Anual</option>
                 </select>
             </div>
-            <div class="flex flex-col sm:flex-row gap-3 justify-center w-full pt-4 modal-buttons">
-                <button type="submit" class="btn-fluent flex items-center justify-center gap-2"><i class="fas fa-save"></i> Guardar</button>
-                <button type="button" class="btn-action flex items-center justify-center gap-2" id="modalCancelar"><i class="fas fa-times"></i> Cancelar</button>
-            </div>
+             <div class="flex flex-row gap-3 justify-center pt-4">
+                 <button type="submit" class="btn-fluent flex items-center justify-center gap-2"><i class="fas fa-save"></i> Guardar</button>
+                  <button type="button" class="btn-fluent btn-blue flex items-center justify-center gap-2" id="modalCancelar"><i class="fas fa-times"></i> Cancelar</button>
+             </div>
         </form>
     </div>
 </div>

@@ -19,15 +19,14 @@
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&display=swap" media="print" onload="this.media='all'">
 
     <!-- Favicon personalizado -->
-    <link rel="icon" href="{{ url_for('static', filename='images/favicon.ico') }}" type="image/x-icon">
-    <link rel="shortcut icon" href="{{ url_for('static', filename='images/favicon.ico') }}" type="image/x-icon">
-    <link rel="apple-touch-icon" href="{{ url_for('static', filename='images/app_money.png') }}">
-
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/tailwind.css') }}">
+     <link rel="icon" href="{{ url_for('static', filename='images/favicon.ico') }}" type="image/x-icon">
+     <link rel="shortcut icon" href="{{ url_for('static', filename='images/favicon.ico') }}" type="image/x-icon">
+     <link rel="apple-touch-icon" href="{{ url_for('static', filename='images/app_money.png') }}">
+     <link rel="stylesheet" href="{{ url_for('static', filename='css/tailwind.css') }}">
+     <link rel="stylesheet" href="{{ url_for('static', filename='css/tailwind.input.css') }}?v=2">
 </head>
 
-<body>
-    <a href="#main-content" class="skip-link">Saltar al contenido principal</a>
+<body class="{% block body_class %}{% endblock %}">
     <div class="page-background" aria-hidden="true"></div>
 
     <!-- Contenedor global de notificaciones -->
@@ -131,7 +130,7 @@
     </nav>
     {% endif %}
 
-    <main id="main-content" class="w-full" tabindex="-1">
+    <main id="main-content" class="w-full overflow-hidden" tabindex="-1">
         {% block content %}{% endblock %}
     </main>
 

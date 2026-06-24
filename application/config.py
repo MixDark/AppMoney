@@ -18,6 +18,7 @@ def configure_app(app):
     app.config['MAX_CONTENT_LENGTH'] = app.config['PHOTO_MAX_BYTES']
     app.config['PROFILE_MAX_DIMENSION'] = int(os.getenv('PROFILE_MAX_DIMENSION', 512))
     app.config['PROFILE_WEBP_QUALITY'] = int(os.getenv('PROFILE_WEBP_QUALITY', 82))
+    app.config['TEMPLATES_AUTO_RELOAD'] = True
 
 
 def configure_security_headers(app):

@@ -25,12 +25,12 @@
             <label class="form-label">Color</label>
             <input type="color" name="color" value="#3b82f6"
                 class="w-full h-11 border border-blue-500/20 bg-transparent cursor-pointer rounded-xl p-1">
-        </div>
-        <div class="w-full">
-            <button type="submit" class="btn-fluent w-full flex items-center justify-center gap-2">
-                <i class="fas fa-folder-plus"></i> Agregar
-            </button>
-        </div>
+         </div>
+         <div>
+             <button type="submit" class="btn-fluent flex items-center justify-center gap-2">
+                 <i class="fas fa-folder-plus"></i> Agregar
+             </button>
+         </div>
     </form>
 
     <!-- Lista de categorías -->
@@ -65,14 +65,14 @@
     <div class="fluent-card p-6 sm:p-10 max-w-sm w-full mx-auto flex flex-col">
         <h3 class="text-2xl font-black mb-6 text-center uppercase tracking-tight text-white">Confirmar eliminación</h3>
         <p class="text-center mb-8 opacity-70 text-sm text-slate-200">¿Está seguro de que desea eliminar la categoría <strong id="modalNombre"></strong>?</p>
-        <div class="flex flex-col sm:flex-row gap-3 justify-center w-full modal-buttons">
-            <button type="button" id="btnCancelar" class="btn-action flex items-center justify-center gap-2">
-                <i class="fas fa-times"></i> Cancelar
-            </button>
-            <button type="button" id="btnConfirmar" class="btn-fluent btn-red flex items-center justify-center gap-2">
-                <i class="fas fa-trash-alt"></i> Eliminar
-            </button>
-        </div>
+         <div class="flex flex-row gap-3 justify-center">
+             <button type="button" id="btnCancelar" class="btn-fluent btn-blue flex-1 flex items-center justify-center gap-2">
+                 <i class="fas fa-times"></i> Cancelar
+             </button>
+             <button type="button" id="btnConfirmar" class="btn-fluent btn-red flex-1 flex items-center justify-center gap-2">
+                 <i class="fas fa-trash-alt"></i> Eliminar
+             </button>
+         </div>
     </div>
 </div>
 

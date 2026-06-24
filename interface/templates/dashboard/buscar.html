@@ -95,18 +95,22 @@
             <label class="form-label">Monto máximo</label>
             <input type="number" step="0.01" name="monto_max" value="{{ filtros.monto_max }}" class="input-glass">
         </div>
-        <div class="md:col-span-2 lg:col-span-4 flex flex-col sm:flex-row gap-3 mt-4 w-full justify-start">
-            <button type="submit" class="btn-fluent flex items-center justify-center gap-2">
-                <i class="fas fa-search"></i> Filtrar
-            </button>
-            <a href="{{ url_for('main.buscar') }}" class="btn-action flex items-center justify-center gap-2">
-                <i class="fas fa-eraser"></i> Limpiar
-            </a>
-            <a href="{{ url_for('main.exportar_buscar', q=filtros.q, desde=filtros.desde, hasta=filtros.hasta, tipo=filtros.tipo, categoria_id=filtros.categoria_id, monto_min=filtros.monto_min, monto_max=filtros.monto_max, orden=filtros.orden, periodo=filtros.periodo) }}"
-                class="btn-fluent btn-green flex items-center justify-center gap-2">
-                <i class="fas fa-file-csv"></i> Exportar
-            </a>
-        </div>
+          <div class="md:col-span-2 lg:col-span-4 flex flex-col sm:flex-row sm:items-center gap-3 mt-4">
+              <div class="flex flex-row gap-3 justify-center sm:justify-start">
+                  <button type="submit" class="btn-fluent flex items-center justify-center gap-2">
+                      <i class="fas fa-search"></i> Filtrar
+                  </button>
+                  <a href="{{ url_for('main.buscar') }}" class="btn-fluent btn-blue flex items-center justify-center gap-2">
+                      <i class="fas fa-eraser"></i> Limpiar
+                  </a>
+              </div>
+              <div class="flex justify-center sm:justify-start">
+                  <a href="{{ url_for('main.exportar_buscar', q=filtros.q, desde=filtros.desde, hasta=filtros.hasta, tipo=filtros.tipo, categoria_id=filtros.categoria_id, monto_min=filtros.monto_min, monto_max=filtros.monto_max, orden=filtros.orden, periodo=filtros.periodo) }}"
+                      class="btn-fluent btn-green inline-flex items-center justify-center gap-2 w-auto">
+                      <i class="fas fa-file-csv"></i> Exportar
+                  </a>
+              </div>
+          </div>
     </form>
 
     <!-- Toolbar resultados -->
@@ -220,12 +224,12 @@
             <input type="hidden" name="tipo" id="eliminarTipo">
             <input type="hidden" name="return_to" value="buscar">
             <input type="hidden" name="return_query" value="{{ query_string }}">
-            <div class="flex flex-col sm:flex-row gap-3 justify-center w-full modal-buttons">
-                <button type="button" onclick="cerrarModal()" class="btn-action">Cancelar</button>
-                <button type="submit" class="btn-fluent btn-red flex items-center justify-center gap-2">
-                    <i class="fas fa-trash-alt"></i> Eliminar
-                </button>
-            </div>
+              <div class="flex flex-row gap-3 justify-center">
+                  <button type="button" onclick="cerrarModal()" class="btn-fluent btn-blue flex-1 flex items-center justify-center gap-2">Cancelar</button>
+                  <button type="submit" class="btn-fluent btn-red flex-1 flex items-center justify-center gap-2">
+                      <i class="fas fa-trash-alt"></i> Eliminar
+                  </button>
+              </div>
         </form>
     </div>
 </div>

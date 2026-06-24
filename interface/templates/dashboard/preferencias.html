@@ -6,6 +6,7 @@
 
     <form method="post" class="space-y-8 mt-6">
         <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+        <input type="text" name="username" value="{{ usuario.nombre_usuario }}" autocomplete="username" readonly class="hidden">
         
         <div class="grid grid-cols-1 md:grid-cols-3 gap-6 lg:gap-8 mb-8">
             <!-- Photo Section (Read Only in Preferences) -->
@@ -26,11 +27,13 @@
             <div class="md:col-span-2 space-y-6">
                 <div class="form-group">
                     <label class="form-label">Moneda predeterminada</label>
-                    <select name="moneda" class="input-glass cursor-pointer w-full">
-                        {% for code, name in currencies_list %}
-                            <option value="{{ code }}" {% if usuario.moneda|upper == code %}selected{% endif %}>{{ name }}</option>
-                        {% endfor %}
-                    </select>
+                     <div class="select-wrapper">
+                         <select name="moneda" class="input-glass cursor-pointer w-full" id="selectMoneda">
+                             {% for code, name in currencies_list %}
+                             <option value="{{ code }}" {% if usuario.moneda|upper == code %}selected{% endif %}>{{ name }}</option>
+                             {% endfor %}
+                         </select>
+                     </div>
                 </div>
 
                 <!-- Password Change Section -->
@@ -56,13 +59,92 @@
             </div>
         </div>
 
-        <!-- Botones -->
-        <div class="form-actions pt-4 border-t border-white/10">
-            <button type="submit" class="btn-fluent flex items-center justify-center gap-2">
-                <i class="fas fa-save"></i> Guardar
-            </button>
-            <a href="/" class="btn-action flex items-center justify-center gap-2"><i class="fas fa-arrow-left"></i> Volver</a>
-        </div>
-    </form>
+         <!-- Botones -->
+         <div class="form-actions pt-4 border-t border-white/10 flex-nowrap">
+             <button type="submit" class="btn-fluent w-auto flex items-center justify-center gap-2">
+                 <i class="fas fa-save"></i> Guardar
+             </button>
+              <a href="/" class="btn-fluent btn-blue w-auto flex items-center justify-center gap-2"><i class="fas fa-times"></i> Cancelar</a>
+          </div>
+     </form>
 </div>
+
+<script>
+    (function() {
+        const select = document.getElementById('selectMoneda');
+        if (!select) return;
+
+        const wrapper = select.closest('.select-wrapper');
+        if (!wrapper) return;
+
+        const dropdown = document.createElement('div');
+        dropdown.className = 'select-dropdown';
+        wrapper.appendChild(dropdown);
+
+        function buildDropdown() {
+            dropdown.innerHTML = '';
+            Array.from(select.options).forEach((opt, idx) => {
+                const div = document.createElement('div');
+                div.className = 'select-dropdown-option' + (opt.selected ? ' selected' : '');
+                div.textContent = opt.textContent;
+                div.dataset.value = opt.value;
+                div.dataset.index = idx;
+                div.addEventListener('click', () => {
+                    select.value = opt.value;
+                    select.dispatchEvent(new Event('change'));
+                    closeDropdown();
+                    updateTrigger();
+                });
+                dropdown.appendChild(div);
+            });
+        }
+
+        function updateTrigger() {
+            const selected = select.options[select.selectedIndex];
+            select.setAttribute('data-display', selected ? selected.textContent : '');
+        }
+
+        function openDropdown() {
+            dropdown.classList.add('open');
+        }
+
+        function closeDropdown() {
+            dropdown.classList.remove('open');
+        }
+
+        select.addEventListener('mousedown', (e) => {
+            e.preventDefault();
+            if (dropdown.classList.contains('open')) {
+                closeDropdown();
+            } else {
+                buildDropdown();
+                openDropdown();
+            }
+        });
+
+        select.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                if (dropdown.classList.contains('open')) {
+                    closeDropdown();
+                } else {
+                    buildDropdown();
+                    openDropdown();
+                }
+            }
+            if (e.key === 'Escape') {
+                closeDropdown();
+            }
+        });
+
+        document.addEventListener('click', (e) => {
+            if (!wrapper.contains(e.target)) {
+                closeDropdown();
+            }
+        });
+
+        buildDropdown();
+        updateTrigger();
+    })();
+</script>
 {% endblock %}

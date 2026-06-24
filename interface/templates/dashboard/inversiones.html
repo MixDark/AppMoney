@@ -48,16 +48,16 @@
                 <label class="form-label">Fecha</label>
                 <input type="date" name="fecha" required class="input-glass">
             </div>
-            
+
             <div class="form-actions pt-4">
-                <button type="submit" class="btn-fluent flex items-center justify-center gap-2">
+                <button type="submit" class="btn-fluent w-auto flex items-center justify-center gap-2">
                     <i class="fas fa-check-circle"></i> Registrar
                 </button>
             </div>
         </form>
-    </div>
+</div>
 
-    <!-- Tabla de inversiones -->
+<!-- Tabla de inversiones -->
     <div class="fluent-card shadow-soft">
         <div class="flex flex-col sm:flex-row justify-between sm:items-center gap-4 mb-10">
             <h3 class="text-xl font-bold opacity-70 uppercase tracking-widest text-slate-300">Historial de inversiones</h3>
@@ -113,7 +113,6 @@
     </div>
 </div>
 
-<!-- Modal eliminar -->
 <div id="confirmModal" class="fixed inset-0 bg-black/60 hidden items-center justify-center z-[1040] p-4 backdrop-blur-sm">
     <div class="fluent-card p-6 sm:p-10 max-w-sm w-full mx-auto flex flex-col shadow-soft">
         <h3 class="text-xl font-bold mb-4 text-center text-white">Eliminar inversión</h3>
@@ -122,9 +121,9 @@
             <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
             <input type="hidden" name="registro_id" id="eliminarId">
             <input type="hidden" name="tipo" id="eliminarTipo">
-            <div class="flex flex-col sm:flex-row gap-3 justify-center w-full modal-buttons">
-                <button type="button" onclick="cerrarModal()" class="btn-action flex items-center justify-center gap-2"><i class="fas fa-times"></i> Cancelar</button>
-                <button type="submit" class="btn-fluent btn-red flex items-center justify-center gap-2">
+            <div class="flex flex-row gap-3 justify-center">
+                <button type="button" onclick="cerrarModal()" class="btn-fluent btn-blue w-auto flex items-center justify-center gap-2"><i class="fas fa-times"></i> Cancelar</button>
+                <button type="submit" class="btn-fluent btn-red w-auto flex items-center justify-center gap-2">
                     <i class="fas fa-trash-alt"></i> Eliminar
                 </button>
             </div>

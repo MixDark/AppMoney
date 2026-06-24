@@ -7,7 +7,7 @@ Una aplicación web para gestionar ingresos, gastos e inversiones de forma segur
 ### 1. **Autenticación de usuarios**
 - Registro de nuevos usuarios
 - Login seguro con validación de contraseña
-- Autenticación de Dds Factores (2FA) con OTP
+- Autenticación de dos Factores (2FA) con OTP
 - Gestión de sesiones
 - Opción de editar perfil y cambiar contraseña
 - Recuperación de contraseña con CAPTCHA
@@ -40,8 +40,16 @@ Una aplicación web para gestionar ingresos, gastos e inversiones de forma segur
 - Diferenciación clara de ingresos y gastos
 - Vista específica de inversiones
 - Integración en gráficos y reportes
+- Edición de inversiones con botones Guardar y Cancelar en una misma fila
 
-### 6. **Reportes mensuales**
+### 6. **Presupuestos mensuales** ⭐
+- Definición de presupuestos por categoría con monto límite
+- Visualización de progreso de gasto con barra de progreso
+- Edición de presupuestos con modal
+- Eliminación de presupuestos
+- Histórico de presupuestos
+
+### 7. **Reportes mensuales**
 - Filtrar transacciones por mes y año
 - Tablas detalladas de ingresos, gastos e inversiones
 - Totales por categoría
@@ -97,7 +105,56 @@ pandas==2.2.0
 openpyxl==3.1.5
 ```
 
-## 🔧 Instalación
+## 🐳 Docker (Producción)
+
+La aplicación se puede desplegar en producción usando Docker y Docker Compose.
+
+### Requisitos
+- Docker
+- Docker Compose
+
+### Archivos de configuración
+- `Dockerfile` - Imagen de la aplicación Python
+- `docker-compose.yml` - Orquestación de servicios (app + MySQL)
+- `.env.production` - Variables de entorno para producción
+
+### Despliegue con Docker
+
+1. **Configurar variables de entorno de producción**
+```bash
+cp .env.production .env
+```
+Editar `.env` con los valores seguros de producción:
+```
+FLASK_ENV=production
+FLASK_SECRET_KEY=tu-clave-secreta-segura
+DB_HOST=mysql
+DB_USER=tu-usuario-db
+DB_PASSWORD=tu-contraseña-db
+DB_NAME=app_money
+MYSQL_ROOT_PASSWORD=tu-contraseña-root
+```
+
+2. **Construir y ejecutar**
+```bash
+docker-compose up -d --build
+```
+
+3. **Ver logs**
+```bash
+docker-compose logs -f app
+```
+
+4. **Detener**
+```bash
+docker-compose down
+```
+
+### Servicios
+- **app**: Aplicación Flask en el puerto 7700
+- **mysql**: Base de datos MySQL 8 con healthcheck y volumen persistente
+
+## 🔧 Instalación (Desarrollo sin Docker)
 
 1. **Clonar/Descargar el proyecto**
 ```bash
@@ -116,17 +173,19 @@ pip install -r requirements.txt
 ```
 
 4. **Configurar variables de entorno**
-- Copiar `.env.example` a `.env`
-- Editar `.env` con tus datos:
+```bash
+cp .env.development .env
 ```
+Editar `.env` con tus datos locales:
+```
+FLASK_ENV=development
 FLASK_SECRET_KEY=tu-clave-secreta
 DB_HOST=localhost
 DB_USER=root
 DB_PASSWORD=tu-contraseña
 DB_NAME=app_money
-FLASK_DEBUG=False
+FLASK_DEBUG=True
 SESSION_TIMEOUT=1800
-PHOTO_MAX_BYTES=2097152
 ```
 
 5. **Crear base de datos**
@@ -139,7 +198,7 @@ mysql -u root -p < init_db.sql
 python app.py
 ```
 
-La aplicación estará disponible en `http://localhost:5000`
+La aplicación estará disponible en `http://localhost:7700`
 
 ## 🔐 Configurar autenticación de dos factores (2FA)
 
@@ -169,15 +228,25 @@ La aplicación estará disponible en `http://localhost:5000`
 
 ```
 app_money/
+├── application/
+│   ├── currencies.py          # Lista de monedas soportadas
+│   └── filters.py             # Filtros Jinja para formateo
 ├── interface/
 │   ├── templates/
 │   │   ├── auth/              # Autenticación
 │   │   │   ├── login.html
-│   │   │   └── registrar_usuario.html
+│   │   │   ├── registrar_usuario.html
+│   │   │   ├── recuperar_contraseña.html
+│   │   │   ├── resetear_contraseña.html
+│   │   │   ├── verificar_captcha.html
+│   │   │   └── verificar_otp_recuperacion.html
 │   │   ├── dashboard/         # Panel principal
 │   │   │   ├── consolidado.html
 │   │   │   ├── inversiones.html
-│   │   │   └── editar_perfil.html
+│   │   │   ├── perfil.html
+│   │   │   └── preferencias.html
+│   │   ├── config/            # Configuración
+│   │   │   └── presupuestos.html
 │   │   ├── forms/             # Formularios
 │   │   │   ├── registrar.html
 │   │   │   └── editar_registro.html
@@ -193,9 +262,11 @@ app_money/
 │   └── validators.py          # Funciones de validación
 ├── app.py                     # Aplicación principal
 ├── init_db.sql                # Script de base de datos
-├── .env                       # Variables de entorno
-├── .env.example               # Ejemplo de .env
-└── .gitignore                 # Archivos ignorados por Git
+├── Dockerfile                 # Imagen Docker para producción
+├── docker-compose.yml         # Orquestación de servicios
+├── .env.development           # Variables para desarrollo
+├── .env.production            # Variables para producción (Docker)
+├── requirements.txt           # Dependencias Python
 ```
 
 ## 🗄️ Base de datos
@@ -242,10 +313,19 @@ app_money/
    - fecha
    - creado_en
 
+5. **presupuestos**
+   - id (PK)
+   - usuario_id (FK)
+   - categoria_id (FK)
+   - monto_limite
+   - gastado
+   - creado_en
+   - actualizado_en
+
 ## 🎨 Diseño
 
 - **Framework**: Tailwind CSS
-- **Estilo**: Fluent Design (glasmorphism)
+- **Estilo**: Fluent Design
 - **Gráficos**: Chart.js
 - **Responsive**: Compatible con móvil y escritorio
 
@@ -257,12 +337,23 @@ app_money/
 | GET/POST | `/login` | Página de login |
 | POST | `/verify-otp` | Verificar código OTP (AJAX) |
 | POST | `/logout` | Cerrar sesión |
-| GET/POST | `/registrar` | Registrar transacciones |
+| GET/POST | `/registrar_usuario` | Registrar nuevo usuario |
+| GET/POST | `/recuperar_contraseña` | Solicitar recuperación |
+| GET/POST | `/resetear_contraseña` | Cambiar contraseña |
+| POST | `/verificar_captcha` | Verificar captcha |
+| POST | `/verificar_otp_recuperacion` | Verificar OTP |
 | GET/POST | `/editar_registro` | Editar transacciones |
 | POST | `/eliminar_registro` | Eliminar transacciones |
 | GET | `/reportes` | Ver reportes mensuales |
+| POST | `/exportar_excel` | Exportar a Excel |
+| POST | `/exportar_pdf` | Exportar a PDF |
 | GET | `/inversiones` | Ver inversiones |
+| GET/POST | `/presupuestos` | Gestionar presupuestos mensuales |
+| GET/POST | `/editar_presupuesto/<id>` | Editar presupuesto (AJAX) |
+| GET | `/historial_presupuesto/<id>` | Ver histórico de presupuesto |
+| GET/POST | `/eliminar_presupuesto/<id>` | Eliminar presupuesto |
 | GET/POST | `/editar_perfil` | Editar perfil de usuario |
+| GET/POST | `/preferencias` | Configurar preferencias |
 | GET/POST | `/seguridad` | Configurar 2FA/MFA |
 
 ## 📊 Validaciones
@@ -324,5 +415,5 @@ Desarrollado como gestor de finanzas personales.
 
 ---
 
-**Última actualización**: 16 de mayo de 2026
+**Última actualización**: 24 de junio de 2026
 

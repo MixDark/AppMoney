@@ -5,28 +5,28 @@
     <h2 class="text-3xl font-black mb-8 text-center text-white">Reportes del mes: {{ mes_mostrar }}</h2>
 
     <!-- Filtros de Reporte -->
-    <form method="get" class="w-full mb-8 lg:mb-12 flex flex-col items-center gap-4">
-        <div class="flex flex-col sm:flex-row gap-4 items-stretch sm:items-end w-full sm:w-auto justify-center">
-            <div class="form-group">
-                <label class="form-label text-center sm:text-left">Seleccionar mes</label>
+    <form method="get" class="w-full mb-8 lg:mb-12">
+        <div class="flex flex-col lg:flex-row gap-4 items-center justify-center">
+            <div class="form-group mb-0 flex flex-row items-center gap-2">
+                <label class="form-label mb-0 leading-none">Seleccionar mes</label>
                 <input type="month" name="mes" value="{{ mes_actual }}" class="input-glass max-w-[200px] h-12">
             </div>
-        </div>
-        <div class="flex flex-col sm:flex-row flex-wrap gap-3 mt-4 w-full sm:w-auto justify-center">
-            <button type="submit" class="btn-fluent h-11 px-6 flex items-center justify-center gap-2">
-                <i class="fas fa-eye"></i> Ver
-            </button>
-            <a href="/exportar_pdf?mes={{ mes_actual }}" class="btn-fluent btn-red h-11 px-6 flex items-center justify-center gap-2">
-                <i class="fas fa-file-pdf"></i> PDF
-            </a>
-            <a href="/exportar_excel?mes={{ mes_actual }}" class="btn-fluent btn-green h-11 px-6 flex items-center justify-center gap-2">
-                <i class="fas fa-file-excel"></i> Excel
-            </a>
+            <div class="flex flex-row gap-3">
+                <button type="submit" class="btn-fluent h-11 px-4 flex items-center justify-center gap-2">
+                    <i class="fas fa-eye"></i> Ver
+                </button>
+                <a href="/exportar_pdf?mes={{ mes_actual }}" class="btn-fluent btn-red h-11 px-4 flex items-center justify-center gap-2">
+                    <i class="fas fa-file-pdf"></i> PDF
+                </a>
+                <a href="/exportar_excel?mes={{ mes_actual }}" class="btn-fluent btn-green h-11 px-4 flex items-center justify-center gap-2">
+                    <i class="fas fa-file-excel"></i> Excel
+                </a>
+            </div>
         </div>
     </form>
 
     <!-- Tarjetas de Estadísticas -->
-    <div class="grid grid-cols-1 xs:grid-cols-3 gap-4 lg:gap-6 w-full mb-8 lg:mb-12 text-center">
+    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 lg:gap-6 w-full mb-8 lg:mb-12 text-center">
         <div class="bg-surface border border-emerald-500/20 hover:border-emerald-500/50 rounded-2xl p-5 sm:p-6 text-center transition-all duration-200 shadow-soft">
             <p class="text-xs font-black uppercase tracking-widest opacity-60 mb-2 text-slate-300">Total Ingresos</p>
             <p class="text-xl sm:text-2xl font-black text-green-400">{% if currency_code == 'COP' %}{{ total_ingresos|currency_with_code(currency_code) }}{% else %}{{ currency_code }} {{ total_ingresos|format_money }}{% endif %}</p>
