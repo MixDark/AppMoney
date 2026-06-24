@@ -1,59 +1,49 @@
 {% extends 'layout/base.html' %}
 {% block title %}Registro de usuario{% endblock %}
 {% block content %}
-<style>
-    .form-label {
-        display: block;
-        font-size: 0.7rem;
-        font-weight: 700;
-        letter-spacing: 0.1em;
-        text-transform: uppercase;
-        color: var(--text-secondary);
-        margin-bottom: 5px;
-    }
-</style>
-<div class="fluent-card form-card p-8 max-w-md w-full flex flex-col items-center">
+<div class="fluent-card form-card p-6 sm:p-10 max-w-md w-full flex flex-col items-center mx-auto shadow-soft">
     <h2 class="text-2xl font-black mb-1 text-center text-white">Información de cuenta</h2>
-    <p class="text-center text-xs opacity-60 mb-6">Únete a App Money hoy mismo</p>
+    <p class="text-center text-xs opacity-60 mb-8 text-slate-300">Únete a App Money hoy mismo</p>
 
-    <form method="post" enctype="multipart/form-data" class="space-y-6 w-full flex flex-col">
+    <form method="post" enctype="multipart/form-data" class="space-y-5 flex flex-col items-center w-full">
         <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
-        <div class="w-full">
+        
+        <div class="form-group">
             <label class="form-label">Nombre de usuario</label>
             <input type="text" name="nombre_usuario" required class="input-glass">
         </div>
 
-        <div class="w-full">
+        <div class="form-group">
             <label class="form-label">Contraseña</label>
             <input type="password" name="password" required class="input-glass">
         </div>
 
-        <div class="w-full">
+        <div class="form-group">
             <label class="form-label">Nombre completo</label>
             <input type="text" name="nombre_completo" class="input-glass">
         </div>
 
-        <div class="w-full">
+        <div class="form-group">
             <label class="form-label">Correo electrónico</label>
             <input type="email" name="email" class="input-glass">
         </div>
 
-        <div class="w-full">
+        <div class="form-group">
             <label class="form-label">Teléfono</label>
             <input type="tel" name="telefono" class="input-glass">
         </div>
 
-        <div class="w-full">
+        <div class="form-group">
             <label class="form-label">País</label>
             <input type="text" name="pais" class="input-glass">
         </div>
 
-        <div class="w-full">
+        <div class="form-group">
             <label class="form-label">Ciudad</label>
             <input type="text" name="ciudad" class="input-glass">
         </div>
 
-        <div class="w-full">
+        <div class="form-group">
             <label class="form-label">Moneda preferida</label>
             <select name="moneda" class="input-glass appearance-none cursor-pointer">
                 {% set moneda_seleccionada = request.form.get('moneda', 'USD') %}
@@ -63,20 +53,20 @@
             </select>
         </div>
 
-        <div class="w-full">
+        <div class="form-group">
             <label class="form-label">Foto de perfil (opcional)</label>
             <input type="file" name="foto_perfil" accept="image/*" class="input-glass">
         </div>
 
-        <div class="w-full flex justify-center">
-            <button type="submit" class="btn-fluent px-10 py-2 flex items-center justify-center gap-2 whitespace-nowrap text-sm">
-                <i class="fas fa-user-plus"></i> Registrar
-            </button>
-        </div>
+        <button type="submit" class="btn-fluent w-full flex items-center justify-center gap-2 mt-6">
+            <i class="fas fa-user-plus"></i> Registrar
+        </button>
     </form>
 
-    <div class="mt-6 flex flex-col items-center">
-        <a href="/login" class="text-blue-400 hover:text-blue-300 text-xs font-bold">Volver al login</a>
+    <div class="w-full h-[1px] bg-white/10 my-6" aria-hidden="true"></div>
+
+    <div class="text-center">
+        <a href="/login" class="text-blue-400 hover:text-blue-300 text-xs font-bold transition-colors">Volver al login</a>
     </div>
 </div>
 {% endblock %}

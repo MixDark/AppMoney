@@ -1,35 +1,17 @@
 {% extends 'layout/base.html' %}
 {% block title %}Preferencias - App Money{% endblock %}
 {% block content %}
-<style>
-    .form-label {
-        display: block;
-        font-size: 0.75rem;
-        font-weight: 700;
-        letter-spacing: 0.1em;
-        text-transform: uppercase;
-        color: var(--text-secondary);
-        margin-bottom: 8px;
-    }
-    .section-divider {
-        padding-top: 2.5rem;
-        border-top: 1px solid rgba(148, 163, 184, 0.1);
-    }
-    .profile-avatar {
-        background: var(--surface);
-        border: 3px solid rgba(59, 130, 246, 0.3);
-    }
-</style>
+<div class="fluent-card max-w-4xl w-full mx-auto shadow-soft">
+    <h2 class="text-3xl font-black mb-10 text-center text-white">Preferencias</h2>
 
-<div class="fluent-card p-6 sm:p-12 max-w-4xl w-full mx-auto">
-    <h2 class="text-3xl font-black mb-12 text-center text-white">Preferencias</h2>
-
-    <form method="post" class="space-y-8">
+    <form method="post" class="space-y-8 mt-6">
         <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-6 md:gap-8 mb-10">
+        
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6 lg:gap-8 mb-8">
+            <!-- Photo Section (Read Only in Preferences) -->
             <div class="md:col-span-1 flex flex-col items-center">
                 <div class="relative mb-6">
-                    <div class="profile-avatar w-32 h-32 rounded-full flex items-center justify-center text-white text-5xl font-black shadow-xl overflow-hidden backdrop-blur-xl">
+                    <div class="w-24 h-24 sm:w-32 sm:h-32 rounded-full border-4 border-blue-500/30 flex items-center justify-center text-white text-3xl sm:text-5xl font-black shadow-xl overflow-hidden backdrop-blur-xl bg-surface select-none shrink-0">
                         {% if usuario.foto_perfil %}
                         <img src="{{ usuario_foto_url(usuario, usuario.id) }}" class="w-full h-full object-cover" alt="Foto de perfil">
                         {% else %}
@@ -37,48 +19,49 @@
                         {% endif %}
                     </div>
                 </div>
-                <p class="text-xl font-black text-center">{{ usuario.nombre_usuario }}</p>
+                <p class="text-xl font-black text-center text-white">{{ usuario.nombre_usuario }}</p>
             </div>
 
+            <!-- Options Section -->
             <div class="md:col-span-2 space-y-6">
-                <div>
+                <div class="form-group">
                     <label class="form-label">Moneda predeterminada</label>
-                    <select name="moneda" class="input-glass appearance-none cursor-pointer h-12 px-4 py-3 w-full">
+                    <select name="moneda" class="input-glass cursor-pointer w-full">
                         {% for code, name in currencies_list %}
                             <option value="{{ code }}" {% if usuario.moneda|upper == code %}selected{% endif %}>{{ name }}</option>
                         {% endfor %}
                     </select>
                 </div>
 
-                <div class="section-divider space-y-6">
-                    <div>
-                        <h3 class="font-black text-lg mb-2 tracking-widest">Cambiar contraseña</h3>
-                    </div>
+                <!-- Password Change Section -->
+                <div class="pt-6 sm:pt-10 border-t border-white/10 mt-6 space-y-4">
+                    <h3 class="font-black text-lg mb-4 uppercase tracking-widest text-slate-300">Cambiar contraseña</h3>
 
-                    <div>
+                    <div class="form-group">
                         <label class="form-label">Contraseña actual</label>
-                        <input type="password" name="password_actual" autocomplete="current-password" class="input-glass h-12 px-4 py-3 w-full">
+                        <input type="password" name="password_actual" autocomplete="current-password" class="input-glass">
                     </div>
 
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        <div>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div class="form-group">
                             <label class="form-label">Nueva contraseña</label>
-                            <input type="password" name="password_nueva" autocomplete="new-password" class="input-glass h-12 px-4 py-3 w-full">
+                            <input type="password" name="password_nueva" autocomplete="new-password" class="input-glass">
                         </div>
-                        <div>
+                        <div class="form-group">
                             <label class="form-label">Confirmar nueva contraseña</label>
-                            <input type="password" name="password_confirmar" autocomplete="new-password" class="input-glass h-12 px-4 py-3 w-full">
+                            <input type="password" name="password_confirmar" autocomplete="new-password" class="input-glass">
                         </div>
                     </div>
                 </div>
             </div>
         </div>
 
-        <div class="flex flex-col sm:flex-row gap-4 justify-end pt-8">
-            <a href="/" class="btn-fluent btn-red px-6 flex items-center gap-2 whitespace-nowrap w-full sm:w-auto"><i class="fas fa-arrow-left"></i> Volver</a>
-            <button type="submit" class="btn-fluent px-6 flex items-center gap-2 whitespace-nowrap w-full sm:w-auto">
+        <!-- Botones -->
+        <div class="form-actions pt-4 border-t border-white/10">
+            <button type="submit" class="btn-fluent flex items-center justify-center gap-2">
                 <i class="fas fa-save"></i> Guardar
             </button>
+            <a href="/" class="btn-action flex items-center justify-center gap-2"><i class="fas fa-arrow-left"></i> Volver</a>
         </div>
     </form>
 </div>

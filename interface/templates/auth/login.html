@@ -1,62 +1,36 @@
 {% extends 'layout/base.html' %}
 {% block title %}Inicio de sesión{% endblock %}
 {% block content %}
-<style>
-    .form-label {
-        display: block;
-        font-size: 0.7rem;
-        font-weight: 700;
-        letter-spacing: 0.1em;
-        text-transform: uppercase;
-        color: var(--text-secondary);
-        margin-bottom: 5px;
-    }
-    .divider {
-        height: 1px;
-        background: rgba(148, 163, 184, 0.1);
-        margin: 12px 0;
-    }
-    .icon-container {
-        margin-bottom: 8px;
-        filter: drop-shadow(0 4px 15px rgba(59, 130, 246, 0.3));
-    }
-    .icon-container img {
-        width: 80px;
-        height: 80px;
-        object-fit: contain;
-    }
-</style>
-<div class="fluent-card form-card p-6 sm:p-8 max-w-md w-full flex flex-col items-center">
-    <div class="icon-container">
-        <img src="{{ url_for('static', filename='images/app_money.png') }}" alt="App Money Logo">
+
+<div class="fluent-card p-6 sm:p-10 max-w-md w-full flex flex-col items-center mx-auto">
+    <div class="mb-6 flex justify-center filter drop-shadow-[0_4px_15px_rgba(59,130,246,0.3)]">
+        <img src="{{ url_for('static', filename='images/app_money.png') }}" alt="App Money Logo" class="w-20 h-20 object-contain">
     </div>
     <h2 class="text-2xl font-black mb-1 text-center text-white">App Money</h2>
-    <p class="text-center text-xs opacity-60 mb-6">Inicia sesión en tu cuenta</p>
+    <p class="text-center text-xs opacity-60 mb-8 text-slate-300">Inicia sesión en tu cuenta</p>
 
-    <form method="post" class="space-y-6 w-full flex flex-col">
+    <form method="post" class="space-y-6 flex flex-col items-center w-full">
         <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
-        <div class="w-full">
+        <div class="form-group">
             <label class="form-label">Usuario</label>
-            <input type="text" name="nombre_usuario" required class="input-glass" value="{{ nombre_usuario or '' }}">
+            <input type="text" name="nombre_usuario" required class="input-glass" autocomplete="username" value="{{ nombre_usuario or '' }}">
         </div>
 
-        <div class="w-full">
+        <div class="form-group">
             <label class="form-label">Contraseña</label>
-            <input type="password" name="password" required class="input-glass">
+            <input type="password" name="password" required class="input-glass" autocomplete="current-password">
         </div>
 
-        <div class="w-full flex justify-center">
-            <button type="submit" class="btn-fluent px-10 py-2 justify-center flex items-center gap-2 whitespace-nowrap text-sm w-full sm:w-auto">
-                <i class="fas fa-sign-in-alt"></i> Ingresar
-            </button>
-        </div>
+        <button type="submit" class="btn-fluent w-full flex items-center justify-center gap-2 mt-6">
+            <i class="fas fa-sign-in-alt"></i> Ingresar
+        </button>
     </form>
 
-    <div class="divider"></div>
+    <div class="w-full h-[1px] bg-white/10 my-6" aria-hidden="true"></div>
 
     <div class="w-full flex flex-col items-center gap-2 text-center">
-        <p class="text-center text-xs opacity-70">
-            ¿No tienes cuenta? <a href="/registrar_usuario" class="text-blue-400 hover:text-blue-300 font-semibold">Regístrate</a>
+        <p class="text-center text-xs opacity-70 text-slate-300">
+            ¿No tienes cuenta? <a href="/registrar_usuario" class="text-blue-400 hover:text-blue-300 font-semibold transition-colors">Regístrate</a>
         </p>
         <a href="/recuperar_contraseña" class="text-xs font-semibold opacity-70 hover:opacity-100 transition-opacity text-blue-400">
             ¿Olvidó su contraseña?
@@ -66,30 +40,31 @@
 
 <!-- Modal flotante para verificación OTP -->
 {% if mostrar_otp_modal %}
-<div id="otp-modal" class="fixed inset-0 bg-black/50 flex items-center justify-center z-50 backdrop-blur-sm">
-    <div class="fluent-card p-8 max-w-sm w-full mx-4 flex flex-col items-center rounded-2xl">
+<div id="otp-modal" class="fixed inset-0 bg-black/60 flex items-center justify-center z-[1040] p-4 backdrop-blur-sm">
+    <div class="fluent-card p-6 sm:p-8 max-w-sm w-full mx-auto flex flex-col items-center rounded-2xl shadow-soft">
         <div class="text-4xl mb-4 text-blue-500">
             <i class="fas fa-lock"></i>
         </div>
         
-        <h3 class="text-2xl font-bold mb-6 text-center">Verificación de dos factores</h3>
+        <h3 class="text-2xl font-bold mb-6 text-center text-white">Verificación de dos factores</h3>
 
         <form id="otp-form" class="w-full flex flex-col gap-4">
-            <div class="w-full">
-                <label class="block mb-2 text-sm font-bold">Código OTP:</label>
+            <div class="w-full form-group">
+                <label class="form-label text-center">Código OTP:</label>
                 <input 
                     type="text" 
                     id="codigo_otp" 
                     name="codigo_otp" 
                     maxlength="6"
                     required 
-                    class="input-glass text-center text-2xl font-bold tracking-widest"
+                    class="input-glass text-center text-2xl font-bold tracking-widest focus:ring-2 focus:ring-blue-500 focus:outline-none text-white"
                     inputmode="numeric"
-                    autocomplete="off">
+                    autocomplete="off"
+                    style="font-variant-numeric: tabular-nums;">
             </div>
 
-            <div class="flex justify-center pt-2">
-                <button type="submit" class="btn-fluent px-8 py-3 justify-center flex items-center gap-2 whitespace-nowrap">
+            <div class="flex justify-center pt-2 w-full">
+                <button type="submit" class="btn-fluent w-full justify-center flex items-center gap-2 whitespace-nowrap">
                     <i class="fas fa-check"></i> Verificar
                 </button>
             </div>
@@ -97,50 +72,20 @@
     </div>
 </div>
 
-<style>
-    @keyframes slideIn {
-        from {
-            opacity: 0;
-            transform: scale(0.95);
-        }
-        to {
-            opacity: 1;
-            transform: scale(1);
-        }
-    }
-
-    #otp-modal {
-        animation: slideIn 0.3s ease-out;
-    }
-
-    #codigo_otp {
-        font-variant-numeric: tabular-nums;
-    }
-
-    #codigo_otp:focus {
-        outline: none;
-        border-color: #3b82f6 !important;
-        box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1) !important;
-    }
-</style>
-
 <script>
     document.addEventListener('DOMContentLoaded', function() {
         const form = document.getElementById('otp-form');
         const inputOtp = document.getElementById('codigo_otp');
         const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
 
-        // Focus automático en el input
         if (inputOtp) {
             inputOtp.focus();
         }
 
-        // Permitir solo números
         inputOtp.addEventListener('input', function(e) {
             this.value = this.value.replace(/[^0-9]/g, '').slice(0, 6);
         });
 
-        // Permitir envío con Enter
         inputOtp.addEventListener('keypress', function(e) {
             if (e.key === 'Enter') {
                 e.preventDefault();
@@ -148,7 +93,6 @@
             }
         });
 
-        // Manejar el envío del formulario
         form.addEventListener('submit', async function(e) {
             e.preventDefault();
             
@@ -159,7 +103,6 @@
                 return;
             }
 
-            // Deshabilitar botón y mostrar cargando
             const submitBtn = form.querySelector('button[type="submit"]');
             submitBtn.disabled = true;
             const btnText = submitBtn.innerHTML;

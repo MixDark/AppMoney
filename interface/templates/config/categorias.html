@@ -1,69 +1,50 @@
 {% extends 'layout/base.html' %}
 {% block title %}Categorías - App Money{% endblock %}
 {% block content %}
-<style>
-    .form-label {
-        display: block;
-        font-size: 0.75rem;
-        font-weight: 700;
-        letter-spacing: 0.1em;
-        text-transform: uppercase;
-        color: var(--text-secondary);
-        margin-bottom: 8px;
-    }
-    .category-card {
-        background: var(--surface);
-        border: 1px solid rgba(148, 163, 184, 0.1);
-        transition: all 0.2s ease;
-    }
-    .category-card:hover {
-        border-color: rgba(59, 130, 246, 0.3);
-        background: rgba(59, 130, 246, 0.05);
-        transform: translateY(-2px);
-    }
-</style>
-<div class="fluent-card p-10 max-w-5xl w-full mx-auto">
+<div class="fluent-card max-w-5xl w-full mx-auto">
     <h2 class="page-title mb-2 text-center">Gestionar categorías</h2>
     <p class="text-center text-sm opacity-60 mb-10">Organiza tus transacciones con categorías personalizadas</p>
 
     <!-- Formulario para agregar -->
     <form method="POST"
-        class="grid grid-cols-1 md:grid-cols-5 gap-6 mb-12 p-8 panel-surface items-end">
+        class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 mb-12 p-4 sm:p-6 md:p-8 panel-surface items-end">
         <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
-        <div class="md:col-span-2">
+        <div class="sm:col-span-2 form-group">
             <label class="form-label">Nombre</label>
             <input type="text" name="nombre" required class="input-glass">
         </div>
-        <div>
+        <div class="form-group">
             <label class="form-label">Tipo</label>
-            <select name="tipo" class="input-glass appearance-none cursor-pointer">
+            <select name="tipo" class="input-glass cursor-pointer">
                 <option value="gasto">Gasto</option>
                 <option value="ingreso">Ingreso</option>
                 <option value="inversion">Inversión</option>
             </select>
         </div>
-        <div>
+        <div class="form-group">
             <label class="form-label">Color</label>
             <input type="color" name="color" value="#3b82f6"
-                class="w-full h-[46px] border border-blue-500/20 bg-transparent cursor-pointer rounded-xl">
+                class="w-full h-11 border border-blue-500/20 bg-transparent cursor-pointer rounded-xl p-1">
         </div>
-        <div>
-            <button type="submit" class="btn-action w-full py-3 flex items-center justify-center gap-2"><i class="fas fa-folder-plus"></i> Agregar</button>
+        <div class="w-full">
+            <button type="submit" class="btn-fluent w-full flex items-center justify-center gap-2">
+                <i class="fas fa-folder-plus"></i> Agregar
+            </button>
         </div>
     </form>
 
     <!-- Lista de categorías -->
-    <h3 class="text-lg font-bold mb-6 opacity-70 uppercase tracking-widest">Tus categorías</h3>
-    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+    <h3 class="text-lg font-bold mb-6 opacity-70 uppercase tracking-widest text-slate-300">Tus categorías</h3>
+    <div class="grid grid-cols-1 min-[480px]:grid-cols-2 lg:grid-cols-3 gap-4 lg:gap-6">
         {% for cat in categorias %}
-        <div class="category-card p-5 rounded-3xl flex justify-between items-center js-category-card"
+        <div class="bg-surface border border-white/10 hover:border-blue-500/30 hover:bg-blue-500/5 rounded-2xl p-4 flex justify-between items-center transition-all duration-200 js-category-card"
             data-color="{{ cat.color or '#3b82f6' }}">
             <div>
-                <p class="font-black text-lg tracking-tight">{{ cat.nombre }}</p>
-                <p class="text-[10px] font-black uppercase opacity-50 tracking-widest">{{ cat.tipo }}</p>
+                <p class="font-black text-lg tracking-tight text-white">{{ cat.nombre }}</p>
+                <p class="text-[10px] font-black uppercase opacity-50 tracking-widest text-slate-400">{{ cat.tipo }}</p>
             </div>
             <button type="button"
-                class="text-red-500 hover:scale-110 transition-transform p-2 js-confirm-delete"
+                class="text-red-500 hover:scale-110 transition-transform p-2 min-h-10 min-w-10 flex items-center justify-center rounded-lg js-confirm-delete"
                 data-href="{{ url_for('main.eliminar_categoria_route', id=cat.id) }}"
                 data-nombre="{{ cat.nombre|e }}">
                 <i class="fas fa-trash-alt"></i>
@@ -72,28 +53,29 @@
         {% endfor %}
         {% if not categorias %}
         <div class="col-span-full text-center py-20 opacity-30">
-            <i class="fas fa-tags text-5xl mb-4"></i>
+            <i class="fas fa-tags text-5xl mb-4 text-slate-400"></i>
             <p class="font-bold">No hay categorías registradas.</p>
         </div>
         {% endif %}
     </div>
 </div>
 
-<!-- Modal de Confirmacion -->
-<div id="confirmModal" class="fixed inset-0 bg-black/50 hidden items-center justify-center z-50">
-    <div class="fluent-card p-10 max-w-sm w-full mx-4">
-        <h3 class="text-2xl font-black mb-6 text-center uppercase tracking-tight">Confirmar eliminacion</h3>
-        <p class="text-center mb-8 opacity-70">¿Esta seguro de que desea eliminar la categoria <strong id="modalNombre"></strong>?</p>
-        <div class="flex gap-4 justify-center">
-            <button type="button" id="btnCancelar" class="btn-fluent px-8 py-2 flex items-center justify-center gap-2 whitespace-nowrap">
+<!-- Modal de Confirmación -->
+<div id="confirmModal" class="fixed inset-0 bg-black/60 hidden items-center justify-center z-[1040] p-4 backdrop-blur-sm">
+    <div class="fluent-card p-6 sm:p-10 max-w-sm w-full mx-auto flex flex-col">
+        <h3 class="text-2xl font-black mb-6 text-center uppercase tracking-tight text-white">Confirmar eliminación</h3>
+        <p class="text-center mb-8 opacity-70 text-sm text-slate-200">¿Está seguro de que desea eliminar la categoría <strong id="modalNombre"></strong>?</p>
+        <div class="flex flex-col sm:flex-row gap-3 justify-center w-full modal-buttons">
+            <button type="button" id="btnCancelar" class="btn-action flex items-center justify-center gap-2">
                 <i class="fas fa-times"></i> Cancelar
             </button>
-            <button type="button" id="btnConfirmar" class="btn-fluent btn-red px-8 py-2 flex items-center justify-center gap-2 whitespace-nowrap">
+            <button type="button" id="btnConfirmar" class="btn-fluent btn-red flex items-center justify-center gap-2">
                 <i class="fas fa-trash-alt"></i> Eliminar
             </button>
         </div>
     </div>
 </div>
+
 <script>
     document.querySelectorAll('.js-category-card').forEach((card) => {
         const color = card.dataset.color || '#3b82f6';

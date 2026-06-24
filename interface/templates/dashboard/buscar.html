@@ -1,214 +1,10 @@
 {% extends 'layout/base.html' %}
 {% block title %}Búsqueda - App Money{% endblock %}
 {% block content %}
-<style>
-    .form-label {
-        display: block;
-        font-size: 0.75rem;
-        font-weight: 700;
-        letter-spacing: 0.05em;
-        color: var(--text-secondary);
-        margin-bottom: 8px;
-    }
-    .summary-card {
-        background: var(--surface);
-        border: 1px solid var(--border-subtle);
-        border-radius: 16px;
-        padding: 20px;
-    }
-    .summary-card.income { border-color: rgba(16, 185, 129, 0.25); }
-    .summary-card.expense { border-color: rgba(239, 68, 68, 0.25); }
-    .summary-card.investment { border-color: rgba(59, 130, 246, 0.25); }
-    .summary-card.balance { border-color: rgba(249, 115, 22, 0.25); }
-    .summary-card.count { border-color: var(--border-subtle); }
-    .summary-label {
-        font-size: 0.7rem;
-        font-weight: 600;
-        color: var(--text-secondary);
-        margin-bottom: 6px;
-    }
-    .summary-value {
-        font-size: 1.1rem;
-        font-weight: 800;
-    }
-    .period-chip {
-        display: inline-flex;
-        align-items: center;
-        padding: 6px 14px;
-        border-radius: 999px;
-        font-size: 0.75rem;
-        font-weight: 600;
-        background: var(--surface-contrast);
-        border: 1px solid var(--border-subtle);
-        color: var(--text-secondary);
-        text-decoration: none;
-        transition: all 0.2s;
-    }
-    .period-chip:hover, .period-chip.active {
-        background: rgba(59, 130, 246, 0.15);
-        border-color: rgba(59, 130, 246, 0.4);
-        color: var(--text-main);
-    }
-    .table-container {
-        background: var(--surface);
-        border: 1px solid var(--border-subtle);
-        border-radius: 16px;
-        overflow: hidden;
-    }
-    .table-header {
-        background: var(--surface-contrast);
-        border-bottom: 1px solid var(--border-subtle);
-    }
-    .table-row {
-        border-bottom: 1px solid var(--border-subtle);
-    }
-    .table-row:hover {
-        background: var(--surface-contrast);
-    }
-    .tipo-badge {
-        display: inline-flex;
-        align-items: center;
-        gap: 6px;
-        padding: 4px 10px;
-        border-radius: 8px;
-        font-size: 0.75rem;
-        font-weight: 700;
-    }
-    .tipo-badge.ingreso { background: rgba(16, 185, 129, 0.15); color: #34d399; }
-    .tipo-badge.gasto { background: rgba(239, 68, 68, 0.15); color: #f87171; }
-    .tipo-badge.inversion { background: rgba(59, 130, 246, 0.15); color: #60a5fa; }
-    .cat-badge {
-        display: inline-block;
-        padding: 6px 12px;
-        border-radius: 10px;
-        font-size: 0.8rem;
-        font-weight: 400;
-        border: 1px solid var(--border-subtle);
-        color: var(--text-main);
-        background: transparent;
-    }
-    .cat-badge--colored {
-        color: var(--text-main) !important;
-        border-color: var(--cat-border);
-        background: transparent;
-    }
-    .cat-badge--colored[style] {
-        color: var(--text-main) !important;
-        border-color: var(--cat-border) !important;
-        background: transparent !important;
-    }
-    .cat-badge--default {
-        color: var(--text-main);
-        background: transparent;
-        border-color: rgba(148,163,184,0.12);
-    }
-    .action-btn {
-        padding: 6px 10px;
-        border-radius: 8px;
-        transition: all 0.2s;
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-    }
-    .action-btn:hover { background: var(--surface-contrast); }
-    .pagination {
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        gap: 8px;
-        flex-wrap: wrap;
-        margin-top: 24px;
-    }
-    .page-link {
-        min-width: 36px;
-        height: 36px;
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-        border-radius: 8px;
-        font-size: 0.85rem;
-        font-weight: 600;
-        background: var(--surface);
-        border: 1px solid var(--border-subtle);
-        color: var(--text-secondary);
-        text-decoration: none;
-        transition: all 0.2s;
-    }
-    .page-link:hover, .page-link.active {
-        background: rgba(59, 130, 246, 0.15);
-        border-color: rgba(59, 130, 246, 0.4);
-        color: var(--text-main);
-    }
-    .toolbar {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 12px;
-        align-items: center;
-        justify-content: space-between;
-        margin-bottom: 16px;
-    }
-
-    @media (max-width: 768px) {
-        .summary-card {
-            padding: 16px;
-        }
-
-        .summary-value {
-            font-size: 1rem;
-        }
-
-        .toolbar {
-            flex-direction: column;
-            align-items: flex-start;
-            gap: 8px;
-        }
-
-        .mobile-stack-table thead {
-            display: none;
-        }
-
-        .mobile-stack-table,
-        .mobile-stack-table tbody,
-        .mobile-stack-table tr,
-        .mobile-stack-table td {
-            display: block;
-            width: 100%;
-        }
-
-        .mobile-stack-table tr {
-            border-bottom: 1px solid var(--border-subtle);
-            padding: 8px 0;
-        }
-
-        .mobile-stack-table td {
-            border: 0;
-            padding: 8px 12px;
-            text-align: left !important;
-            white-space: normal;
-        }
-
-        .mobile-stack-table td::before {
-            content: attr(data-label);
-            display: block;
-            font-size: 0.68rem;
-            font-weight: 700;
-            text-transform: uppercase;
-            letter-spacing: 0.08em;
-            color: var(--text-secondary);
-            margin-bottom: 4px;
-        }
-
-        .mobile-stack-table td.actions-cell {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
-    }
-</style>
 
 {% set query_string = request.query_string.decode() if request.query_string else '' %}
 
-<div class="fluent-card p-10 max-w-7xl w-full">
+<div class="fluent-card max-w-7xl w-full mx-auto">
     <h2 class="page-title mb-2">Explorador de transacciones</h2>
     <p class="text-sm opacity-60 mb-8">Busca, filtra y analiza todos tus movimientos</p>
 
@@ -222,7 +18,7 @@
     </div>
 
     <!-- Resumen -->
-    <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-5 gap-4 mb-8">
+    <div class="grid grid-cols-1 min-[360px]:grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4 mb-8">
         <div class="summary-card income">
             <p class="summary-label">Ingresos</p>
             <p class="summary-value text-green-400">{% if currency_code == 'COP' %}{{ resumen.total_ingresos|currency_with_code(currency_code) }}{% else %}{{ currency_code }} {{ resumen.total_ingresos|format_money }}{% endif %}</p>
@@ -243,17 +39,17 @@
         </div>
         <div class="summary-card count">
             <p class="summary-label">Movimientos</p>
-            <p class="summary-value">{{ resumen.cantidad }}</p>
+            <p class="summary-value text-white">{{ resumen.cantidad }}</p>
         </div>
     </div>
 
     <!-- Filtros -->
-    <form method="GET" class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-5 mb-6 p-8 panel-surface">
-        <div>
+    <form method="GET" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6 p-4 sm:p-6 md:p-8 panel-surface">
+        <div class="form-group">
             <label class="form-label">Texto / descripción</label>
             <input type="text" name="q" value="{{ filtros.q }}" class="input-glass">
         </div>
-        <div>
+        <div class="form-group">
             <label class="form-label">Tipo</label>
             <select name="tipo" class="input-glass">
                 <option value="" {% if not filtros.tipo %}selected{% endif %}>Todos</option>
@@ -262,7 +58,7 @@
                 <option value="inversion" {% if filtros.tipo == 'inversion' %}selected{% endif %}>Inversión</option>
             </select>
         </div>
-        <div>
+        <div class="form-group">
             <label class="form-label">Categoría</label>
             <select name="categoria_id" class="input-glass">
                 <option value="">Todas</option>
@@ -273,7 +69,7 @@
                 {% endfor %}
             </select>
         </div>
-        <div>
+        <div class="form-group">
             <label class="form-label">Ordenar por</label>
             <select name="orden" class="input-glass">
                 <option value="fecha_desc" {% if filtros.orden == 'fecha_desc' %}selected{% endif %}>Fecha (reciente)</option>
@@ -283,38 +79,38 @@
                 <option value="descripcion_asc" {% if filtros.orden == 'descripcion_asc' %}selected{% endif %}>Descripción (A-Z)</option>
             </select>
         </div>
-        <div>
+        <div class="form-group">
             <label class="form-label">Desde</label>
             <input type="date" name="desde" value="{{ filtros.desde }}" class="input-glass">
         </div>
-        <div>
+        <div class="form-group">
             <label class="form-label">Hasta</label>
             <input type="date" name="hasta" value="{{ filtros.hasta }}" class="input-glass">
         </div>
-        <div>
+        <div class="form-group">
             <label class="form-label">Monto mínimo</label>
             <input type="number" step="0.01" name="monto_min" value="{{ filtros.monto_min }}" class="input-glass">
         </div>
-        <div>
+        <div class="form-group">
             <label class="form-label">Monto máximo</label>
             <input type="number" step="0.01" name="monto_max" value="{{ filtros.monto_max }}" class="input-glass">
         </div>
-        <div class="md:col-span-2 xl:col-span-4 flex flex-col sm:flex-row flex-wrap gap-3 items-stretch sm:items-end">
-            <button type="submit" class="btn-fluent h-10 px-6 flex items-center gap-2 w-full sm:w-auto">
+        <div class="md:col-span-2 lg:col-span-4 flex flex-col sm:flex-row gap-3 mt-4 w-full justify-start">
+            <button type="submit" class="btn-fluent flex items-center justify-center gap-2">
                 <i class="fas fa-search"></i> Filtrar
             </button>
-            <a href="{{ url_for('main.buscar') }}" class="btn-fluent h-10 px-6 flex items-center gap-2 w-full sm:w-auto">
+            <a href="{{ url_for('main.buscar') }}" class="btn-action flex items-center justify-center gap-2">
                 <i class="fas fa-eraser"></i> Limpiar
             </a>
             <a href="{{ url_for('main.exportar_buscar', q=filtros.q, desde=filtros.desde, hasta=filtros.hasta, tipo=filtros.tipo, categoria_id=filtros.categoria_id, monto_min=filtros.monto_min, monto_max=filtros.monto_max, orden=filtros.orden, periodo=filtros.periodo) }}"
-                class="btn-fluent h-10 px-6 flex items-center gap-2 w-full sm:w-auto">
+                class="btn-fluent btn-green flex items-center justify-center gap-2">
                 <i class="fas fa-file-csv"></i> Exportar
             </a>
         </div>
     </form>
 
     <!-- Toolbar resultados -->
-    <div class="toolbar">
+    <div class="flex flex-wrap justify-between items-center gap-4 mb-4 mt-8">
         <p class="text-sm opacity-70">
             Mostrando <strong>{{ resultados|length }}</strong> de <strong>{{ paginacion.total }}</strong> resultados
             {% if paginacion.total_paginas > 1 %}(página {{ paginacion.pagina }} de {{ paginacion.total_paginas }}){% endif %}
@@ -322,8 +118,8 @@
     </div>
 
     <!-- Tabla -->
-    <div class="table-container table-responsive">
-        <table class="w-full text-sm min-w-[800px] mobile-stack-table">
+    <div class="table-container scroll-x-safe">
+        <table class="w-full text-sm min-w-full table-base mobile-stack-table">
             <thead class="table-header">
                 <tr>
                     <th class="px-4 py-4 text-left text-xs font-bold text-[var(--text-secondary)]">Fecha</th>
@@ -363,10 +159,10 @@
                     </td>
                     <td class="px-4 py-4 text-center whitespace-nowrap actions-cell" data-label="Acciones">
                         <a href="{{ url_for('main.editar_registro', id=t.id, tipo=t.tipo, return_to='buscar', return_query=query_string) }}"
-                            class="action-btn text-blue-400" title="Editar">
+                            class="action-btn edit-btn" title="Editar">
                             <i class="fas fa-pen"></i>
                         </a>
-                        <button type="button" class="action-btn text-red-400 js-eliminar"
+                        <button type="button" class="action-btn delete-btn js-eliminar"
                             data-id="{{ t.id }}" data-tipo="{{ t.tipo }}"
                             data-descripcion="{{ (t.descripcion or 'Sin descripción')|e }}"
                             title="Eliminar">
@@ -388,24 +184,24 @@
 
     <!-- Paginación -->
     {% if paginacion.total_paginas > 1 %}
-    <nav class="pagination" aria-label="Paginación">
+    <nav class="flex justify-center gap-2 mt-8 flex-wrap" aria-label="Paginación">
         {% if paginacion.pagina > 1 %}
-        <a class="page-link" href="{{ url_for('main.buscar', page=paginacion.pagina - 1, q=filtros.q, desde=filtros.desde, hasta=filtros.hasta, tipo=filtros.tipo, categoria_id=filtros.categoria_id, monto_min=filtros.monto_min, monto_max=filtros.monto_max, orden=filtros.orden, periodo=filtros.periodo) }}">
+        <a class="btn-action min-h-10 min-w-10 flex items-center justify-center p-2 rounded-lg" href="{{ url_for('main.buscar', page=paginacion.pagina - 1, q=filtros.q, desde=filtros.desde, hasta=filtros.hasta, tipo=filtros.tipo, categoria_id=filtros.categoria_id, monto_min=filtros.monto_min, monto_max=filtros.monto_max, orden=filtros.orden, periodo=filtros.periodo) }}">
             <i class="fas fa-chevron-left"></i>
         </a>
         {% endif %}
         {% for p in range(1, paginacion.total_paginas + 1) %}
             {% if p == paginacion.pagina or (p >= paginacion.pagina - 2 and p <= paginacion.pagina + 2) or p == 1 or p == paginacion.total_paginas %}
-            <a class="page-link {% if p == paginacion.pagina %}active{% endif %}"
+            <a class="btn-action min-h-10 min-w-10 flex items-center justify-center p-2 rounded-lg {% if p == paginacion.pagina %}bg-blue-500/20 border-blue-500/40 text-white{% endif %}"
                 href="{{ url_for('main.buscar', page=p, q=filtros.q, desde=filtros.desde, hasta=filtros.hasta, tipo=filtros.tipo, categoria_id=filtros.categoria_id, monto_min=filtros.monto_min, monto_max=filtros.monto_max, orden=filtros.orden, periodo=filtros.periodo) }}">
                 {{ p }}
             </a>
             {% elif p == paginacion.pagina - 3 or p == paginacion.pagina + 3 %}
-            <span class="page-link opacity-40">…</span>
+            <span class="min-h-10 min-w-10 flex items-center justify-center p-2 opacity-40">…</span>
             {% endif %}
         {% endfor %}
         {% if paginacion.pagina < paginacion.total_paginas %}
-        <a class="page-link" href="{{ url_for('main.buscar', page=paginacion.pagina + 1, q=filtros.q, desde=filtros.desde, hasta=filtros.hasta, tipo=filtros.tipo, categoria_id=filtros.categoria_id, monto_min=filtros.monto_min, monto_max=filtros.monto_max, orden=filtros.orden, periodo=filtros.periodo) }}">
+        <a class="btn-action min-h-10 min-w-10 flex items-center justify-center p-2 rounded-lg" href="{{ url_for('main.buscar', page=paginacion.pagina + 1, q=filtros.q, desde=filtros.desde, hasta=filtros.hasta, tipo=filtros.tipo, categoria_id=filtros.categoria_id, monto_min=filtros.monto_min, monto_max=filtros.monto_max, orden=filtros.orden, periodo=filtros.periodo) }}">
             <i class="fas fa-chevron-right"></i>
         </a>
         {% endif %}
@@ -414,8 +210,8 @@
 </div>
 
 <!-- Modal eliminar -->
-<div id="confirmModal" class="fixed inset-0 bg-black/50 hidden items-center justify-center z-50">
-    <div class="fluent-card p-10 max-w-sm w-full mx-4">
+<div id="confirmModal" class="fixed inset-0 bg-black/60 hidden items-center justify-center z-[1040] p-4 backdrop-blur-sm">
+    <div class="fluent-card p-6 sm:p-10 max-w-sm w-full mx-auto flex flex-col">
         <h3 class="text-xl font-bold mb-4 text-center">Eliminar transacción</h3>
         <p class="text-center mb-6 opacity-70 text-sm">¿Eliminar <strong id="modalDescripcion"></strong>?</p>
         <form id="formEliminar" method="POST" action="{{ url_for('main.eliminar_registro') }}">
@@ -424,9 +220,9 @@
             <input type="hidden" name="tipo" id="eliminarTipo">
             <input type="hidden" name="return_to" value="buscar">
             <input type="hidden" name="return_query" value="{{ query_string }}">
-            <div class="flex flex-col sm:flex-row gap-4 justify-center">
-                <button type="button" onclick="cerrarModal()" class="btn-fluent px-6 py-2 flex items-center justify-center gap-2 w-full sm:w-auto">Cancelar</button>
-                <button type="submit" class="btn-fluent btn-red px-6 py-2 flex items-center gap-2 w-full sm:w-auto">
+            <div class="flex flex-col sm:flex-row gap-3 justify-center w-full modal-buttons">
+                <button type="button" onclick="cerrarModal()" class="btn-action">Cancelar</button>
+                <button type="submit" class="btn-fluent btn-red flex items-center justify-center gap-2">
                     <i class="fas fa-trash-alt"></i> Eliminar
                 </button>
             </div>

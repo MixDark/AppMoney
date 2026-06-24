@@ -1,113 +1,59 @@
 {% extends 'layout/base.html' %}
 {% block title %}Presupuestos - App Money{% endblock %}
 {% block content %}
-<style>
-    .form-label {
-        display: block;
-        font-size: 0.75rem;
-        font-weight: 700;
-        letter-spacing: 0.1em;
-        text-transform: uppercase;
-        color: var(--text-secondary);
-        margin-bottom: 8px;
-    }
-    .budget-card {
-        background: var(--surface);
-        border: 1px solid rgba(59, 130, 246, 0.2);
-        transition: all 0.2s ease;
-    }
-    .budget-card:hover {
-        border-color: rgba(59, 130, 246, 0.5);
-    }
-    .progress-bar {
-        height: 8px;
-        background: rgba(148, 163, 184, 0.1);
-        border-radius: 10px;
-        overflow: hidden;
-    }
-    .progress-fill {
-        height: 100%;
-        background: #3b82f6;
-        border-radius: 10px;
-        transition: width 0.3s ease;
-    }
-    .action-btn {
-        padding: 4px 6px;
-        border-radius: 8px;
-        transition: all 0.2s;
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-        border: none;
-        background: transparent;
-        cursor: pointer;
-        color: inherit;
-        text-decoration: none;
-    }
-    .action-btn:hover { background: var(--surface-contrast); }
-    .action-btn.edit-btn {
-        color: #60a5fa;
-    }
-    .action-btn.delete-btn {
-        color: #ff6b6b;
-    }
-    .history-item {
-        background: rgba(15, 23, 42, 0.35);
-        border: 1px solid rgba(59, 130, 246, 0.15);
-    }
-</style>
-
-<div class="fluent-card p-10 max-w-6xl w-full">
+<div class="fluent-card p-6 sm:p-8 lg:p-10 max-w-6xl w-full mx-auto">
     <h2 class="text-3xl font-black mb-10 text-center text-white">Presupuestos mensuales</h2>
 
     <!-- Agregar Presupuesto -->
     <form method="POST"
-        class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6 mb-12 p-8 panel-surface">
+        class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-12 p-4 sm:p-6 md:p-8 panel-surface items-end">
         <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
-        <div class="md:col-span-2">
+        <div class="md:col-span-2 form-group">
             <label class="form-label">Categoría</label>
-            <select name="categoria_id" class="input-glass h-12 px-4 py-3 appearance-none cursor-pointer" required>
+            <select name="categoria_id" class="input-glass cursor-pointer" required>
                 <option value="" disabled selected>Selecciona una categoría</option>
                 {% for categoria in categorias %}
                 <option value="{{ categoria.id }}">{{ categoria.nombre }}</option>
                 {% endfor %}
             </select>
         </div>
-        <div>
+        <div class="form-group">
             <label class="form-label">Monto límite</label>
-            <input type="number" step="0.01" name="monto" required class="input-glass h-12 px-4 py-3">
+            <input type="number" step="0.01" name="monto" required class="input-glass">
         </div>
-        <div class="flex flex-col justify-end w-fit">
-            <button type="submit" class="btn-fluent btn-green h-12 px-8 justify-center flex items-center gap-2 whitespace-nowrap"><i class="fas fa-chart-pie"></i> Establecer</button>
+        <div class="w-full">
+            <button type="submit" class="btn-fluent btn-green flex items-center justify-center gap-2 whitespace-nowrap">
+                <i class="fas fa-chart-pie"></i> Establecer
+            </button>
         </div>
     </form>
 
     <!-- Lista de presupuestos -->
-    <div class="grid grid-cols-1 md:grid-cols-2 gap-6 md:gap-8">
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-6 lg:gap-8">
         {% for p in presupuestos %}
-        <div id="presupuesto-{{ p.id }}" class="budget-card p-8 rounded-3xl">
+        <div id="presupuesto-{{ p.id }}" class="bg-surface border border-blue-500/20 hover:border-blue-500/50 rounded-3xl p-6 sm:p-8 transition-all duration-200 shadow-soft">
             <div class="flex justify-between items-center mb-6">
-                <h4 class="font-black text-lg uppercase tracking-tight">{{ p.categoria_nombre }}</h4>
-                <span class="text-xs font-black px-3 py-1 bg-blue-500/20 rounded-full uppercase">Mensual</span>
+                <h4 class="font-black text-lg uppercase tracking-tight text-white">{{ p.categoria_nombre }}</h4>
+                <span class="text-xs font-black px-3 py-1 bg-blue-500/20 rounded-full uppercase text-blue-400">Mensual</span>
             </div>
-            <div class="grid grid-cols-2 gap-4 mb-6">
-                <div class="bg-blue-500/10 p-4 rounded-2xl border border-blue-500/20">
-                    <p class="text-xs font-black uppercase mb-2 opacity-70">Gastado</p>
-                    <p class="text-lg font-black text-blue-400"><span id="gastado-{{ p.id }}">{% if currency_code == 'COP' %}{{ p.get('gastado', 0)|currency_with_code(currency_code) }}{% else %}{{ currency_code }} {{ p.get('gastado', 0)|format_money }}{% endif %}</span></p>
+            <div class="grid grid-cols-2 gap-3 mb-6">
+                <div class="bg-blue-500/10 p-3 sm:p-4 rounded-2xl border border-blue-500/20">
+                    <p class="text-[10px] sm:text-xs font-black uppercase mb-1 sm:mb-2 opacity-70">Gastado</p>
+                    <p class="text-base sm:text-lg font-black text-blue-400"><span id="gastado-{{ p.id }}">{% if currency_code == 'COP' %}{{ p.get('gastado', 0)|currency_with_code(currency_code) }}{% else %}{{ currency_code }} {{ p.get('gastado', 0)|format_money }}{% endif %}</span></p>
                 </div>
-                <div class="bg-green-500/10 p-4 rounded-2xl border border-green-500/20">
-                    <p class="text-xs font-black uppercase mb-2 opacity-70">Límite</p>
-                    <p class="text-lg font-black text-green-400"><span id="monto-{{ p.id }}">{% if currency_code == 'COP' %}{{ p.get('monto', 0)|currency_with_code(currency_code) }}{% else %}{{ currency_code }} {{ p.get('monto', 0)|format_money }}{% endif %}</span></p>
+                <div class="bg-green-500/10 p-3 sm:p-4 rounded-2xl border border-green-500/20">
+                    <p class="text-[10px] sm:text-xs font-black uppercase mb-1 sm:mb-2 opacity-70">Límite</p>
+                    <p class="text-base sm:text-lg font-black text-green-400"><span id="monto-{{ p.id }}">{% if currency_code == 'COP' %}{{ p.get('monto', 0)|currency_with_code(currency_code) }}{% else %}{{ currency_code }} {{ p.get('monto', 0)|format_money }}{% endif %}</span></p>
                 </div>
             </div>
             <div class="progress-bar mb-3">
-                <div id="progreso-{{ p.id }}" class="progress-fill" data-percent="{{ p.porcentaje }}" style="min-width: 4px;"></div>
+                <div id="progreso-{{ p.id }}" class="progress-fill" data-percent="{{ p.porcentaje }}"></div>
             </div>
             <p id="porcentaje-{{ p.id }}" class="text-right text-xs font-black uppercase tracking-widest {% if p.porcentaje >= 100 %}text-red-400{% else %}opacity-60{% endif %}">
                 {% if p.porcentaje >= 100 %}¡Límite alcanzado!{% else %}{{ p.porcentaje }}% de utilización{% endif %}
             </p>
             
-            <div class="flex gap-3 mt-8">
+            <div class="flex flex-col sm:flex-row gap-3 mt-8">
                 {% if p.porcentaje >= 100 %}
                 <button type="button" class="btn-fluent btn-green py-2 px-4 text-xs flex items-center justify-center gap-2 js-presupuesto-historial" data-id="{{ p.id }}" data-nombre="{{ p.categoria_nombre|e }}">
                     <i class="fas fa-eye"></i> Ver
@@ -125,7 +71,7 @@
         {% endfor %}
         {% if not presupuestos %}
         <div class="col-span-full text-center py-20 opacity-40">
-            <i class="fas fa-wallet text-5xl mb-4"></i>
+            <i class="fas fa-wallet text-5xl mb-4 text-slate-400"></i>
             <p class="font-bold">No has definido presupuestos mensuales aún.</p>
         </div>
         {% endif %}
@@ -133,13 +79,13 @@
 </div>
 
 <!-- Modal Editar -->
-<div id="modalEditar" class="fixed inset-0 bg-black/50 hidden items-center justify-center z-50">
-    <div class="fluent-card p-10 max-w-sm w-full mx-4">
-        <h3 class="text-2xl font-black mb-6 text-center uppercase tracking-tight">Editar Presupuesto</h3>
+<div id="modalEditar" class="fixed inset-0 bg-black/60 hidden items-center justify-center z-[1040] p-4 backdrop-blur-sm">
+    <div class="fluent-card p-6 sm:p-10 max-w-sm w-full mx-auto flex flex-col">
+        <h3 class="text-2xl font-black mb-6 text-center uppercase tracking-tight text-white">Editar Presupuesto</h3>
         
-        <div class="mb-4">
-            <label class="block text-[10px] font-black uppercase mb-2 tracking-widest opacity-60">Categoría</label>
-            <select id="categoriaEditar" class="input-glass h-12 px-4 py-3 w-full appearance-none cursor-pointer">
+        <div class="mb-4 form-group">
+            <label class="form-label">Categoría</label>
+            <select id="categoriaEditar" class="input-glass cursor-pointer">
                 <option value="" selected>Sin categoría</option>
                 {% for categoria in categorias %}
                 <option value="{{ categoria.id }}">{{ categoria.nombre }}</option>
@@ -147,47 +93,47 @@
             </select>
         </div>
         
-        <div class="mb-4">
-            <label class="block text-[10px] font-black uppercase mb-2 tracking-widest opacity-60">Gastado</label>
-            <input type="text" id="gastadoEditar" class="input-glass h-12 px-4 py-3 w-full">
+        <div class="mb-4 form-group">
+            <label class="form-label">Gastado</label>
+            <input type="text" id="gastadoEditar" class="input-glass">
         </div>
         
-        <div class="mb-6">
-            <label class="block text-[10px] font-black uppercase mb-2 tracking-widest opacity-60">Monto Límite</label>
-            <input type="text" id="montoEditar" class="input-glass h-12 px-4 py-3 w-full" placeholder="0.00" readonly>
+        <div class="mb-6 form-group">
+            <label class="form-label">Monto Límite</label>
+            <input type="text" id="montoEditar" class="input-glass opacity-70 cursor-not-allowed" placeholder="0.00" readonly>
         </div>
         
-        <div class="flex gap-4 justify-center">
-            <button onclick="cerrarModalEditar()" class="btn-fluent px-8 py-2"><i class="fa-solid fa-xmark"></i> Cancelar</button>
-            <button onclick="confirmarEditar()" class="btn-fluent btn-green px-8 py-2"><i class="fas fa-edit"></i> Guardar</button>
+        <div class="flex flex-col sm:flex-row gap-3 justify-center w-full modal-buttons">
+            <button onclick="cerrarModalEditar()" class="btn-action flex items-center justify-center gap-2"><i class="fa-solid fa-xmark"></i> Cancelar</button>
+            <button onclick="confirmarEditar()" class="btn-fluent btn-green flex items-center justify-center gap-2"><i class="fas fa-edit"></i> Guardar</button>
         </div>
     </div>
 </div>
 
 <!-- Modal Eliminar -->
-<div id="modalEliminar" class="fixed inset-0 bg-black/50 hidden items-center justify-center z-50">
-    <div class="fluent-card p-10 max-w-sm w-full mx-4">
-        <h3 class="text-2xl font-black mb-6 text-center uppercase tracking-tight">Eliminar Presupuesto</h3>
-        <p class="text-center mb-8 opacity-70">¿Está seguro de que desea eliminar el presupuesto de <strong id="nombrePresupuestoEliminar"></strong>?</p>
+<div id="modalEliminar" class="fixed inset-0 bg-black/60 hidden items-center justify-center z-[1040] p-4 backdrop-blur-sm">
+    <div class="fluent-card p-6 sm:p-10 max-w-sm w-full mx-auto flex flex-col">
+        <h3 class="text-2xl font-black mb-6 text-center uppercase tracking-tight text-white">Eliminar Presupuesto</h3>
+        <p class="text-center mb-8 opacity-70 text-sm text-slate-200">¿Está seguro de que desea eliminar el presupuesto de <strong id="nombrePresupuestoEliminar"></strong>?</p>
         
-        <div class="flex gap-4 justify-center">
-            <button onclick="cerrarModalEliminar()" class="btn-fluent px-8 py-2 flex items-center justify-center gap-2 whitespace-nowrap"><i class="fa-solid fa-xmark"></i> Cancelar</button>
-            <button onclick="confirmarEliminar()" class="btn-fluent btn-red px-8 py-2 flex items-center justify-center gap-2 whitespace-nowrap"><i class="fa-solid fa-trash"></i> Eliminar</button>
+        <div class="flex flex-col sm:flex-row gap-3 justify-center w-full modal-buttons">
+            <button onclick="cerrarModalEliminar()" class="btn-action flex items-center justify-center gap-2"><i class="fa-solid fa-xmark"></i> Cancelar</button>
+            <button onclick="confirmarEliminar()" class="btn-fluent btn-red flex items-center justify-center gap-2"><i class="fa-solid fa-trash"></i> Eliminar</button>
         </div>
     </div>
 </div>
 
 <!-- Modal Histórico -->
-<div id="modalHistorial" class="fixed inset-0 bg-black/60 hidden items-center justify-center z-50">
-    <div class="fluent-card p-10 max-w-lg w-full mx-4 max-h-[85vh] overflow-hidden flex flex-col">
-        <div class="flex items-start justify-between gap-4 mb-6">
+<div id="modalHistorial" class="fixed inset-0 bg-black/60 hidden items-center justify-center z-[1040] p-4 backdrop-blur-sm">
+    <div class="fluent-card p-6 sm:p-10 max-w-lg w-full mx-auto max-h-[85vh] overflow-hidden flex flex-col">
+        <div class="flex items-start justify-between gap-4 mb-6 flex-wrap">
             <div>
-                <h3 class="text-2xl font-black uppercase tracking-tight">Histórico de Presupuesto</h3>
-                <p id="nombrePresupuestoHistorial" class="text-xs font-black uppercase opacity-60 mt-1"></p>
+                <h3 class="text-2xl font-black uppercase tracking-tight text-white">Histórico de Presupuesto</h3>
+                <p id="nombrePresupuestoHistorial" class="text-xs font-black uppercase opacity-60 mt-1 text-slate-300"></p>
             </div>
-            <button onclick="cerrarModalHistorial()" class="btn-fluent px-4 py-2"><i class="fas fa-times"></i></button>
+            <button onclick="cerrarModalHistorial()" class="btn-action min-h-10 min-w-10 p-2 flex items-center justify-center rounded-lg"><i class="fas fa-times"></i></button>
         </div>
-        <div id="contenidoHistorial" class="space-y-3 overflow-y-auto pr-2"></div>
+        <div id="contenidoHistorial" class="space-y-3 overflow-y-auto pr-2 flex-1"></div>
     </div>
 </div>
 
@@ -198,7 +144,6 @@
     function abrirModalEditar(presupuestoId, categoriaId, nombreCategoria, gastado, monto) {
         presupuestoActualId = presupuestoId;
         
-        // Establecer valores de forma segura
         const categoriaInput = document.getElementById('categoriaEditar');
         const gastadoInput = document.getElementById('gastadoEditar');
         const montoInput = document.getElementById('montoEditar');
@@ -207,7 +152,6 @@
         if (gastadoInput) gastadoInput.value = gastado;
         if (montoInput) montoInput.value = monto;
         
-        // Abrir modal
         const modal = document.getElementById('modalEditar');
         if (modal) {
             modal.classList.remove('hidden');
@@ -227,8 +171,6 @@
     function confirmarEditar() {
         const nuevoGastado = document.getElementById('gastadoEditar').value;
         const categoriaIdSeleccionada = document.getElementById('categoriaEditar').value;
-        const categoriaSelect = document.getElementById('categoriaEditar');
-        const montoLimiteInput = document.getElementById('montoEditar');
         
         if (!nuevoGastado || parseFloat(nuevoGastado) < 0) {
             window.showToast('Por favor ingresa un gastado válido', 'error');
@@ -263,7 +205,6 @@
         });
     }
     
-    // Función auxiliar para formatear moneda
     function formatoMoneda(valor) {
         const numero = Number(valor) || 0;
         const formateador = new Intl.NumberFormat('es-CO', {
@@ -305,7 +246,7 @@
                 }
 
                 contenido.innerHTML = data.historial.map((item, index) => `
-                    <div class="history-item rounded-2xl p-4 flex items-center justify-between gap-4">
+                    <div class="bg-slate-900/40 border border-blue-500/15 rounded-2xl p-4 flex items-center justify-between gap-4">
                         <div>
                             <p class="text-sm font-black uppercase tracking-wide">Paso ${index + 1}</p>
                             <p class="text-xs opacity-60 mt-1">${item.creado_en}</p>
@@ -395,9 +336,7 @@
         window.location.href = '/eliminar_presupuesto/' + presupuestoActualId;
     }
     
-    // Inicializar event listeners cuando el DOM esté listo
     document.addEventListener('DOMContentLoaded', function() {
-        // Listeners para actualizar preview en tiempo real
         const gastadoInput = document.getElementById('gastadoEditar');
         const montoInput = document.getElementById('montoEditar');
         
@@ -413,7 +352,6 @@
             });
         }
         
-        // Cerrar modales al hacer clic afuera
         const modalEditar = document.getElementById('modalEditar');
         const modalEliminar = document.getElementById('modalEliminar');
         

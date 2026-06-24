@@ -1,57 +1,32 @@
 {% extends 'layout/base.html' %}
 {% block title %}CAPTCHA - App Money{% endblock %}
 {% block content %}
-<style>
-    .form-label {
-        display: block;
-        font-size: 0.75rem;
-        font-weight: 700;
-        letter-spacing: 0.1em;
-        text-transform: uppercase;
-        color: var(--text-secondary);
-        margin-bottom: 8px;
-    }
-    .captcha-box {
-        background: var(--surface);
-        border: 1px solid rgba(59, 130, 246, 0.2);
-    }
-    .captcha-image {
-        width: 100%;
-        max-width: 320px;
-        border-radius: 18px;
-        border: 1px solid rgba(148, 163, 184, 0.35);
-        box-shadow: 0 18px 35px rgba(15, 23, 42, 0.18);
-        user-select: none;
-        -webkit-user-drag: none;
-    }
-</style>
-
-<div class="fluent-card p-6 sm:p-10 max-w-sm w-full flex flex-col items-center">
+<div class="fluent-card p-6 sm:p-10 max-w-sm w-full flex flex-col items-center mx-auto shadow-soft">
     <h2 class="text-3xl font-black mb-2 text-center text-white">Verificación</h2>
-    <p class="text-center text-xs font-bold opacity-50 uppercase tracking-widest mb-10">Resuelve el captcha para continuar</p>
+    <p class="text-center text-xs font-bold opacity-50 uppercase tracking-widest mb-8 text-slate-300">Resuelve el captcha para continuar</p>
 
-    <form method="post" action="{{ url_for('main.verificar_captcha') }}" class="space-y-8 w-full flex flex-col">
+    <form method="post" action="{{ url_for('main.verificar_captcha') }}" class="space-y-6 w-full flex flex-col">
         <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
         <input type="hidden" id="captcha-token" name="token" value="{{ token }}">
 
-        <div class="w-full flex flex-col items-center captcha-box p-8 rounded-3xl gap-5">
-            <img id="captcha-image" src="{{ captcha_image }}" alt="Captcha visual" class="captcha-image" draggable="false">
+        <div class="w-full flex flex-col items-center bg-surface border border-blue-500/20 p-6 sm:p-8 rounded-3xl gap-5">
+            <img id="captcha-image" src="{{ captcha_image }}" alt="Captcha visual" class="w-full max-w-[320px] rounded-2xl border border-white/10 shadow-soft select-none pointer-events-none" draggable="false">
             <input type="text" name="captcha_answer" required autofocus maxlength="6" minlength="6" autocomplete="off" autocapitalize="characters" spellcheck="false"
-                class="input-glass text-center text-2xl font-black py-4 w-full uppercase tracking-[0.35em]">
+                class="input-glass text-center text-2xl font-black py-3 w-full uppercase tracking-[0.35em] text-white">
         </div>
 
-        <div class="w-full flex justify-center">
-            <button type="submit" class="btn-fluent justify-center py-4 flex items-center gap-2 whitespace-nowrap w-full sm:w-auto"><i class="fas fa-check"></i> Verificar</button>
-        </div>
+        <button type="submit" class="btn-fluent w-full flex items-center justify-center gap-2 mt-4"><i class="fas fa-check"></i> Verificar</button>
     </form>
-    <div class="mt-8">
+    
+    <div class="mt-8 text-center">
         <div class="flex items-center justify-center gap-4 text-sm font-bold">
-            <button type="button" id="refresh-captcha" data-refresh-url="{{ url_for('main.nuevo_captcha') }}" class="text-blue-400 hover:text-blue-300 bg-transparent p-0 border-0 font-bold">Cambiar captcha</button>
+            <button type="button" id="refresh-captcha" data-refresh-url="{{ url_for('main.nuevo_captcha') }}" class="text-blue-400 hover:text-blue-300 bg-transparent p-0 border-0 font-bold transition-colors">Cambiar captcha</button>
             <span class="opacity-30">|</span>
-            <a href="/recuperar_contraseña" class="text-blue-400 hover:text-blue-300">Volver atrás</a>
+            <a href="/recuperar_contraseña" class="text-blue-400 hover:text-blue-300 transition-colors">Volver atrás</a>
         </div>
     </div>
 </div>
+
 <script>
 (() => {
     const refreshButton = document.getElementById('refresh-captcha');

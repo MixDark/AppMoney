@@ -1,137 +1,50 @@
 {% extends 'layout/base.html' %}
 {% block title %}Reporte Financiero{% endblock %}
 {% block content %}
-<style>
-    .stat-card {
-        background: var(--surface);
-        border: 1px solid rgba(148, 163, 184, 0.1);
-        transition: all 0.2s ease;
-    }
-    .stat-card.income {
-        border-color: rgba(16, 185, 129, 0.2);
-    }
-    .stat-card.expense {
-        border-color: rgba(239, 68, 68, 0.2);
-    }
-    .stat-card.investment {
-        border-color: rgba(168, 85, 247, 0.2);
-    }
-    .table-container {
-        background: var(--surface);
-        border: 1px solid rgba(148, 163, 184, 0.1);
-        border-radius: 16px;
-        overflow: hidden;
-    }
-    .table-header {
-        background: var(--surface-contrast);
-        border-bottom: 1px solid var(--border-subtle);
-    }
-    .table-row {
-        border-bottom: 1px solid var(--border-subtle);
-    }
-    .table-row:hover {
-        background: var(--surface-contrast);
-    }
-    .input-label {
-        display: block;
-        font-size: 0.75rem;
-        font-weight: 700;
-        letter-spacing: 0.1em;
-        text-transform: uppercase;
-        color: var(--text-secondary);
-        margin-bottom: 8px;
-    }
-
-    @media (max-width: 768px) {
-        .mobile-stack-table thead {
-            display: none;
-        }
-
-        .mobile-stack-table,
-        .mobile-stack-table tbody,
-        .mobile-stack-table tr,
-        .mobile-stack-table td {
-            display: block;
-            width: 100%;
-        }
-
-        .mobile-stack-table tr {
-            border-bottom: 1px solid var(--border-subtle);
-            padding: 8px 0;
-        }
-
-        .mobile-stack-table td {
-            border: 0;
-            padding: 8px 12px;
-            text-align: left !important;
-            white-space: normal;
-        }
-
-        .mobile-stack-table td::before {
-            content: attr(data-label);
-            display: block;
-            font-size: 0.68rem;
-            font-weight: 700;
-            text-transform: uppercase;
-            letter-spacing: 0.08em;
-            color: var(--text-secondary);
-            margin-bottom: 4px;
-        }
-
-        .report-tools {
-            width: 100%;
-        }
-
-        .report-tools > * {
-            width: 100%;
-        }
-
-        .report-tools .btn-fluent {
-            justify-content: center;
-        }
-    }
-</style>
-
-<div class="fluent-card p-10 max-w-6xl w-full flex flex-col items-center">
+<div class="fluent-card max-w-6xl w-full flex flex-col items-center mx-auto">
     <h2 class="text-3xl font-black mb-8 text-center text-white">Reportes del mes: {{ mes_mostrar }}</h2>
 
-    <form method="get" class="flex flex-col sm:flex-row flex-wrap gap-4 items-stretch sm:items-end mb-12 justify-center w-full">
-        <div class="flex flex-col sm:flex-row gap-2 items-stretch sm:items-end w-full sm:w-auto report-tools">
-            <div>
-                <label class="input-label">Seleccionar mes</label>
+    <!-- Filtros de Reporte -->
+    <form method="get" class="w-full mb-8 lg:mb-12 flex flex-col items-center gap-4">
+        <div class="flex flex-col sm:flex-row gap-4 items-stretch sm:items-end w-full sm:w-auto justify-center">
+            <div class="form-group">
+                <label class="form-label text-center sm:text-left">Seleccionar mes</label>
                 <input type="month" name="mes" value="{{ mes_actual }}" class="input-glass max-w-[200px] h-12">
             </div>
-            <button type="submit" class="btn-fluent h-12 px-6 whitespace-nowrap">
+        </div>
+        <div class="flex flex-col sm:flex-row flex-wrap gap-3 mt-4 w-full sm:w-auto justify-center">
+            <button type="submit" class="btn-fluent h-11 px-6 flex items-center justify-center gap-2">
                 <i class="fas fa-eye"></i> Ver
             </button>
-            <a href="/exportar_pdf?mes={{ mes_actual }}" class="btn-fluent btn-red h-12 px-6 flex items-center gap-2 whitespace-nowrap">
+            <a href="/exportar_pdf?mes={{ mes_actual }}" class="btn-fluent btn-red h-11 px-6 flex items-center justify-center gap-2">
                 <i class="fas fa-file-pdf"></i> PDF
             </a>
-            <a href="/exportar_excel?mes={{ mes_actual }}" class="btn-fluent btn-green h-12 px-6 flex items-center gap-2 whitespace-nowrap">
+            <a href="/exportar_excel?mes={{ mes_actual }}" class="btn-fluent btn-green h-11 px-6 flex items-center justify-center gap-2">
                 <i class="fas fa-file-excel"></i> Excel
             </a>
         </div>
     </form>
 
-    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-8 w-full mb-12 text-center">
-        <div class="stat-card income p-6 rounded-2xl">
-            <p class="text-xs font-black uppercase tracking-widest opacity-60 mb-2">Total Ingresos</p>
-            <p class="text-2xl font-black text-green-400">{% if currency_code == 'COP' %}{{ total_ingresos|currency_with_code(currency_code) }}{% else %}{{ currency_code }} {{ total_ingresos|format_money }}{% endif %}</p>
+    <!-- Tarjetas de Estadísticas -->
+    <div class="grid grid-cols-1 xs:grid-cols-3 gap-4 lg:gap-6 w-full mb-8 lg:mb-12 text-center">
+        <div class="bg-surface border border-emerald-500/20 hover:border-emerald-500/50 rounded-2xl p-5 sm:p-6 text-center transition-all duration-200 shadow-soft">
+            <p class="text-xs font-black uppercase tracking-widest opacity-60 mb-2 text-slate-300">Total Ingresos</p>
+            <p class="text-xl sm:text-2xl font-black text-green-400">{% if currency_code == 'COP' %}{{ total_ingresos|currency_with_code(currency_code) }}{% else %}{{ currency_code }} {{ total_ingresos|format_money }}{% endif %}</p>
         </div>
-        <div class="stat-card expense p-6 rounded-2xl">
-            <p class="text-xs font-black uppercase tracking-widest opacity-60 mb-2">Total Gastos</p>
-            <p class="text-2xl font-black text-red-400">{% if currency_code == 'COP' %}{{ total_gastos|currency_with_code(currency_code) }}{% else %}{{ currency_code }} {{ total_gastos|format_money }}{% endif %}</p>
+        <div class="bg-surface border border-red-500/20 hover:border-red-500/50 rounded-2xl p-5 sm:p-6 text-center transition-all duration-200 shadow-soft">
+            <p class="text-xs font-black uppercase tracking-widest opacity-60 mb-2 text-slate-300">Total Gastos</p>
+            <p class="text-xl sm:text-2xl font-black text-red-400">{% if currency_code == 'COP' %}{{ total_gastos|currency_with_code(currency_code) }}{% else %}{{ currency_code }} {{ total_gastos|format_money }}{% endif %}</p>
         </div>
-        <div class="stat-card investment p-6 rounded-2xl">
-            <p class="text-xs font-black uppercase tracking-widest opacity-60 mb-2">Total Inversiones</p>
-            <p class="text-2xl font-black text-blue-400">{% if currency_code == 'COP' %}{{ total_inversiones|currency_with_code(currency_code) }}{% else %}{{ currency_code }} {{ total_inversiones|format_money }}{% endif %}</p>
+        <div class="bg-surface border border-purple-500/20 hover:border-purple-500/50 rounded-2xl p-5 sm:p-6 text-center transition-all duration-200 shadow-soft">
+            <p class="text-xs font-black uppercase tracking-widest opacity-60 mb-2 text-slate-300">Total Inversiones</p>
+            <p class="text-xl sm:text-2xl font-black text-blue-400">{% if currency_code == 'COP' %}{{ total_inversiones|currency_with_code(currency_code) }}{% else %}{{ currency_code }} {{ total_inversiones|format_money }}{% endif %}</p>
         </div>
     </div>
 
     <!-- Tabla de Ingresos -->
-    <div class="mb-10 w-full">
+    <div class="mb-8 w-full">
         <h3 class="text-sm font-black uppercase tracking-widest mb-4 text-green-400">Ingresos</h3>
-        <div class="table-container table-responsive">
+        <div class="table-container scroll-x-safe">
             <table class="w-full text-sm mobile-stack-table">
                 <thead class="table-header">
                     <tr>
@@ -158,9 +71,9 @@
     </div>
 
     <!-- Tabla de Gastos -->
-    <div class="mb-10 w-full">
+    <div class="mb-8 w-full">
         <h3 class="text-sm font-black uppercase tracking-widest mb-4 text-red-400">Gastos</h3>
-        <div class="table-container table-responsive">
+        <div class="table-container scroll-x-safe">
             <table class="w-full text-sm mobile-stack-table">
                 <thead class="table-header">
                     <tr>
@@ -187,9 +100,9 @@
     </div>
 
     <!-- Tabla de Inversiones -->
-    <div class="mb-10 w-full">
+    <div class="mb-4 w-full">
         <h3 class="text-sm font-black uppercase tracking-widest mb-4 text-blue-400">Inversiones</h3>
-        <div class="table-container table-responsive">
+        <div class="table-container scroll-x-safe">
             <table class="w-full text-sm mobile-stack-table">
                 <thead class="table-header">
                     <tr>

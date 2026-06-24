@@ -28,8 +28,10 @@ def run_server(host='127.0.0.1', port=7700, threads=2):
     print(f"Entorno: {os.getenv('FLASK_ENV', 'production')}")
     print(f"{'='*60}\n")
     
-    # Abrir navegador automáticamente
-    abrir_navegador(url)
+    # Abrir navegador automáticamente solo en desarrollo
+    is_production = os.getenv('FLASK_ENV', 'production') == 'production'
+    if not is_production:
+        abrir_navegador(url)
     
     try:
         serve(

@@ -1,22 +1,10 @@
 {% extends 'layout/base.html' %}
 {% block title %}Editar Registro - App Money{% endblock %}
 {% block content %}
-<style>
-    .form-label {
-        display: block;
-        font-size: 0.75rem;
-        font-weight: 700;
-        letter-spacing: 0.1em;
-        text-transform: uppercase;
-        color: var(--text-secondary);
-        margin-bottom: 8px;
-    }
-</style>
+<div class="fluent-card max-w-lg w-full flex flex-col items-center mx-auto">
+    <h2 class="page-title mb-2 text-center text-white">Editar registro</h2>
 
-<div class="fluent-card form-card p-6 sm:p-12 max-w-lg w-full flex flex-col items-center">
-    <h2 class="text-3xl font-black mb-10 text-center text-white">Editar registro</h2>
-
-    <form method="post" class="space-y-8 w-full">
+    <form method="post" class="space-y-6 w-full mt-6">
         <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
         <input type="hidden" name="registro_id" value="{{ registro.id }}">
         <input type="hidden" name="tipo" value="{{ tipo }}">
@@ -25,29 +13,29 @@
         <input type="hidden" name="return_query" value="{{ return_query }}">
         {% endif %}
 
-        <div class="w-full">
+        <div class="form-group">
             <label class="form-label">Tipo</label>
-            <input type="text" value="{{ tipo|capitalize }}" disabled class="input-glass opacity-50 cursor-not-allowed">
+            <input type="text" value="{{ tipo|capitalize }}" disabled class="input-glass opacity-50 cursor-not-allowed text-slate-300">
         </div>
 
-        <div class="w-full">
+        <div class="form-group">
             <label class="form-label">Monto ({% if usuario and usuario.moneda == 'COP' %}{{ usuario.moneda }}{% else %}{{ usuario.moneda if usuario else 'USD' }}{% endif %})</label>
             <input type="number" step="0.01" name="monto" required value="{{ registro.monto }}" class="input-glass" placeholder="0.00">
         </div>
 
-        <div class="w-full">
+        <div class="form-group">
             <label class="form-label">Descripción</label>
             <input type="text" name="descripcion" value="{{ registro.descripcion }}" class="input-glass" placeholder="Descripción del registro">
         </div>
 
-        <div class="w-full">
+        <div class="form-group">
             <label class="form-label">Fecha</label>
-            <input type="date" name="fecha" required value="{{ registro.fecha }}" class="input-glass text-sm h-12 px-4 py-3">
+            <input type="date" name="fecha" required value="{{ registro.fecha }}" class="input-glass">
         </div>
 
-        <div class="w-full">
+        <div class="form-group">
             <label class="form-label">Categoría</label>
-            <select name="categoria_id" class="input-glass">
+            <select name="categoria_id" class="input-glass cursor-pointer">
                 <option value="">Sin categoría</option>
                 {% for cat in categorias %}
                     {% if cat.tipo == tipo %}
@@ -57,14 +45,22 @@
             </select>
         </div>
 
-        <div class="w-full flex flex-col sm:flex-row gap-4 justify-center pt-8">
-            <button type="submit" class="btn-fluent px-6 flex items-center justify-center gap-2 py-3 whitespace-nowrap w-full sm:w-auto"><i class="fas fa-save"></i> Guardar</button>
+        <div class="form-actions pt-4">
+            <button type="submit" class="btn-fluent flex items-center justify-center gap-2">
+                <i class="fas fa-save"></i> Guardar
+            </button>
             {% if return_to == 'buscar' %}
-            <a href="{{ url_for('main.buscar') }}{% if return_query %}?{{ return_query }}{% endif %}" class="btn-fluent btn-red px-6 flex items-center justify-center gap-2 py-3 whitespace-nowrap w-full sm:w-auto"><i class="fas fa-times"></i> Cancelar</a>
+            <a href="{{ url_for('main.buscar') }}{% if return_query %}?{{ return_query }}{% endif %}" class="btn-action flex items-center justify-center gap-2">
+                <i class="fas fa-times"></i> Cancelar
+            </a>
             {% elif tipo == 'inversion' %}
-            <a href="{{ url_for('main.inversiones') }}" class="btn-fluent btn-red px-6 flex items-center justify-center gap-2 py-3 whitespace-nowrap w-full sm:w-auto"><i class="fas fa-times"></i> Cancelar</a>
+            <a href="{{ url_for('main.inversiones') }}" class="btn-action flex items-center justify-center gap-2">
+                <i class="fas fa-times"></i> Cancelar
+            </a>
             {% else %}
-            <a href="/registrar" class="btn-fluent btn-red px-6 flex items-center justify-center gap-2 py-3 whitespace-nowrap w-full sm:w-auto"><i class="fas fa-times"></i> Cancelar</a>
+            <a href="/registrar" class="btn-action flex items-center justify-center gap-2">
+                <i class="fas fa-times"></i> Cancelar
+            </a>
             {% endif %}
         </div>
     </form>

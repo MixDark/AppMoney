@@ -3,88 +3,7 @@
 {% block content %}
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
-<style>
-    /* Las tarjetas principales usan utilidades Tailwind; estilos específicos se aplican en el HTML mediante clases y estilos en línea. */
-
-    .chart-card {
-        background: var(--surface);
-        border: 1px solid rgba(148, 163, 184, 0.1);
-        border-radius: 16px;
-        padding: 24px;
-        backdrop-filter: blur(10px);
-    }
-
-    .transaction-row {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        padding: 12px 0;
-        border-bottom: 1px solid rgba(148, 163, 184, 0.1);
-        transition: all 0.2s ease;
-    }
-
-    .transaction-row:last-child {
-        border-bottom: none;
-    }
-
-    .transaction-row:hover {
-        background: rgba(59, 130, 246, 0.05);
-        padding-left: 8px;
-    }
-
-    .transaction-date {
-        font-size: 0.75rem;
-        color: var(--text-secondary);
-        min-width: 70px;
-    }
-
-    .transaction-desc {
-        flex: 1;
-        font-size: 0.9rem;
-        font-weight: 600;
-        color: var(--text-main);
-        margin: 0 16px;
-        overflow: hidden;
-        text-overflow: ellipsis;
-        white-space: nowrap;
-    }
-
-    .transaction-amount {
-        font-size: 0.95rem;
-        font-weight: 700;
-        min-width: 100px;
-        text-align: right;
-    }
-
-    .transaction-amount.positive {
-        color: #10b981;
-    }
-
-    .transaction-amount.negative {
-        color: #ef4444;
-    }
-
-    .title-section {
-        margin-bottom: 32px;
-        text-align: center;
-    }
-
-    .title-section h1 {
-        font-size: 2.5rem;
-        font-weight: 800;
-        letter-spacing: -0.02em;
-        margin: 0;
-        color: var(--text-main);
-    }
-
-    .title-section p {
-        opacity: 0.6;
-        margin-top: 8px;
-        font-size: 0.9rem;
-    }
-</style>
-
-<div class="fluent-card p-10 w-full max-w-7xl">
+<div class="fluent-card w-full max-w-7xl mx-auto">
     <!-- Título -->
     <div class="title-section">
         <h1>Consolidado financiero</h1>
@@ -92,67 +11,67 @@
     </div>
 
     <!-- Resumen en 4 Cards -->
-    <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4 md:gap-6 mb-12">
+    <div class="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-8 lg:mb-12">
         <!-- Ingresos -->
-        <div class="bg-[var(--surface)]/70 rounded-xl p-5 md:p-6 flex flex-col justify-between shadow-sm min-h-[120px] overflow-hidden">
+        <div class="summary-card income">
             <div class="flex items-center gap-3 mb-3">
                 <div class="w-10 h-10 md:w-12 md:h-12 rounded-full flex items-center justify-center text-lg flex-shrink-0" style="background:linear-gradient(180deg,#0ea76a,#05986a);">
                     <i class="fas fa-arrow-up text-white"></i>
                 </div>
-                <h3 class="text-xs md:text-sm font-extrabold uppercase opacity-80 text-white">Ingresos</h3>
+                <h3 class="summary-label text-white">Ingresos</h3>
             </div>
             <div class="flex-1">
-                <p class="text-sm md:text-lg font-extrabold text-white">{% if usuario.moneda == 'COP' %}{{ total_ingresos|format_currency(usuario.moneda) }}{% else %}{{ usuario.moneda }} {{ total_ingresos|format_money }}{% endif %}</p>
+                <p class="summary-value text-white">{% if usuario.moneda == 'COP' %}{{ total_ingresos|format_currency(usuario.moneda) }}{% else %}{{ usuario.moneda }} {{ total_ingresos|format_money }}{% endif %}</p>
             </div>
         </div>
 
         <!-- Gastos -->
-        <div class="bg-[var(--surface)]/70 rounded-xl p-5 md:p-6 flex flex-col justify-between shadow-sm min-h-[120px] overflow-hidden">
+        <div class="summary-card expense">
             <div class="flex items-center gap-3 mb-3">
                 <div class="w-10 h-10 md:w-12 md:h-12 rounded-full flex items-center justify-center text-lg flex-shrink-0" style="background:linear-gradient(180deg,#b73b4b,#9b2f47);">
                     <i class="fas fa-arrow-down text-white"></i>
                 </div>
-                <h3 class="text-xs md:text-sm font-extrabold uppercase opacity-80 text-white">Gastos</h3>
+                <h3 class="summary-label text-white">Gastos</h3>
             </div>
             <div class="flex-1">
-                <p class="text-sm md:text-lg font-extrabold text-white">{% if usuario.moneda == 'COP' %}{{ total_gastos|format_currency(usuario.moneda) }}{% else %}{{ usuario.moneda }} {{ total_gastos|format_money }}{% endif %}</p>
+                <p class="summary-value text-white">{% if usuario.moneda == 'COP' %}{{ total_gastos|format_currency(usuario.moneda) }}{% else %}{{ usuario.moneda }} {{ total_gastos|format_money }}{% endif %}</p>
             </div>
         </div>
 
         <!-- Inversiones -->
-        <div class="bg-[var(--surface)]/70 rounded-xl p-5 md:p-6 flex flex-col justify-between shadow-sm min-h-[120px] overflow-hidden">
+        <div class="summary-card investment">
             <div class="flex items-center gap-3 mb-3">
                 <div class="w-10 h-10 md:w-12 md:h-12 rounded-full flex items-center justify-center text-lg flex-shrink-0" style="background:linear-gradient(180deg,#7c4df0,#6a3adf);">
                     <i class="fas fa-piggy-bank text-white"></i>
                 </div>
-                <h3 class="text-xs md:text-sm font-extrabold uppercase opacity-80 text-white">Inversiones</h3>
+                <h3 class="summary-label text-white">Inversiones</h3>
             </div>
             <div class="flex-1">
-                <p class="text-sm md:text-lg font-extrabold text-white">{% if usuario.moneda == 'COP' %}{{ total_inversiones|format_currency(usuario.moneda) }}{% else %}{{ usuario.moneda }} {{ total_inversiones|format_money }}{% endif %}</p>
+                <p class="summary-value text-white">{% if usuario.moneda == 'COP' %}{{ total_inversiones|format_currency(usuario.moneda) }}{% else %}{{ usuario.moneda }} {{ total_inversiones|format_money }}{% endif %}</p>
             </div>
         </div>
 
         <!-- Saldo Neto -->
-        <div class="bg-[var(--surface)]/70 rounded-xl p-5 md:p-6 flex flex-col justify-between shadow-sm min-h-[120px] overflow-hidden">
+        <div class="summary-card balance">
             <div class="flex items-center gap-3 mb-3">
                 <div class="w-10 h-10 md:w-12 md:h-12 rounded-full flex items-center justify-center text-lg flex-shrink-0" style="background:linear-gradient(180deg,#5a3d2b,#3f2a1f);">
                     <i class="fas fa-wallet text-white"></i>
                 </div>
-                <h3 class="text-xs md:text-sm font-extrabold uppercase opacity-80 text-white">Saldo Neto</h3>
+                <h3 class="summary-label text-white">Saldo Neto</h3>
             </div>
             <div class="flex-1">
                 {% set saldo_total = (total_ingresos - total_gastos - total_inversiones) %}
-                <p class="text-sm md:text-lg font-extrabold text-white">{% if usuario.moneda == 'COP' %}{{ saldo_total|format_currency(usuario.moneda) }}{% else %}{{ usuario.moneda }} {{ saldo_total|format_money }}{% endif %}</p>
+                <p class="summary-value text-white">{% if usuario.moneda == 'COP' %}{{ saldo_total|format_currency(usuario.moneda) }}{% else %}{{ usuario.moneda }} {{ saldo_total|format_money }}{% endif %}</p>
             </div>
         </div>
     </div>
 
     <!-- Grid de Gráficos -->
-    <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 xl:gap-12 mb-12">
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 lg:gap-8 mb-8 lg:mb-12">
         <!-- Distribución Circular -->
         <div class="chart-card">
             <h3 class="text-sm font-bold uppercase tracking-widest mb-6 opacity-70">Distribución de Capital</h3>
-            <div style="width: 100%; height: 280px;">
+            <div class="chart-container">
                 <canvas id="pieChart"></canvas>
             </div>
             <div class="flex gap-6 mt-8 flex-wrap justify-center text-xs font-bold">
@@ -165,14 +84,14 @@
         <!-- Evolución Mensual -->
         <div class="chart-card">
             <h3 class="text-sm font-bold uppercase tracking-widest mb-6 opacity-70">Evolución Mensual</h3>
-            <div style="height: 280px;">
+            <div class="chart-container">
                 <canvas id="evolChart"></canvas>
             </div>
         </div>
     </div>
 
     <!-- Grid de Transacciones Recientes -->
-    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 xl:gap-8">
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         <!-- Ingresos Recientes -->
         <div class="chart-card">
             <h3 class="text-sm font-bold uppercase tracking-widest mb-6 opacity-70">

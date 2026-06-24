@@ -1,88 +1,75 @@
 {% extends 'layout/base.html' %}
 {% block title %}Información del perfil - App Money{% endblock %}
 {% block content %}
-<style>
-    .form-label {
-        display: block;
-        font-size: 0.75rem;
-        font-weight: 700;
-        letter-spacing: 0.1em;
-        text-transform: uppercase;
-        color: var(--text-secondary);
-        margin-bottom: 8px;
-    }
-    .profile-avatar {
-        background: var(--surface);
-        border: 3px solid rgba(59, 130, 246, 0.3);
-    }
-</style>
-
-<div class="fluent-card p-6 sm:p-12 max-w-4xl w-full mx-auto">
+<div class="fluent-card max-w-4xl w-full mx-auto shadow-soft">
     <!-- Title -->
-    <h2 class="text-3xl font-black mb-12 text-center text-white">Información del perfil</h2>
+    <h2 class="text-3xl font-black mb-10 text-center text-white">Información del perfil</h2>
 
-    <form method="post" enctype="multipart/form-data" class="space-y-8">
+    <form method="post" enctype="multipart/form-data" class="space-y-8 mt-6">
         <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-6 md:gap-8 mb-12">
-        <!-- Photo Section -->
-        <div class="md:col-span-1 flex flex-col items-center">
-            <div class="relative mb-6">
-                <div id="foto-perfil-preview" class="profile-avatar w-32 h-32 rounded-full flex items-center justify-center text-white text-5xl font-black shadow-xl overflow-hidden backdrop-blur-xl" data-initial="{{ usuario.nombre_usuario[0].upper() }}" data-original-src="{% if usuario.foto_perfil %}{{ usuario_foto_url(usuario, usuario.id) }}{% endif %}">
-                    {% if usuario.foto_perfil %}
-                    <img src="{{ usuario_foto_url(usuario, usuario.id) }}" class="w-full h-full object-cover">
-                    {% else %}
-                    {{ usuario.nombre_usuario[0].upper() }}
-                    {% endif %}
+        
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6 lg:gap-8 mb-8">
+            <!-- Photo Section -->
+            <div class="md:col-span-1 flex flex-col items-center">
+                <div class="relative mb-6">
+                    <div id="foto-perfil-preview" class="w-24 h-24 sm:w-32 sm:h-32 rounded-full border-4 border-blue-500/30 flex items-center justify-center text-white text-3xl sm:text-5xl font-black shadow-xl overflow-hidden backdrop-blur-xl bg-surface select-none shrink-0" data-initial="{{ usuario.nombre_usuario[0].upper() }}" data-original-src="{% if usuario.foto_perfil %}{{ usuario_foto_url(usuario, usuario.id) }}{% endif %}">
+                        {% if usuario.foto_perfil %}
+                        <img src="{{ usuario_foto_url(usuario, usuario.id) }}" class="w-full h-full object-cover">
+                        {% else %}
+                        {{ usuario.nombre_usuario[0].upper() }}
+                        {% endif %}
+                    </div>
+                    <!-- Input oculto para la foto -->
+                    <input type="file" name="foto_perfil" id="foto_perfil" class="hidden" accept="image/*">
+                    <button type="button" onclick="document.getElementById('foto_perfil').click()"
+                        class="absolute bottom-1 right-1 bg-blue-500/80 backdrop-blur-md p-2 rounded-full shadow-lg border border-blue-500/30 hover:bg-blue-500 hover:scale-110 transition-all cursor-pointer min-h-[36px] min-w-[36px] flex items-center justify-center">
+                        <i class="fas fa-camera text-xs text-white"></i>
+                    </button>
                 </div>
-                <!-- Input oculto para la foto -->
-                <input type="file" name="foto_perfil" id="foto_perfil" class="hidden" accept="image/*">
-                <button type="button" onclick="document.getElementById('foto_perfil').click()"
-                    class="absolute bottom-1 right-1 bg-blue-500/60 backdrop-blur-md p-2 rounded-full shadow-lg border border-blue-500/30 hover:bg-blue-500/80 hover:scale-110 transition-all cursor-pointer">
-                    <i class="fas fa-camera text-xs text-white"></i>
-                </button>
-            </div>
-            <p class="text-xl font-black text-center">{{ usuario.nombre_usuario }}</p>
-        </div>
-
-        <!-- Info Section -->
-        <div class="md:col-span-2 space-y-6">
-            <!-- Nombre Completo -->
-            <div>
-                <label class="form-label">Nombre completo</label>
-                <input type="text" name="nombre_completo" value="{{ usuario.nombre_completo or '' }}" class="input-glass">
+                <p class="text-xl font-black text-center text-white">{{ usuario.nombre_usuario }}</p>
             </div>
 
-            <div>
-                <label class="form-label">Email</label>
-                <input type="email" name="email" value="{{ usuario.email or '' }}" class="input-glass" >
-            </div>
+            <!-- Info Section -->
+            <div class="md:col-span-2 space-y-4">
+                <!-- Nombre Completo -->
+                <div class="form-group">
+                    <label class="form-label">Nombre completo</label>
+                    <input type="text" name="nombre_completo" value="{{ usuario.nombre_completo or '' }}" class="input-glass">
+                </div>
 
-            <div>
-                <label class="form-label">Teléfono</label>
-                <input type="tel" name="telefono" value="{{ usuario.telefono or '' }}" class="input-glass">
-            </div>
+                <div class="form-group">
+                    <label class="form-label">Email</label>
+                    <input type="email" name="email" value="{{ usuario.email or '' }}" class="input-glass" >
+                </div>
 
-            <div>
-                <label class="form-label">País</label>
-                <input type="text" name="pais" value="{{ usuario.pais or '' }}" class="input-glass">
-            </div>
+                <div class="form-group">
+                    <label class="form-label">Teléfono</label>
+                    <input type="tel" name="telefono" value="{{ usuario.telefono or '' }}" class="input-glass">
+                </div>
 
-            <!-- Ciudad -->
-            <div>
-                <label class="form-label">Ciudad</label>
-                <input type="text" name="ciudad" value="{{ usuario.ciudad or '' }}" class="input-glass" >
+                <div class="form-group">
+                    <label class="form-label">País</label>
+                    <input type="text" name="pais" value="{{ usuario.pais or '' }}" class="input-glass">
+                </div>
+
+                <!-- Ciudad -->
+                <div class="form-group">
+                    <label class="form-label">Ciudad</label>
+                    <input type="text" name="ciudad" value="{{ usuario.ciudad or '' }}" class="input-glass" >
+                </div>
             </div>
         </div>
-        </div>
+        
         <!-- Botones -->
-        <div class="flex flex-col sm:flex-row gap-4 justify-end pt-8">
-            <a href="/" class="btn-fluent btn-red px-6 flex items-center gap-2 whitespace-nowrap w-full sm:w-auto"><i class="fas fa-arrow-left"></i> Volver</a>
-            <button type="submit" class="btn-fluent px-6 flex items-center gap-2 whitespace-nowrap w-full sm:w-auto">
+        <div class="form-actions pt-4 border-t border-white/10">
+            <button type="submit" class="btn-fluent flex items-center justify-center gap-2">
                 <i class="fas fa-save"></i> Guardar
             </button>
+            <a href="/" class="btn-action flex items-center justify-center gap-2"><i class="fas fa-arrow-left"></i> Volver</a>
         </div>
     </form>
 </div>
+
 <script>
     (() => {
         const input = document.getElementById('foto_perfil');
