@@ -20,27 +20,13 @@ services:
       - SERVER_HOST=0.0.0.0
       - SERVER_PORT=7700
       - SERVER_THREADS=${SERVER_THREADS:-4}
-    depends_on:
-      mysql:
-        condition: service_healthy
 
-  mysql:
-    image: mysql:8
-    container_name: mysql_app_money
-    restart: always
-    environment:
-      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-rootpass}
-      MYSQL_DATABASE: ${DB_NAME:-app_money}
-      MYSQL_USER: ${DB_USER:-appuser}
-      MYSQL_PASSWORD: ${DB_PASSWORD:-apppass}
-    ports:
-      - "3306:3306"
-    volumes:
-      - mysql_data:/var/lib/mysql
-    healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
-      timeout: 20s
-      retries: 10
+    networks:
+      - proxy
+      - appmoney
 
-volumes:
-  mysql_data:
+networks:
+  proxy:
+    external: true
+  appmoney:
+    external: true
