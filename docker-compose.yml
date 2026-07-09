@@ -8,8 +8,6 @@ services:
       dockerfile: Dockerfile
     container_name: app_money
     restart: always
-    ports:
-      - "${SERVER_PORT:-7700}:7700"
     environment:
       - FLASK_ENV=${FLASK_ENV:-production}
       - FLASK_SECRET_KEY=${FLASK_SECRET_KEY}
