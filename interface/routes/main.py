@@ -896,6 +896,8 @@ def register_routes(app):
             return redirect(url_for('main.login'))
         
         if request.method == 'POST':
+            nueva_ruta_foto = usuario.get('foto_perfil_ruta')
+            
             # Actualizar Foto si se envió
             if 'foto_perfil' in request.files and request.files['foto_perfil'].filename:
                 file = request.files['foto_perfil']
@@ -905,19 +907,26 @@ def register_routes(app):
                         flash(error, 'error')
                         return render_template('dashboard/perfil.html', usuario=usuario)
                     if ruta:
-                        delete_profile_image_file(usuario.get('foto_perfil_ruta'), usuario['id'])
-                        actualizar_foto_perfil_db(usuario['id'], ruta)
+                        nueva_ruta_foto = ruta
             
             moneda = (request.form.get('moneda') or usuario.get('moneda') or 'USD').strip().upper()
             
+            # Leer los valores del formulario para actualizar en BD
+            nombre_completo = (request.form.get('nombre_completo') or usuario.get('nombre_completo') or '').strip()
+            email = (request.form.get('email') or usuario.get('email') or '').strip()
+            telefono = (request.form.get('telefono') or usuario.get('telefono') or '').strip()
+            pais = (request.form.get('pais') or usuario.get('pais') or '').strip()
+            ciudad = (request.form.get('ciudad') or usuario.get('ciudad') or '').strip()
+            
             resultado = actualizar_perfil_usuario_db(
                 usuario['id'],
-                usuario.get('nombre_completo', ''),
-                usuario.get('email', ''),
-                usuario.get('telefono', ''),
-                usuario.get('pais', ''),
-                usuario.get('ciudad', ''),
+                nombre_completo,
+                email,
+                telefono,
+                pais,
+                ciudad,
                 moneda,
+                nueva_ruta_foto,
             )
             
             if resultado:
@@ -2660,14 +2669,15 @@ def procesar_recurrentes_usuario(usuario_id):
     finally:
         conn.close()
 
-def actualizar_perfil_usuario_db(usuario_id, nombre_completo='', email='', telefono='', pais='', ciudad='', moneda='USD'):
+def actualizar_perfil_usuario_db(usuario_id, nombre_completo='', email='', telefono='', pais='', ciudad='', moneda='USD', foto_perfil=None):
     conn = get_connection()
     if conn is None:
         return False
     try:
         cursor = conn.cursor()
-        cursor.execute('UPDATE usuarios SET nombre_completo = %s, email = %s, telefono = %s, pais = %s, ciudad = %s, moneda = %s WHERE id = %s', 
-                       (nombre_completo, email, telefono, pais, ciudad, moneda, usuario_id))
+        foto_valor = foto_perfil if foto_perfil is not None else None
+        cursor.execute('UPDATE usuarios SET nombre_completo = %s, email = %s, telefono = %s, pais = %s, ciudad = %s, moneda = %s, foto_perfil = %s WHERE id = %s', 
+                     (nombre_completo, email, telefono, pais, ciudad, moneda, foto_valor, usuario_id))
         conn.commit()
         return True
     except Exception as e:

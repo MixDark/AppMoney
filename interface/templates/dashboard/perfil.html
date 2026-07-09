@@ -57,6 +57,16 @@
                     <label class="form-label">Ciudad</label>
                     <input type="text" name="ciudad" value="{{ usuario.ciudad or '' }}" class="input-glass" >
                 </div>
+
+                <div class="form-group">
+                    <label class="form-label">Moneda</label>
+                    <select name="moneda" class="input-glass">
+                        <option value="USD" {% if usuario.moneda == 'USD' %}selected{% endif %}>USD - Dólar estadounidense</option>
+                        <option value="COP" {% if usuario.moneda == 'COP' %}selected{% endif %}>COP - Peso colombiano</option>
+                        <option value="EUR" {% if usuario.moneda == 'EUR' %}selected{% endif %}>EUR - Euro</option>
+                        <option value="MXN" {% if usuario.moneda == 'MXN' %}selected{% endif %}>MXN - Peso mexicano</option>
+                    </select>
+                </div>
             </div>
         </div>
         
