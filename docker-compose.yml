@@ -8,6 +8,9 @@ services:
       dockerfile: Dockerfile
     container_name: app_money
     restart: always
+    volumes:
+      # Persistencia de imágenes de perfil
+      - profiles_data:/app/interface/static/images/profiles    
     environment:
       - FLASK_ENV=${FLASK_ENV:-production}
       - FLASK_SECRET_KEY=${FLASK_SECRET_KEY}
@@ -28,3 +31,7 @@ networks:
     external: true
   appmoney:
     external: true
+
+volumes:
+  profiles_data:
+    name: app_money_profiles    
