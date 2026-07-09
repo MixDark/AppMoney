@@ -60,13 +60,14 @@
 
                 <div class="form-group">
                     <label class="form-label">Moneda</label>
-                    <select name="moneda" class="input-glass">
-                        <option value="USD" {% if usuario.moneda == 'USD' %}selected{% endif %}>USD - Dólar estadounidense</option>
-                        <option value="COP" {% if usuario.moneda == 'COP' %}selected{% endif %}>COP - Peso colombiano</option>
-                        <option value="EUR" {% if usuario.moneda == 'EUR' %}selected{% endif %}>EUR - Euro</option>
-                        <option value="MXN" {% if usuario.moneda == 'MXN' %}selected{% endif %}>MXN - Peso mexicano</option>
-                    </select>
-                </div>
+                     <div class="select-wrapper">
+                         <select name="moneda" class="input-glass cursor-pointer w-full" id="selectMoneda">
+                             {% for code, name in currencies_list %}
+                             <option value="{{ code }}" {% if usuario.moneda|upper == code %}selected{% endif %}>{{ name }}</option>
+                             {% endfor %}
+                         </select>
+                     </div>
+                 </div>
             </div>
         </div>
         

@@ -23,19 +23,8 @@
                 <p class="text-xl font-black text-center text-white">{{ usuario.nombre_usuario }}</p>
             </div>
 
-            <!-- Options Section -->
+<!-- Options Section -->
             <div class="md:col-span-2 space-y-6">
-                <div class="form-group">
-                    <label class="form-label">Moneda predeterminada</label>
-                     <div class="select-wrapper">
-                         <select name="moneda" class="input-glass cursor-pointer w-full" id="selectMoneda">
-                             {% for code, name in currencies_list %}
-                             <option value="{{ code }}" {% if usuario.moneda|upper == code %}selected{% endif %}>{{ name }}</option>
-                             {% endfor %}
-                         </select>
-                     </div>
-                </div>
-
                 <!-- Password Change Section -->
                 <div class="pt-6 sm:pt-10 border-t border-white/10 mt-6 space-y-4">
                     <h3 class="font-black text-lg mb-4 uppercase tracking-widest text-slate-300">Cambiar contraseña</h3>
@@ -70,81 +59,9 @@
 </div>
 
 <script>
+    // Preferencias page script
     (function() {
-        const select = document.getElementById('selectMoneda');
-        if (!select) return;
-
-        const wrapper = select.closest('.select-wrapper');
-        if (!wrapper) return;
-
-        const dropdown = document.createElement('div');
-        dropdown.className = 'select-dropdown';
-        wrapper.appendChild(dropdown);
-
-        function buildDropdown() {
-            dropdown.innerHTML = '';
-            Array.from(select.options).forEach((opt, idx) => {
-                const div = document.createElement('div');
-                div.className = 'select-dropdown-option' + (opt.selected ? ' selected' : '');
-                div.textContent = opt.textContent;
-                div.dataset.value = opt.value;
-                div.dataset.index = idx;
-                div.addEventListener('click', () => {
-                    select.value = opt.value;
-                    select.dispatchEvent(new Event('change'));
-                    closeDropdown();
-                    updateTrigger();
-                });
-                dropdown.appendChild(div);
-            });
-        }
-
-        function updateTrigger() {
-            const selected = select.options[select.selectedIndex];
-            select.setAttribute('data-display', selected ? selected.textContent : '');
-        }
-
-        function openDropdown() {
-            dropdown.classList.add('open');
-        }
-
-        function closeDropdown() {
-            dropdown.classList.remove('open');
-        }
-
-        select.addEventListener('mousedown', (e) => {
-            e.preventDefault();
-            if (dropdown.classList.contains('open')) {
-                closeDropdown();
-            } else {
-                buildDropdown();
-                openDropdown();
-            }
-        });
-
-        select.addEventListener('keydown', (e) => {
-            if (e.key === 'Enter' || e.key === ' ') {
-                e.preventDefault();
-                if (dropdown.classList.contains('open')) {
-                    closeDropdown();
-                } else {
-                    buildDropdown();
-                    openDropdown();
-                }
-            }
-            if (e.key === 'Escape') {
-                closeDropdown();
-            }
-        });
-
-        document.addEventListener('click', (e) => {
-            if (!wrapper.contains(e.target)) {
-                closeDropdown();
-            }
-        });
-
-        buildDropdown();
-        updateTrigger();
+        // Page initialized
     })();
-</script>
+ </script>
 {% endblock %}

@@ -951,33 +951,13 @@ def register_routes(app):
             return redirect(url_for('main.login'))
         
         if request.method == 'POST':
-            # Leer campos de contraseña primero para detectar intención de cambio
             password_actual = (request.form.get('password_actual') or '').strip()
             password_nueva = (request.form.get('password_nueva') or '').strip()
             password_confirmar = (request.form.get('password_confirmar') or '').strip()
 
             cambiar_password = bool(password_actual or password_nueva or password_confirmar)
 
-            # Actualizar moneda siempre (independiente)
-            moneda = (request.form.get('moneda') or usuario.get('moneda') or 'USD').strip().upper()
-            perfil_actualizado = actualizar_perfil_usuario_db(
-                usuario['id'],
-                usuario.get('nombre_completo', ''),
-                usuario.get('email', ''),
-                usuario.get('telefono', ''),
-                usuario.get('pais', ''),
-                usuario.get('ciudad', ''),
-                moneda,
-            )
-
-            # Solo mostrar confirmación de moneda si no se intenta cambiar contraseña
-            if not cambiar_password:
-                if perfil_actualizado:
-                    flash('Moneda predeterminada actualizada correctamente', 'success')
-                else:
-                    flash('Error al actualizar preferencias', 'error')
-
-            # Si no hay intención de cambiar contraseña, terminar aquí
+            # Si no hay intención de cambiar contraseña, no hay nada que procesar en preferencias
             if not cambiar_password:
                 usuario = get_current_usuario(refresh=True)
                 return redirect(url_for('main.preferencias'))
