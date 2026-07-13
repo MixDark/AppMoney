@@ -10,17 +10,17 @@ services:
     restart: always
     volumes:
       # Persistencia de imágenes de perfil
-      - profiles_data:/app/interface/static/images/profiles    
+      - profiles_data:/app/interface/static/images/profiles
     environment:
-      - FLASK_ENV=${FLASK_ENV:-production}
+      - FLASK_ENV=${FLASK_ENV}
       - FLASK_SECRET_KEY=${FLASK_SECRET_KEY}
-      - DB_HOST=mysql
-      - DB_USER=${DB_USER:-appuser}
-      - DB_PASSWORD=${DB_PASSWORD:-apppass}
-      - DB_NAME=${DB_NAME:-app_money}
-      - SERVER_HOST=0.0.0.0
-      - SERVER_PORT=7700
-      - SERVER_THREADS=${SERVER_THREADS:-4}
+      - DB_HOST=${DB_HOST}
+      - DB_USER=${DB_USER}
+      - DB_PASSWORD=${DB_PASSWORD}
+      - DB_NAME=${DB_NAME}
+      - SERVER_HOST=${SERVER_HOST}
+      - SERVER_PORT=${SERVER_PORT}
+      - SERVER_THREADS=${SERVER_THREADS}
 
     networks:
       - proxy
