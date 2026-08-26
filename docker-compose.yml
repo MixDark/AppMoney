@@ -12,19 +12,22 @@ services:
     environment:
       - FLASK_ENV=${FLASK_ENV}
       - FLASK_SECRET_KEY=${FLASK_SECRET_KEY}
-      - DB_HOST=${DB_HOST}
+      - DB_HOST=${DB_HOST}  
       - DB_USER=${DB_USER}
       - DB_PASSWORD=${DB_PASSWORD}
       - DB_NAME=${DB_NAME}
       - SERVER_HOST=${SERVER_HOST}
       - SERVER_PORT=${SERVER_PORT}
       - SERVER_THREADS=${SERVER_THREADS}
+    ports:
+      - "${SERVER_PORT}:${SERVER_PORT}"
     networks:
       - app_network
+  
 
 networks:
   app_network:
-    external: true
+    external: true  
 
 volumes:
   profiles_data:
