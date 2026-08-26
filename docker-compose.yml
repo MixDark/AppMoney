@@ -1,7 +1,6 @@
 version: "3.9"
 
 services:
-
   app:
     build:
       context: .
@@ -9,7 +8,6 @@ services:
     container_name: app_money
     restart: always
     volumes:
-      # Persistencia de imágenes de perfil
       - profiles_data:/app/interface/static/images/profiles
     environment:
       - FLASK_ENV=${FLASK_ENV}
@@ -21,17 +19,13 @@ services:
       - SERVER_HOST=${SERVER_HOST}
       - SERVER_PORT=${SERVER_PORT}
       - SERVER_THREADS=${SERVER_THREADS}
-
     networks:
-      - proxy
-      - appmoney
+      - app_network
 
 networks:
-  proxy:
-    external: true
-  appmoney:
+  app_network:
     external: true
 
 volumes:
   profiles_data:
-    name: app_money_profiles    
+    name: app_money_profiles
