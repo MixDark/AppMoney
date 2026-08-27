@@ -5,30 +5,52 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-    container_name: app_money
+    image: appmoney:latest  # Usa imagen pre-construida para despliegue rápido
+    container_name: appmoney_app_prod
     restart: always
     volumes:
       - profiles_data:/app/interface/static/images/profiles
+      - ./logs:/app/logs  # Logs persistentes
     environment:
       - FLASK_ENV=${FLASK_ENV}
       - FLASK_SECRET_KEY=${FLASK_SECRET_KEY}
-      - DB_HOST=${DB_HOST}  
+      - DB_HOST=${DB_HOST}
       - DB_USER=${DB_USER}
       - DB_PASSWORD=${DB_PASSWORD}
       - DB_NAME=${DB_NAME}
       - SERVER_HOST=${SERVER_HOST}
       - SERVER_PORT=${SERVER_PORT}
       - SERVER_THREADS=${SERVER_THREADS}
+      - TZ=America/Bogota  # Zona horaria
     ports:
-      - "${SERVER_PORT}:${SERVER_PORT}"
+      - "0.0.0.0:7700:7700"
     networks:
       - app_network
-  
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 1G
+        reservations:
+          cpus: '0.2'
+          memory: 256M
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:7700/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
 
 networks:
   app_network:
-    external: true  
+    external: true
+    name: app_network
 
 volumes:
   profiles_data:
-    name: app_money_profiles
+    name: appmoney_profiles_prod
