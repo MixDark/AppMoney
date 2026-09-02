@@ -1,31 +1,31 @@
-version: "3.9"
+version: "3.8"
 
 services:
   app:
-    build:
-      context: .
-      dockerfile: Dockerfile
-    image: appmoney:latest  # Usa imagen pre-construida para despliegue rápido
+    image: appmoney:latest
     container_name: appmoney_app_prod
     restart: always
+    depends_on:
+      - mysql-appmoney  # Espera a que MySQL esté listo
     volumes:
       - profiles_data:/app/interface/static/images/profiles
-      - ./logs:/app/logs  # Logs persistentes
+      - logs_data:/app/logs
     environment:
-      - FLASK_ENV=${FLASK_ENV}
+      - FLASK_ENV=${FLASK_ENV:-production}
       - FLASK_SECRET_KEY=${FLASK_SECRET_KEY}
-      - DB_HOST=${DB_HOST}
-      - DB_USER=${DB_USER}
+      # CORREGIDO: Usar el nombre correcto del contenedor MySQL
+      - DB_HOST=mysql-appmoney
+      - DB_USER=${DB_USER:-appuser}
       - DB_PASSWORD=${DB_PASSWORD}
-      - DB_NAME=${DB_NAME}
-      - SERVER_HOST=${SERVER_HOST}
-      - SERVER_PORT=${SERVER_PORT}
-      - SERVER_THREADS=${SERVER_THREADS}
-      - TZ=America/Bogota  # Zona horaria
+      - DB_NAME=${DB_NAME:-appmoney_db}
+      - SERVER_HOST=${SERVER_HOST:-0.0.0.0}
+      - SERVER_PORT=${SERVER_PORT:-7700}
+      - SERVER_THREADS=${SERVER_THREADS:-4}
+      - TZ=America/Bogota
     ports:
-      - "0.0.0.0:7700:7700"
+      - "${HOST_PORT:-7700}:7700"
     networks:
-      - app_network
+      - appmoney-network  # CAMBIADO: Usar la misma red que MySQL
     deploy:
       resources:
         limits:
@@ -47,10 +47,12 @@ services:
       start_period: 40s
 
 networks:
-  app_network:
+  appmoney-network:  # CAMBIADO: Usar la red existente de MySQL
     external: true
-    name: app_network
+    name: appmoney-network
 
 volumes:
   profiles_data:
     name: appmoney_profiles_prod
+  logs_data:
+    name: appmoney_logs_prod
