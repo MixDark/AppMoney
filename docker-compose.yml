@@ -6,26 +6,25 @@ services:
     container_name: appmoney_app_prod
     restart: always
     depends_on:
-      - mysql-appmoney  # Espera a que MySQL esté listo
+      - mysql-appmoney
     volumes:
       - profiles_data:/app/interface/static/images/profiles
       - logs_data:/app/logs
     environment:
-      - FLASK_ENV=${FLASK_ENV:-production}
+      - FLASK_ENV=${FLASK_ENV}
       - FLASK_SECRET_KEY=${FLASK_SECRET_KEY}
-      # CORREGIDO: Usar el nombre correcto del contenedor MySQL
       - DB_HOST=mysql-appmoney
-      - DB_USER=${DB_USER:-appuser}
+      - DB_USER=${DB_USER}
       - DB_PASSWORD=${DB_PASSWORD}
-      - DB_NAME=${DB_NAME:-appmoney_db}
-      - SERVER_HOST=${SERVER_HOST:-0.0.0.0}
-      - SERVER_PORT=${SERVER_PORT:-7700}
-      - SERVER_THREADS=${SERVER_THREADS:-4}
+      - DB_NAME=${DB_NAME}
+      - SERVER_HOST=${SERVER_HOST}
+      - SERVER_PORT=${SERVER_PORT}
+      - SERVER_THREADS=${SERVER_THREADS}
       - TZ=America/Bogota
     ports:
-      - "${HOST_PORT:-7700}:7700"
+      - "${HOST_PORT}:7700"
     networks:
-      - appmoney-network  # CAMBIADO: Usar la misma red que MySQL
+      - appmoney-network
     deploy:
       resources:
         limits:
@@ -47,7 +46,7 @@ services:
       start_period: 40s
 
 networks:
-  appmoney-network:  # CAMBIADO: Usar la red existente de MySQL
+  appmoney-network:
     external: true
     name: appmoney-network
 
