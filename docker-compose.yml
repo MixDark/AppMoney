@@ -3,6 +3,7 @@ version: "3.8"
 services:
 
   app:
+
     build:
       context: .
       dockerfile: Dockerfile
@@ -15,26 +16,27 @@ services:
       - logs_data:/app/logs
 
     environment:
-      - FLASK_ENV=${FLASK_ENV}
-      - FLASK_SECRET_KEY=${FLASK_SECRET_KEY}
+      FLASK_ENV: ${FLASK_ENV}
+      FLASK_SECRET_KEY: ${FLASK_SECRET_KEY}
 
-      # MySQL existente
-      - DB_HOST=mysql-appmoney
-      - DB_PORT=3306
-      - DB_USER=${DB_USER}
-      - DB_PASSWORD=${DB_PASSWORD}
-      - DB_NAME=${DB_NAME}
+      DB_HOST: mysql-appmoney
+      DB_PORT: 3306
+      DB_USER: ${DB_USER}
+      DB_PASSWORD: ${DB_PASSWORD}
+      DB_NAME: ${DB_NAME}
 
-      - SERVER_HOST=${SERVER_HOST}
-      - SERVER_PORT=${SERVER_PORT}
-      - SERVER_THREADS=${SERVER_THREADS}
-      - TZ=America/Bogota
+      SERVER_HOST: ${SERVER_HOST}
+      SERVER_PORT: ${SERVER_PORT}
+      SERVER_THREADS: ${SERVER_THREADS}
+
+      TZ: America/Bogota
 
     ports:
       - "${HOST_PORT}:7700"
 
     networks:
       - appmoney-network
+      - nginx-proxy_default
 
     deploy:
       resources:
@@ -46,7 +48,7 @@ services:
           memory: 256M
 
     logging:
-      driver: "json-file"
+      driver: json-file
       options:
         max-size: "10m"
         max-file: "3"
@@ -58,12 +60,20 @@ services:
       retries: 3
       start_period: 40s
 
+
 networks:
+
   appmoney-network:
     external: true
     name: appmoney-network
 
+  nginx-proxy_default:
+    external: true
+    name: nginx-proxy_default
+
+
 volumes:
+
   profiles_data:
     name: appmoney_profiles_prod
 
