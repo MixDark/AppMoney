@@ -1,41 +1,56 @@
 version: "3.8"
 
 services:
+
   app:
-    image: appmoney:latest
+    build:
+      context: .
+      dockerfile: Dockerfile
+
     container_name: appmoney_app_prod
     restart: always
+
     volumes:
       - profiles_data:/app/interface/static/images/profiles
       - logs_data:/app/logs
+
     environment:
       - FLASK_ENV=${FLASK_ENV}
       - FLASK_SECRET_KEY=${FLASK_SECRET_KEY}
+
+      # MySQL existente
       - DB_HOST=mysql-appmoney
+      - DB_PORT=3306
       - DB_USER=${DB_USER}
       - DB_PASSWORD=${DB_PASSWORD}
       - DB_NAME=${DB_NAME}
+
       - SERVER_HOST=${SERVER_HOST}
       - SERVER_PORT=${SERVER_PORT}
       - SERVER_THREADS=${SERVER_THREADS}
       - TZ=America/Bogota
+
     ports:
       - "${HOST_PORT}:7700"
+
     networks:
       - appmoney-network
+
     deploy:
       resources:
         limits:
-          cpus: '1.0'
+          cpus: "1.0"
           memory: 1G
         reservations:
-          cpus: '0.2'
+          cpus: "0.2"
           memory: 256M
+
     logging:
       driver: "json-file"
       options:
         max-size: "10m"
         max-file: "3"
+
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:7700/health"]
       interval: 30s
@@ -51,5 +66,6 @@ networks:
 volumes:
   profiles_data:
     name: appmoney_profiles_prod
+
   logs_data:
     name: appmoney_logs_prod
