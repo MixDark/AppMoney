@@ -38,6 +38,10 @@ services:
       - appmoney-network
       - nginx-proxy_default
 
+    depends_on:
+      mysql:
+        condition: service_healthy
+
     deploy:
       resources:
         limits:
@@ -61,11 +65,44 @@ services:
       start_period: 40s
 
 
+  mysql:
+
+    image: mysql:8.4
+
+    container_name: mysql-appmoney
+    restart: always
+
+    networks:
+      - appmoney-network
+
+    volumes:
+      - mysql_data:/var/lib/mysql
+
+    environment:
+      TZ: America/Bogota
+
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "mysqladmin ping -h localhost -u root -p$${MYSQL_ROOT_PASSWORD} || exit 1"
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+
 networks:
 
   appmoney-network:
-    external: true
-    name: appmoney-network
+    driver: bridge
 
   nginx-proxy_default:
     external: true
@@ -73,6 +110,9 @@ networks:
 
 
 volumes:
+
+  mysql_data:
+    name: appmoney_mysql_prod
 
   profiles_data:
     name: appmoney_profiles_prod
