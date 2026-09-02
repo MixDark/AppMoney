@@ -5,8 +5,6 @@ services:
     image: appmoney:latest
     container_name: appmoney_app_prod
     restart: always
-    depends_on:
-      - mysql-appmoney
     volumes:
       - profiles_data:/app/interface/static/images/profiles
       - logs_data:/app/logs
