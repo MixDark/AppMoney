@@ -3,7 +3,7 @@ version: "3.9"
 services:
 
   # ============================================================
-  # MYSQL - BASE DE DATOS EXISTENTE
+  # MYSQL
   # ============================================================
   mysql:
     image: mysql:8.4
@@ -14,10 +14,17 @@ services:
 
     environment:
       MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      MYSQL_DATABASE: ${DB_NAME}
+      MYSQL_USER: ${DB_USER}
+      MYSQL_PASSWORD: ${DB_PASSWORD}
       TZ: America/Bogota
 
     volumes:
+      # Datos persistentes de MySQL
       - mysql_data:/var/lib/mysql
+
+      # Script de inicialización
+      - ./infrastructure/init_db.sql:/docker-entrypoint-initdb.d/init_db.sql:ro
 
     networks:
       - appmoney
@@ -30,8 +37,8 @@ services:
         ]
       interval: 10s
       timeout: 5s
-      retries: 15
-      start_period: 90s
+      retries: 10
+      start_period: 60s
 
     logging:
       driver: json-file
@@ -57,11 +64,18 @@ services:
 
     environment:
 
-      # Flask
+      # --------------------------------------------------------
+      # FLASK
+      # --------------------------------------------------------
       FLASK_ENV: ${FLASK_ENV}
       FLASK_SECRET_KEY: ${FLASK_SECRET_KEY}
 
-      # MySQL
+      # --------------------------------------------------------
+      # MYSQL
+      # --------------------------------------------------------
+      # IMPORTANTE:
+      # Dentro de Docker NO usar localhost.
+      # El nombre del servicio MySQL es "mysql".
       DB_HOST: mysql
       DB_PORT: 3306
       DB_USER: ${DB_USER}
@@ -69,16 +83,24 @@ services:
       DB_NAME: ${DB_NAME}
       DB_POOL_SIZE: ${DB_POOL_SIZE}
 
-      # Servidor
+      # --------------------------------------------------------
+      # SERVIDOR FLASK / GUNICORN
+      # --------------------------------------------------------
       SERVER_HOST: ${SERVER_HOST}
       SERVER_PORT: ${SERVER_PORT}
       SERVER_THREADS: ${SERVER_THREADS}
 
-      # Zona horaria
+      # --------------------------------------------------------
+      # TIMEZONE
+      # --------------------------------------------------------
       TZ: America/Bogota
 
     volumes:
+
+      # Fotografías de perfiles
       - profiles_data:/app/interface/static/images/profiles
+
+      # Logs de la aplicación
       - logs_data:/app/logs
 
     depends_on:
@@ -86,14 +108,19 @@ services:
         condition: service_healthy
 
     networks:
+      # Red utilizada por Nginx Proxy Manager
       - proxy
+
+      # Red privada entre AppMoney y MySQL
       - appmoney
 
     deploy:
       resources:
+
         limits:
           cpus: "1.0"
           memory: 1G
+
         reservations:
           cpus: "0.2"
           memory: 256M
@@ -104,6 +131,7 @@ services:
           "CMD-SHELL",
           "python -c \"import urllib.request; urllib.request.urlopen('http://127.0.0.1:7700/', timeout=5)\""
         ]
+
       interval: 30s
       timeout: 10s
       retries: 3
@@ -116,30 +144,35 @@ services:
         max-file: "3"
 
 
-# ============================================================
+# ==============================================================
 # NETWORKS
-# ============================================================
+# ==============================================================
 
 networks:
 
+  # Red externa utilizada por Nginx Proxy Manager
   proxy:
     external: true
 
+  # Red privada de AppMoney
   appmoney:
     driver: bridge
 
 
-# ============================================================
+# ==============================================================
 # VOLUMES
-# ============================================================
+# ==============================================================
 
 volumes:
 
+  # Base de datos
   mysql_data:
     name: appmoney_mysql_prod
 
+  # Imágenes de perfiles
   profiles_data:
     name: appmoney_profiles_prod
 
+  # Logs
   logs_data:
     name: appmoney_logs_prod
