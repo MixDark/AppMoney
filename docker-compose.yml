@@ -14,17 +14,11 @@ services:
 
     environment:
       MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
-      MYSQL_DATABASE: ${DB_NAME}
-      MYSQL_USER: ${DB_USER}
-      MYSQL_PASSWORD: ${DB_PASSWORD}
       TZ: America/Bogota
 
     volumes:
       # Datos persistentes de MySQL
       - mysql_data:/var/lib/mysql
-
-      # Script de inicialización
-      - ./infrastructure/init_db.sql:/docker-entrypoint-initdb.d/init_db.sql:ro
 
     networks:
       - appmoney
@@ -37,8 +31,8 @@ services:
         ]
       interval: 10s
       timeout: 5s
-      retries: 10
-      start_period: 60s
+      retries: 15
+      start_period: 90s
 
     logging:
       driver: json-file
@@ -73,9 +67,6 @@ services:
       # --------------------------------------------------------
       # MYSQL
       # --------------------------------------------------------
-      # IMPORTANTE:
-      # Dentro de Docker NO usar localhost.
-      # El nombre del servicio MySQL es "mysql".
       DB_HOST: mysql
       DB_PORT: 3306
       DB_USER: ${DB_USER}
@@ -84,7 +75,7 @@ services:
       DB_POOL_SIZE: ${DB_POOL_SIZE}
 
       # --------------------------------------------------------
-      # SERVIDOR FLASK / GUNICORN
+      # SERVIDOR
       # --------------------------------------------------------
       SERVER_HOST: ${SERVER_HOST}
       SERVER_PORT: ${SERVER_PORT}
@@ -100,7 +91,7 @@ services:
       # Fotografías de perfiles
       - profiles_data:/app/interface/static/images/profiles
 
-      # Logs de la aplicación
+      # Logs
       - logs_data:/app/logs
 
     depends_on:
@@ -108,19 +99,17 @@ services:
         condition: service_healthy
 
     networks:
-      # Red utilizada por Nginx Proxy Manager
+      # Red de Nginx Proxy Manager
       - proxy
 
-      # Red privada entre AppMoney y MySQL
+      # Red privada AppMoney ↔ MySQL
       - appmoney
 
     deploy:
       resources:
-
         limits:
           cpus: "1.0"
           memory: 1G
-
         reservations:
           cpus: "0.2"
           memory: 256M
@@ -131,7 +120,6 @@ services:
           "CMD-SHELL",
           "python -c \"import urllib.request; urllib.request.urlopen('http://127.0.0.1:7700/', timeout=5)\""
         ]
-
       interval: 30s
       timeout: 10s
       retries: 3
@@ -144,28 +132,30 @@ services:
         max-file: "3"
 
 
-# ==============================================================
+# ============================================================
 # NETWORKS
-# ==============================================================
+# ============================================================
 
 networks:
 
-  # Red externa utilizada por Nginx Proxy Manager
+  # Red EXISTENTE de Nginx Proxy Manager
   proxy:
     external: true
+    name: nginx-proxy_default
 
-  # Red privada de AppMoney
+  # Red privada de AppMoney y MySQL
   appmoney:
     driver: bridge
 
 
-# ==============================================================
+# ============================================================
 # VOLUMES
-# ==============================================================
+# ============================================================
 
 volumes:
 
-  # Base de datos
+  # IMPORTANTE:
+  # Mantiene la base de datos existente.
   mysql_data:
     name: appmoney_mysql_prod
 
