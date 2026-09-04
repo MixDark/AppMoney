@@ -1,5 +1,3 @@
-version: "3.9"
-
 services:
 
   # ============================================================
@@ -7,20 +5,17 @@ services:
   # ============================================================
   mysql:
     image: mysql:8.4
-
     container_name: mysql-appmoney
-
     restart: unless-stopped
 
     environment:
       MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
-      MYSQL_DATABASE: ${DB_NAME}         # <--- Inicializa la BD automáticamente
-      MYSQL_USER: ${DB_USER}             # <--- Crea el usuario de la aplicación
-      MYSQL_PASSWORD: ${DB_PASSWORD}     # <--- Asigna la contraseña al usuario
+      MYSQL_DATABASE: ${DB_NAME}
+      MYSQL_USER: ${DB_USER}
+      MYSQL_PASSWORD: ${DB_PASSWORD}
       TZ: America/Bogota
 
     volumes:
-      # Datos persistentes de MySQL
       - mysql_data:/var/lib/mysql
 
     networks:
@@ -30,7 +25,7 @@ services:
       test:
         [
           "CMD-SHELL",
-          "mysqladmin ping -h 127.0.0.1 -u root -p$${MYSQL_ROOT_PASSWORD} --silent"
+          "mysqladmin ping -h 127.0.0.1 -u root -p${MYSQL_ROOT_PASSWORD} --silent"
         ]
       interval: 10s
       timeout: 5s
@@ -53,23 +48,17 @@ services:
       dockerfile: Dockerfile
 
     container_name: appmoney_app
-
     restart: unless-stopped
 
     expose:
       - "7700"
 
     environment:
-
-      # --------------------------------------------------------
       # FLASK
-      # --------------------------------------------------------
       FLASK_ENV: ${FLASK_ENV}
       FLASK_SECRET_KEY: ${FLASK_SECRET_KEY}
 
-      # --------------------------------------------------------
       # MYSQL
-      # --------------------------------------------------------
       DB_HOST: mysql
       DB_PORT: 3306
       DB_USER: ${DB_USER}
@@ -77,24 +66,16 @@ services:
       DB_NAME: ${DB_NAME}
       DB_POOL_SIZE: ${DB_POOL_SIZE}
 
-      # --------------------------------------------------------
       # SERVIDOR
-      # --------------------------------------------------------
       SERVER_HOST: ${SERVER_HOST}
       SERVER_PORT: ${SERVER_PORT}
       SERVER_THREADS: ${SERVER_THREADS}
 
-      # --------------------------------------------------------
       # TIMEZONE
-      # --------------------------------------------------------
       TZ: America/Bogota
 
     volumes:
-
-      # Fotografías de perfiles
       - profiles_data:/app/interface/static/images/profiles
-
-      # Logs
       - logs_data:/app/logs
 
     depends_on:
@@ -102,10 +83,7 @@ services:
         condition: service_healthy
 
     networks:
-      # Red de Nginx Proxy Manager
       - proxy
-
-      # Red privada AppMoney ↔ MySQL
       - appmoney
 
     deploy:
@@ -138,15 +116,11 @@ services:
 # ============================================================
 # NETWORKS
 # ============================================================
-
 networks:
-
-  # Red EXISTENTE de Nginx Proxy Manager
   proxy:
     external: true
     name: nginx-proxy_default
 
-  # Red privada de AppMoney y MySQL
   appmoney:
     driver: bridge
 
@@ -154,18 +128,12 @@ networks:
 # ============================================================
 # VOLUMES
 # ============================================================
-
 volumes:
-
-  # IMPORTANTE:
-  # Mantiene la base de datos existente.
   mysql_data:
     name: appmoney_mysql_prod
 
-  # Imágenes de perfiles
   profiles_data:
     name: appmoney_profiles_prod
 
-  # Logs
   logs_data:
     name: appmoney_logs_prod
