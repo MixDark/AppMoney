@@ -14,6 +14,9 @@ services:
 
     environment:
       MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      MYSQL_DATABASE: ${DB_NAME}         # <--- Inicializa la BD automáticamente
+      MYSQL_USER: ${DB_USER}             # <--- Crea el usuario de la aplicación
+      MYSQL_PASSWORD: ${DB_PASSWORD}     # <--- Asigna la contraseña al usuario
       TZ: America/Bogota
 
     volumes:
